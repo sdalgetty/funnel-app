@@ -177,6 +177,14 @@
     // Init
     recalc();
   </script>
+  <div id="version-badge" style="position:fixed;right:12px;bottom:12px;font:12px/1.2 system-ui;padding:8px 10px;border-radius:999px;background:#10141b;border:1px solid #2a2e36;color:#8b94a7"></div>
+<script>
+  (function () {
+    const d = new Date(document.lastModified);
+    const pretty = d.toLocaleString([], {year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+    document.getElementById('version-badge').textContent = `Last updated: ${pretty}`;
+  })();
+</script>
 </body>
 </html>
 
