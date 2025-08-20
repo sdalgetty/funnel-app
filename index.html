@@ -33,16 +33,20 @@
     a{color:var(--accent);text-decoration:none}
 
     /* Readability override for highlighted pace boxes */
-    .good .value,
-    .warn .value { color: black; }
+    .good .value, .warn .value { color: black; }
 
-    /* Simple auth bar buttons */
+    /* Auth bar + toast */
     #auth-bar { display:flex; gap:8px; align-items:center; margin-bottom:14px }
     #signin-google, #signout {
       background:#121419; color:#e9edf3; border:1px solid #2a2e36; border-radius:10px;
       padding:8px 12px; cursor:pointer;
     }
     #signin-google:hover, #signout:hover { filter:brightness(1.1); }
+    #save-toast{
+      position:fixed; left:12px; bottom:12px; padding:6px 10px; border-radius:999px;
+      background:#10141b; border:1px solid #2a2e36; color:#8b94a7;
+      opacity:0; transition:opacity .2s; pointer-events:none; z-index:9999;
+    }
   </style>
 </head>
 <body>
@@ -140,10 +144,7 @@
   <script>
     // Helpers
     const el = id => document.getElementById(id);
-    const num = v => {
-      const x = parseFloat(v);
-      return Number.isFinite(x) ? x : 0;
-    };
+    const num = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : 0; };
     const fmtInt = v => isNaN(v) ? "—" : Math.round(v).toLocaleString();
 
     // Months elapsed (0.xx in Jan … ~7.xx mid-Aug … 12.00 at year end)
@@ -194,16 +195,13 @@
 
     // Wire inputs
     ["bookingsGoal","inquiryToCall","callToBooking","inqYtd","callsYtd","bookingsYtd"]
-      .forEach(id => {
-        const node = el(id);
-        if (node) node.addEventListener("input", recalc);
-      });
+      .forEach(id => el(id)?.addEventListener("input", recalc));
 
     // Init
     recalc();
   </script>
 
-  <!-- Version badge (kept as in your file) -->
+  <!-- Version badge -->
   <div id="version-badge" style="position:fixed;right:12px;bottom:12px;font:12px/1.2 system-ui;padding:8px 10px;border-radius:999px;background:#10141b;border:1px solid #2a2e36;color:#8b94a7"></div>
   <script>
     (function () {
@@ -218,58 +216,57 @@
     })();
   </script>
 
+  <!-- Save toast -->
+  <div id="save-toast">Saved</div>
+
   <!-- Supabase auth + per-user save/load -->
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
     // 🔧 TODO: paste your Supabase project values
-    const SUPABASE_URL = "https://qzasyupuocurntozalsp.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6YXN5dXB1b2N1cm50b3phbHNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2OTgzMjIsImV4cCI6MjA3MTI3NDMyMn0.9paP6qqGMyMTtwFi7VE6p9qgq9IZh2R-tHeWS1XVc0g";
+    const SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co";
+    const SUPABASE_ANON_KEY = "YOUR_PUBLIC_ANON_KEY";
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Elements
     const $ = (id) => document.getElementById(id);
     const signInBtn = $("signin-google");
     const signOutBtn = $("signout");
     const whoami = $("whoami");
     const appWrap = $("app-wrap");
     const signedOut = $("signed-out");
+    const toast = $("save-toast");
 
-    // Fields to persist (IDs must match inputs)
-    const FIELD_IDS = [
-      "bookingsGoal","inquiryToCall","callToBooking",
-      "inqYtd","callsYtd","bookingsYtd"
-    ];
+    // Fields to persist
+    const FIELD_IDS = ["bookingsGoal","inquiryToCall","callToBooking","inqYtd","callsYtd","bookingsYtd"];
 
     function showSignedIn(email){
-      if (signInBtn) signInBtn.style.display = "none";
-      if (signOutBtn) signOutBtn.style.display = "inline-block";
-      if (whoami) whoami.textContent = `Signed in as ${email}`;
-      if (signedOut) signedOut.style.display = "none";
-      if (appWrap) appWrap.style.display = "block";
+      signInBtn.style.display = "none";
+      signOutBtn.style.display = "inline-block";
+      whoami.textContent = `Signed in as ${email}`;
+      signedOut.style.display = "none";
+      appWrap.style.display = "block";
       if (typeof recalc === "function") recalc();
     }
     function showSignedOut(){
-      if (signInBtn) signInBtn.style.display = "inline-block";
-      if (signOutBtn) signOutBtn.style.display = "none";
-      if (whoami) whoami.textContent = "";
-      if (appWrap) appWrap.style.display = "none";
-      if (signedOut) signedOut.style.display = "block";
+      signInBtn.style.display = "inline-block";
+      signOutBtn.style.display = "none";
+      whoami.textContent = "";
+      appWrap.style.display = "none";
+      signedOut.style.display = "block";
     }
 
-    signInBtn?.addEventListener("click", async () => {
+    signInBtn.addEventListener("click", async () => {
       await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: window.location.origin + window.location.pathname }
       });
     });
-    signOutBtn?.addEventListener("click", async () => {
+    signOutBtn.addEventListener("click", async () => {
       await supabase.auth.signOut();
       showSignedOut();
     });
 
-    // Map input id -> DB column
     const toCol = (id) => ({
       bookingsGoal: "bookings_goal",
       inquiryToCall: "inquiry_to_call",
@@ -279,7 +276,6 @@
       bookingsYtd: "bookings_ytd"
     })[id] || id;
 
-    // Collect current UI into payload
     function collect(userId){
       const payload = { user_id: userId, name: "Default", updated_at: new Date().toISOString() };
       FIELD_IDS.forEach(id => {
@@ -291,7 +287,7 @@
       return payload;
     }
 
-    // Debounced save
+    // Debounced save with visual toast + console errors
     let saveTimer;
     function wireSaves(userId){
       FIELD_IDS.forEach(id => {
@@ -304,38 +300,52 @@
             const { error } = await supabase
               .from("funnels")
               .upsert(payload, { onConflict: "user_id,name" });
-            if (error) console.error("Save error:", error);
+            if (error) {
+              console.error("Save error:", error);
+            } else if (toast) {
+              toast.style.opacity = 1; setTimeout(()=> toast.style.opacity = 0, 800);
+            }
           }, 500);
         });
       });
     }
 
+    // Load the most recent row (even if multiple exist)
     async function loadFunnel(userId){
       const { data, error } = await supabase
-        .from("funnels").select("*")
-        .eq("user_id", userId).eq("name","Default").maybeSingle();
-      if (error) { console.error("Load error:", error); return; }
+        .from("funnels")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("name","Default")
+        .order("updated_at", { ascending: false })
+        .limit(1);
 
-      if (data){
+      if (error) {
+        console.error("Load error:", error);
+        return;
+      }
+
+      const row = data && data[0];
+      if (row){
         FIELD_IDS.forEach(id => {
           const el = $(id);
-          const val = data[toCol(id)];
-          if (el != null && val != null) el.value = val;
+          const val = row[toCol(id)];
+          if (el && val != null) el.value = val;
         });
         if (typeof recalc === "function") recalc();
       } else {
-        // Create first row with current UI values
-        const { error: e2 } = await supabase.from("funnels").insert(collect(userId));
-        if (e2) console.error("Insert error:", e2);
+        // First save to create a row
+        const first = collect(userId);
+        const { error: e2 } = await supabase.from("funnels").insert(first);
+        if (e2) console.error("Initial insert error:", e2);
       }
     }
 
-    // Init auth state
+    // Init auth + data flow
     (async () => {
-      // Handle OAuth redirect, if present
-      await supabase.auth.getSession();
-
+      await supabase.auth.getSession(); // handle OAuth redirect
       const { data: { user } } = await supabase.auth.getUser();
+
       if (user){
         showSignedIn(user.email || "user");
         await loadFunnel(user.id);
