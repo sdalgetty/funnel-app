@@ -185,52 +185,7 @@
     document.getElementById('version-badge').textContent = `Last updated: ${pretty}`;
   })();
 </script>
-<style>
-  /* Subtle version badge (top-left) */
-  #version-badge{
-    position: fixed;
-    left: 12px;
-    top: 12px;
-    font: 12px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: rgba(16,20,27,.85);      /* subtle dark */
-    border: 1px solid #2a2e36;
-    color: #8b94a7;
-    box-shadow: 0 2px 8px rgba(0,0,0,.15);
-    opacity: .75;
-    transition: opacity .2s ease;
-    z-index: 9999;
-    pointer-events: none;                 /* never blocks clicks */
-  }
-  #version-badge:hover{ opacity: 1; }
-
-  /* Hide on small screens */
-  @media (max-width: 640px){
-    #version-badge{ display: none; }
-  }
-</style>
-
-<div id="version-badge" aria-live="polite"></div>
-<script>
-  (function () {
-    // Simple "last updated" timestamp based on the file's last-modified time.
-    // Example output: "Updated Aug 20, 2025 • 07:41 AM"
-    try {
-      const d = new Date(document.lastModified);
-      const prettyDate = d.toLocaleString([], {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      document.getElementById('version-badge').textContent = `Updated ${prettyDate}`;
-    } catch (e) {
-      document.getElementById('version-badge').textContent = 'Updated just now';
-    }
-  })();
-</script>
 </body>
 </html>
+
 
