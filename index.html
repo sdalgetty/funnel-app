@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sales Funnel Calculator</title>
+  <style>
+    :root{
+      --bg:#0f0f10; --panel:#1b1d22; --muted:#8b94a7; --text:#e9edf3; --accent:#8ad1ff;
+      --ok:#d0f5d6; --warn:#ffe1b3;
+    }
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+    body{margin:0;background:var(--bg);color:var(--text);padding:24px}
+    .wrap{max-width:980px;margin:auto}
+    h1{margin:0 0 20px;font-weight:700;letter-spacing:.2px}
+    .grid{display:grid;gap:14px}
+    @media (min-width:800px){.grid{grid-template-columns:1fr 1fr}}
+    .card{background:var(--panel);border-radius:14px;padding:18px;border:1px solid #2a2e36}
+    .section-title{font-size:14px;text-transform:uppercase;color:var(--muted);letter-spacing:.08em;margin-bottom:10px}
+    label{font-size:14px;color:var(--muted)}
+    .row{display:grid;grid-template-columns:1fr 140px;gap:10px;align-items:center;margin:8px 0}
+    input[type="number"]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #343a46;background:#121419;color:var(--text)}
+    .suffix{display:flex;align-items:center;gap:8px}
+    .suffix span{color:var(--muted)}
+    .kpi{display:flex;justify-content:space-between;align-items:baseline;padding:10px 12px;border-radius:12px;background:#121419;border:1px solid #2a2e36;margin:8px 0}
+    .kpi .label{color:var(--muted);font-size:14px}
+    .kpi .value{font-weight:700;font-size:20px}
+    .hint{color:var(--muted);font-size:12px;margin-top:6px}
+    .good{background:linear-gradient(0deg, transparent, transparent), var(--ok)}
+    .warn{background:linear-gradient(0deg, transparent, transparent), var(--warn)}
+    .pill{display:inline-block;background:#10141b;border:1px solid #2a2e36;color:var(--muted);padding:6px 10px;border-radius:999px;font-size:12px}
+    .footer{color:var(--muted);font-size:12px;margin-top:14px}
+    a{color:var(--accent);text-decoration:none}
+  /* override text color for highlighted pace boxes */
+.good .value,
+.warn .value {
+  color: black;
+}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Sales Funnel Calculator</h1>
+
+    <div class="grid">
+      <!-- Goals -->
+      <div class="card" id="goals">
+        <div class="section-title">Inputs — Annual Goals</div>
+        <div class="row">
+          <label for="bookingsGoal">Bookings Goal</label>
+          <input type="number" id="bookingsGoal" min="0" step="1" value="45" />
+        </div>
+        <div class="row">
+          <label for="inquiryToCall">Inquiry → Call %</label>
+          <div class="suffix">
+            <input type="number" id="inquiryToCall" min="0" max="100" step="1" value="50" />
+            <span>%</span>
+          </div>
+        </div>
+        <div class="row">
+          <label for="callToBooking">Call → Booking %</label>
+          <div class="suffix">
+            <input type="number" id="callToBooking" min="0" max="100" step="1" value="30" />
+            <span>%</span>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top:14px">Outputs — Required Activity</div>
+        <div class="kpi">
+          <div class="label">Required Inquiries</div>
+          <div class="value" id="reqInquiries">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Required Sales Calls</div>
+          <div class="value" id="reqCalls">—</div>
+        </div>
+      </div>
+
+      <!-- Progress / Pace -->
+      <div class="card" id="progress">
+        <div class="section-title">Progress — Actual YTD</div>
+        <div class="row">
+          <label for="inqYtd">Inquiries YTD</label>
+          <input type="number" id="inqYtd" min="0" step="1" value="182" />
+        </div>
+        <div class="row">
+          <label for="callsYtd">Calls YTD</label>
+          <input type="number" id="callsYtd" min="0" step="1" value="89" />
+        </div>
+        <div class="row">
+          <label for="bookingsYtd">Bookings YTD</label>
+          <input type="number" id="bookingsYtd" min="0" step="1" value="32" />
+        </div>
+
+        <div class="section-title" style="margin-top:14px">Annualized Pace</div>
+        <div class="kpi" id="paceInqBox">
+          <div class="label">Inquiries Pace</div>
+          <div class="value" id="paceInq">—</div>
+        </div>
+        <div class="kpi" id="paceCallsBox">
+          <div class="label">Calls Pace</div>
+          <div class="value" id="paceCalls">—</div>
+        </div>
+        <div class="kpi" id="paceBookingsBox">
+          <div class="label">Bookings Pace</div>
+          <div class="value" id="paceBookings">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+    </div>
+  </div>
+
+  <script>
+    // Helpers
+    const el = id => document.getElementById(id);
+    const num = v => {
+      const x = parseFloat(v);
+      return Number.isFinite(x) ? x : 0;
+    };
+    const fmtInt = v => isNaN(v) ? "—" : Math.round(v).toLocaleString();
+
+    // Correct auto months elapsed:
+    //  - January 1  => ~0.03
+    //  - August mid => ~7.65
+    //  - Dec 31     => 12.00
+    function monthsElapsedAuto(){
+      const d = new Date();
+      const monthIndex0to11 = d.getMonth(); // 0..11
+      const day = d.getDate();
+      const daysInMonth = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+      const fractional = day / daysInMonth;
+      return monthIndex0to11 + fractional; // <-- removed +1 (bug fix)
+    }
+
+    function recalc(){
+      const bookingsGoal = num(el("bookingsGoal").value);
+      const pctInquiryToCall = num(el("inquiryToCall").value) / 100;
+      const pctCallToBooking = num(el("callToBooking").value) / 100;
+
+      // Requirements from goals
+      const requiredCalls = pctCallToBooking > 0 ? bookingsGoal / pctCallToBooking : NaN;
+      const requiredInquiries = (pctInquiryToCall > 0 && Number.isFinite(requiredCalls))
+        ? requiredCalls / pctInquiryToCall : NaN;
+
+      el("reqCalls").textContent = fmtInt(requiredCalls);
+      el("reqInquiries").textContent = fmtInt(requiredInquiries);
+
+      // Progress / Pace (months are auto-calculated & hidden)
+      const months = Math.min(12, Math.max(0.01, monthsElapsedAuto()));
+      const inqYTD = num(el("inqYtd").value);
+      const callsYTD = num(el("callsYtd").value);
+      const bookingsYTD = num(el("bookingsYtd").value);
+
+      const paceInq = (inqYTD / months) * 12;
+      const paceCalls = (callsYTD / months) * 12;
+      const paceBookings = (bookingsYTD / months) * 12;
+
+      el("paceInq").textContent = fmtInt(paceInq);
+      el("paceCalls").textContent = fmtInt(paceCalls);
+      el("paceBookings").textContent = fmtInt(paceBookings);
+
+      // Highlight pace vs goal (bookings)
+      const box = el("paceBookingsBox");
+      box.classList.remove("good","warn");
+      if (Number.isFinite(paceBookings) && Number.isFinite(bookingsGoal) && bookingsGoal>0){
+        if (paceBookings >= bookingsGoal) box.classList.add("good");
+        else box.classList.add("warn");
+      }
+    }
+
+    // Wire inputs (no months input anymore)
+    ["bookingsGoal","inquiryToCall","callToBooking","inqYtd","callsYtd","bookingsYtd"]
+      .forEach(id => el(id).addEventListener("input", recalc));
+
+    // Init
+    recalc();
+  </script>
+</body>
+</html>
