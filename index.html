@@ -220,13 +220,22 @@
   <div id="save-toast">Saved</div>
 
   <!-- Supabase auth + per-user save/load -->
+   <!-- Injected at build time by Netlify (placeholders replaced via env vars) -->
+<script>
+  window.ENV = {
+    SUPABASE_URL: "__SUPABASE_URL__",
+    SUPABASE_ANON_KEY: "__SUPABASE_ANON_KEY__"
+  };
+</script>
+
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
     // 🔧 TODO: paste your Supabase project values
-    const SUPABASE_URL = "https://qzasyupuocurntozalsp.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6YXN5dXB1b2N1cm50b3phbHNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2OTgzMjIsImV4cCI6MjA3MTI3NDMyMn0.9paP6qqGMyMTtwFi7VE6p9qgq9IZh2R-tHeWS1XVc0g";
-
+    const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.ENV;
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.error("Missing Supabase env vars (placeholders not replaced). Check Netlify build command & env vars.");
+  }
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const $ = (id) => document.getElementById(id);
