@@ -219,23 +219,24 @@
   <!-- Save toast -->
   <div id="save-toast">Saved</div>
 
-  <!-- Supabase auth + per-user save/load -->
-   <!-- Injected at build time by Netlify (placeholders replaced via env vars) -->
-<script>
-  window.ENV = {
-    SUPABASE_URL: "__SUPABASE_URL__",
-    SUPABASE_ANON_KEY: "__SUPABASE_ANON_KEY__"
-  };
-</script>
+  <!-- Injected at build time by Netlify (placeholders replaced via env vars) -->
+  <script>
+    window.ENV = {
+      SUPABASE_URL: "__SUPABASE_URL__",
+      SUPABASE_ANON_KEY: "__SUPABASE_ANON_KEY__"
+    };
+  </script>
 
+  <!-- Supabase auth + per-user save/load -->
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-    // 🔧 TODO: paste your Supabase project values
     const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.ENV;
-      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.error("Missing Supabase env vars (placeholders not replaced). Check Netlify build command & env vars.");
-  }
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.error("Missing Supabase env vars. Check Netlify env + build command.");
+    }
+
+    // ✅ single client
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const $ = (id) => document.getElementById(id);
@@ -265,10 +266,11 @@
       signedOut.style.display = "block";
     }
 
+    // 🔐 Google sign-in → always return to site root to avoid 404
     signInBtn.addEventListener("click", async () => {
       await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: window.location.origin + window.location.pathname }
+        options: { redirectTo: window.location.origin + "/" }
       });
     });
     signOutBtn.addEventListener("click", async () => {
@@ -377,4 +379,3 @@
   </script>
 </body>
 </html>
-
