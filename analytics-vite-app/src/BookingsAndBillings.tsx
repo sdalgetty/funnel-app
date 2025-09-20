@@ -648,6 +648,10 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
     bookedRevenue: '',
   });
   const [payments, setPayments] = useState<Omit<Payment, 'id' | 'bookingId'>[]>([]);
+  const [paymentType, setPaymentType] = useState<'one-time' | 'installments' | 'recurring' | null>(null);
+  const [recurringInterval, setRecurringInterval] = useState<'monthly' | 'bi-monthly'>('monthly');
+  const [recurringStartDate, setRecurringStartDate] = useState('');
+  const [recurringEndDate, setRecurringEndDate] = useState('');
 
   const addPayment = () => {
     setPayments(prev => [...prev, {
@@ -657,6 +661,75 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
       memo: ''
     }]);
   };
+
+  // Generate payment schedule based on type and booking amount
+  const generatePaymentSchedule = () => {
+    const totalAmount = parseFloat(formData.bookedRevenue) || 0;
+    if (totalAmount === 0 || !paymentType) return;
+
+    const totalCents = Math.round(totalAmount * 100);
+    let newPayments: Omit<Payment, 'id' | 'bookingId'>[] = [];
+
+    if (paymentType === 'one-time') {
+      newPayments = [{
+        amount: totalCents,
+        dueDate: formData.dateBooked || new Date().toISOString().split('T')[0],
+        paidAt: null,
+        memo: ''
+      }];
+    } else if (paymentType === 'installments') {
+      // For installments, don't auto-generate - let user add manually
+      return;
+    } else if (paymentType === 'recurring') {
+      if (!recurringStartDate || !recurringEndDate) return;
+      
+      const startDate = new Date(recurringStartDate);
+      const endDate = new Date(recurringEndDate);
+      const totalMonths = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
+      
+      let paymentCount = 0;
+      if (recurringInterval === 'monthly') {
+        paymentCount = totalMonths;
+      } else if (recurringInterval === 'bi-monthly') {
+        paymentCount = Math.ceil(totalMonths / 2);
+      }
+      
+      const baseAmount = Math.floor(totalCents / paymentCount);
+      const remainder = totalCents - (baseAmount * paymentCount);
+      
+      for (let i = 0; i < paymentCount; i++) {
+        const amount = i === paymentCount - 1 ? baseAmount + remainder : baseAmount;
+        const dueDate = new Date(startDate);
+        
+        if (recurringInterval === 'monthly') {
+          dueDate.setMonth(dueDate.getMonth() + i);
+        } else if (recurringInterval === 'bi-monthly') {
+          dueDate.setMonth(dueDate.getMonth() + (i * 2));
+        }
+        
+        newPayments.push({
+          amount,
+          dueDate: dueDate.toISOString().split('T')[0],
+          paidAt: null,
+          memo: ''
+        });
+      }
+    }
+
+    setPayments(newPayments);
+  };
+
+  // Reset payments when payment type changes
+  React.useEffect(() => {
+    setPayments([]);
+  }, [paymentType]);
+
+  // Auto-generate payments when booking amount or payment type changes
+  React.useEffect(() => {
+    if (formData.bookedRevenue && paymentType) {
+      generatePaymentSchedule();
+    }
+  }, [formData.bookedRevenue, paymentType, recurringInterval, recurringStartDate, recurringEndDate]);
 
   const updatePayment = (index: number, field: keyof Omit<Payment, 'id' | 'bookingId'>, value: any) => {
     setPayments(prev => prev.map((payment, i) => 
@@ -710,10 +783,11 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
         backgroundColor: 'white',
         borderRadius: '12px',
         padding: '24px',
-        width: '90%',
-        maxWidth: '600px',
+        width: '95%',
+        maxWidth: '800px',
         maxHeight: '90vh',
-        overflow: 'auto'
+        overflow: 'auto',
+        boxSizing: 'border-box'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Add New Booking</h2>
@@ -722,10 +796,10 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
                 Project Name *
               </label>
               <input
@@ -734,17 +808,19 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
                 onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '8px 12px',
+                  padding: '10px 12px',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  height: '40px'
                 }}
                 placeholder="e.g., Ashley & Devon"
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
                 Service Type *
               </label>
               <select
@@ -752,10 +828,12 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
                 onChange={(e) => setFormData({ ...formData, serviceTypeId: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '8px 12px',
+                  padding: '10px 12px',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  height: '40px'
                 }}
               >
                 <option value="">Select service type</option>
@@ -766,9 +844,9 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
                 Date Inquired
               </label>
               <input
@@ -777,16 +855,18 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
                 onChange={(e) => setFormData({ ...formData, dateInquired: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '8px 12px',
+                  padding: '10px 12px',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  height: '40px'
                 }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
                 Date Booked
               </label>
               <input
@@ -795,16 +875,18 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
                 onChange={(e) => setFormData({ ...formData, dateBooked: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '8px 12px',
+                  padding: '10px 12px',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  height: '40px'
                 }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
                 Project Date
               </label>
               <input
@@ -813,17 +895,19 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
                 onChange={(e) => setFormData({ ...formData, projectDate: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '8px 12px',
+                  padding: '10px 12px',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  height: '40px'
                 }}
               />
             </div>
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
               Booked Revenue *
             </label>
             <input
@@ -833,72 +917,249 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
               onChange={(e) => setFormData({ ...formData, bookedRevenue: e.target.value })}
               style={{
                 width: '100%',
-                padding: '8px 12px',
+                padding: '10px 12px',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
-                fontSize: '14px'
+                fontSize: '14px',
+                boxSizing: 'border-box',
+                height: '40px'
               }}
               placeholder="0.00"
             />
           </div>
 
           {/* Payment Schedule Section */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <div style={{ 
+            border: '1px solid #e5e7eb', 
+            borderRadius: '8px', 
+            padding: '20px',
+            backgroundColor: '#f9fafb'
+          }}>
+            <div style={{ marginBottom: '20px' }}>
               <label style={{ fontSize: '16px', fontWeight: '600' }}>
                 Payment Schedule
               </label>
-              <button
-                type="button"
-                onClick={addPayment}
-                style={{
-                  backgroundColor: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                <Plus size={12} />
-                Add Payment
-              </button>
             </div>
+
+            {/* Payment Type Selection */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="paymentType"
+                    value="one-time"
+                    checked={paymentType === 'one-time'}
+                    onChange={(e) => setPaymentType(e.target.value as any)}
+                  />
+                  <span style={{ fontSize: '14px' }}>One-time Payment</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="paymentType"
+                    value="installments"
+                    checked={paymentType === 'installments'}
+                    onChange={(e) => setPaymentType(e.target.value as any)}
+                  />
+                  <span style={{ fontSize: '14px' }}>Installments</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="paymentType"
+                    value="recurring"
+                    checked={paymentType === 'recurring'}
+                    onChange={(e) => setPaymentType(e.target.value as any)}
+                  />
+                  <span style={{ fontSize: '14px' }}>Recurring</span>
+                </label>
+              </div>
+            </div>
+
+            {/* One-time Payment - Due Date */}
+            {paymentType === 'one-time' && (
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+                  Payment Due Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.dateBooked || new Date().toISOString().split('T')[0]}
+                  onChange={(e) => {
+                    // Update the due date for the one-time payment
+                    if (payments.length > 0) {
+                      updatePayment(0, 'dueDate', e.target.value);
+                    }
+                  }}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    width: '200px'
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Installment Options */}
+            {paymentType === 'installments' && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '500' }}>
+                    Payment Schedule
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addPayment}
+                    style={{
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <Plus size={12} />
+                    Add Payment
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Recurring Options */}
+            {paymentType === 'recurring' && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+                      Payment Frequency
+                    </label>
+                    <select
+                      value={recurringInterval}
+                      onChange={(e) => setRecurringInterval(e.target.value as any)}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        height: '40px'
+                      }}
+                    >
+                      <option value="monthly">Monthly</option>
+                      <option value="bi-monthly">Bi-Monthly</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={recurringStartDate}
+                      onChange={(e) => setRecurringStartDate(e.target.value)}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        height: '40px'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={recurringEndDate}
+                      onChange={(e) => setRecurringEndDate(e.target.value)}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        height: '40px'
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Payment Summary */}
+            {payments.length > 0 && (
+              <div style={{
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '16px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '500' }}>
+                    Total Payment Schedule: {toUSD(payments.reduce((sum, p) => sum + p.amount, 0))}
+                  </span>
+                  <span style={{ 
+                    fontSize: '12px', 
+                    color: payments.reduce((sum, p) => sum + p.amount, 0) === Math.round(parseFloat(formData.bookedRevenue || '0') * 100) 
+                      ? '#10b981' 
+                      : '#f59e0b' 
+                  }}>
+                    {payments.reduce((sum, p) => sum + p.amount, 0) === Math.round(parseFloat(formData.bookedRevenue || '0') * 100) 
+                      ? '✓ Matches booking amount' 
+                      : '⚠ Amount mismatch'}
+                  </span>
+                </div>
+              </div>
+            )}
             
             {payments.map((payment, index) => (
               <div key={index} style={{
                 border: '1px solid #e5e7eb',
                 borderRadius: '8px',
-                padding: '12px',
-                marginBottom: '8px',
-                backgroundColor: '#f9fafb'
+                padding: '16px',
+                marginBottom: '12px',
+                backgroundColor: 'white',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <span style={{ fontSize: '14px', fontWeight: '500' }}>Payment {index + 1}</span>
-                  <button
-                    type="button"
-                    onClick={() => removePayment(index)}
-                    style={{
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '4px 8px',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <X size={12} />
-                  </button>
+                  {paymentType === 'installments' && (
+                    <button
+                      type="button"
+                      onClick={() => removePayment(index)}
+                      style={{
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        fontSize: '12px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
                 </div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '2px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>
                       Amount
                     </label>
                     <input
@@ -908,16 +1169,17 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
                       onChange={(e) => updatePayment(index, 'amount', Math.round(parseFloat(e.target.value || '0') * 100))}
                       style={{
                         width: '100%',
-                        padding: '6px 8px',
+                        padding: '10px 12px',
                         border: '1px solid #d1d5db',
-                        borderRadius: '4px',
-                        fontSize: '12px'
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
                       }}
                       placeholder="0.00"
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '2px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>
                       Due Date
                     </label>
                     <input
@@ -926,55 +1188,20 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
                       onChange={(e) => updatePayment(index, 'dueDate', e.target.value)}
                       style={{
                         width: '100%',
-                        padding: '6px 8px',
+                        padding: '10px 12px',
                         border: '1px solid #d1d5db',
-                        borderRadius: '4px',
-                        fontSize: '12px'
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
                       }}
                     />
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '2px' }}>
-                      Paid Date
-                    </label>
-                    <input
-                      type="date"
-                      value={payment.paidAt || ''}
-                      onChange={(e) => updatePayment(index, 'paidAt', e.target.value || null)}
-                      style={{
-                        width: '100%',
-                        padding: '6px 8px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '4px',
-                        fontSize: '12px'
-                      }}
-                    />
-                  </div>
-                </div>
-                
-                <div style={{ marginTop: '8px' }}>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '2px' }}>
-                    Memo
-                  </label>
-                  <input
-                    type="text"
-                    value={payment.memo || ''}
-                    onChange={(e) => updatePayment(index, 'memo', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '6px 8px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      fontSize: '12px'
-                    }}
-                    placeholder="e.g., Retainer, Milestone, Final Payment"
-                  />
                 </div>
               </div>
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
             <button
               type="button"
               onClick={onClose}
