@@ -3,6 +3,11 @@ import BookingsAndBillingsPOC from './BookingsAndBillings'
 import Funnel from './Funnel'
 import Calculator from './Calculator'
 import Forecast from './Forecast'
+import AuthModal from './AuthModal'
+import FeatureGate from './FeatureGate'
+import { AuthProvider, useAuth } from './AuthContext'
+import { UpgradePrompt } from './FeatureGate'
+import { User, Crown, LogOut } from 'lucide-react'
 // import { FunnelData, mockFunnelData } from './mockData'
 import './App.css'
 
@@ -20,8 +25,10 @@ interface FunnelData {
   lastUpdated?: string;
 }
 
-function App() {
+function AppContent() {
+  const { user, logout, features } = useAuth()
   const [currentPage, setCurrentPage] = useState<Page>('funnel')
+  const [showAuthModal, setShowAuthModal] = useState(false)
   
   // Mock data directly in App component
   const mockFunnelData: FunnelData[] = [
@@ -176,82 +183,172 @@ function App() {
         <h1 style={{ fontSize: '20px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
           Analytics Dashboard
         </h1>
-            <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
-              <button
-                onClick={() => setCurrentPage('funnel')}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  backgroundColor: currentPage === 'funnel' ? '#3b82f6' : '#f3f4f6',
-                  color: currentPage === 'funnel' ? 'white' : '#374151',
-                  fontSize: '14px',
+        
+        <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+          <button
+            onClick={() => setCurrentPage('funnel')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: currentPage === 'funnel' ? '#3b82f6' : '#f3f4f6',
+              color: currentPage === 'funnel' ? 'white' : '#374151',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Funnel
+          </button>
+          <button
+            onClick={() => setCurrentPage('calculator')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: currentPage === 'calculator' ? '#3b82f6' : '#f3f4f6',
+              color: currentPage === 'calculator' ? 'white' : '#374151',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Calculator
+          </button>
+          <button
+            onClick={() => setCurrentPage('forecast')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: currentPage === 'forecast' ? '#3b82f6' : '#f3f4f6',
+              color: currentPage === 'forecast' ? 'white' : '#374151',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Forecast
+          </button>
+          <button
+            onClick={() => setCurrentPage('bookings')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: currentPage === 'bookings' ? '#3b82f6' : '#f3f4f6',
+              color: currentPage === 'bookings' ? 'white' : '#374151',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Sales
+          </button>
+        </div>
+
+        {/* User Menu */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
+          {user ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  backgroundColor: user.subscriptionTier === 'pro' ? '#fef3c7' : '#f3f4f6',
+                  fontSize: '12px',
                   fontWeight: '500',
+                  color: user.subscriptionTier === 'pro' ? '#92400e' : '#6b7280'
+                }}>
+                  <Crown size={12} />
+                  {user.subscriptionTier === 'pro' ? 'Pro' : 'Free'}
+                </div>
+                <span style={{ fontSize: '14px', color: '#374151' }}>
+                  {user.name}
+                </span>
+              </div>
+              <button
+                onClick={logout}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: 'white',
+                  color: '#6b7280',
+                  fontSize: '12px',
                   cursor: 'pointer',
                   transition: 'all 0.2s'
                 }}
               >
-                Funnel
+                <LogOut size={12} />
+                Logout
               </button>
-              <button
-                onClick={() => setCurrentPage('calculator')}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  backgroundColor: currentPage === 'calculator' ? '#3b82f6' : '#f3f4f6',
-                  color: currentPage === 'calculator' ? 'white' : '#374151',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-              >
-                Calculator
-              </button>
-              <button
-                onClick={() => setCurrentPage('forecast')}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  backgroundColor: currentPage === 'forecast' ? '#3b82f6' : '#f3f4f6',
-                  color: currentPage === 'forecast' ? 'white' : '#374151',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-              >
-                Forecast
-              </button>
-              <button
-                onClick={() => setCurrentPage('bookings')}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  backgroundColor: currentPage === 'bookings' ? '#3b82f6' : '#f3f4f6',
-                  color: currentPage === 'bookings' ? 'white' : '#374151',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-              >
-                Sales
-              </button>
-            </div>
+            </>
+          ) : (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              <User size={16} />
+              Sign In
+            </button>
+          )}
+        </div>
       </nav>
 
       {/* Page Content */}
       <div style={{ padding: '0' }}>
-        {currentPage === 'bookings' && <BookingsAndBillingsPOC />}
-        {currentPage === 'funnel' && <Funnel funnelData={funnelData} setFunnelData={setFunnelData} />}
+        {currentPage === 'bookings' && (
+          <FeatureGate feature="sales">
+            <BookingsAndBillingsPOC />
+          </FeatureGate>
+        )}
+        {currentPage === 'funnel' && <Funnel funnelData={funnelData} setFunnelData={setFunnelData} salesData={bookings} paymentsData={payments} />}
         {currentPage === 'calculator' && <Calculator funnelData={funnelData} />}
-        {currentPage === 'forecast' && <Forecast funnelData={funnelData} serviceTypes={serviceTypes} setServiceTypes={setServiceTypes} bookings={bookings} payments={payments} />}
+        {currentPage === 'forecast' && (
+          <FeatureGate feature="forecast">
+            <Forecast funnelData={funnelData} serviceTypes={serviceTypes} setServiceTypes={setServiceTypes} bookings={bookings} payments={payments} />
+          </FeatureGate>
+        )}
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
     </div>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 

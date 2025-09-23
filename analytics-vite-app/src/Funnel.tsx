@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit } from "lucide-react";
+import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit, Lock, Crown } from "lucide-react";
+import { useAuth } from "./AuthContext";
 
 interface FunnelData {
   id: string;
@@ -16,6 +17,8 @@ interface FunnelData {
 interface FunnelProps {
   funnelData: FunnelData[];
   setFunnelData: (data: FunnelData[]) => void;
+  salesData?: any[]; // Optional sales data for Pro users
+  paymentsData?: any[]; // Optional payments data for Pro users
 }
 
 // Helper functions
@@ -28,7 +31,8 @@ const calculateConversionRate = (from: number, to: number) => {
   return ((to / from) * 100).toFixed(1);
 };
 
-export default function Funnel({ funnelData, setFunnelData }: FunnelProps) {
+export default function Funnel({ funnelData, setFunnelData, salesData = [], paymentsData = [] }: FunnelProps) {
+  const { user, features } = useAuth();
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
 
@@ -100,12 +104,64 @@ export default function Funnel({ funnelData, setFunnelData }: FunnelProps) {
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', margin: '0 0 8px 0', color: '#1f2937' }}>
-          Sales Funnel
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: '700', margin: 0, color: '#1f2937' }}>
+            Sales Funnel
+          </h1>
+          {user && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                backgroundColor: user.subscriptionTier === 'pro' ? '#fef3c7' : '#f3f4f6',
+                fontSize: '12px',
+                fontWeight: '500',
+                color: user.subscriptionTier === 'pro' ? '#92400e' : '#6b7280'
+              }}>
+                <Crown size={12} />
+                {user.subscriptionTier === 'pro' ? 'Pro' : 'Free'}
+              </div>
+            </div>
+          )}
+        </div>
         <p style={{ color: '#6b7280', margin: 0, fontSize: '16px' }}>
           Track and analyze your sales funnel performance
         </p>
+        
+        {/* Data Integration Notice */}
+        {user && (
+          <div style={{
+            marginTop: '12px',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            backgroundColor: features.canSyncFunnelWithSales ? '#f0f9ff' : '#fef3c7',
+            border: `1px solid ${features.canSyncFunnelWithSales ? '#bfdbfe' : '#fbbf24'}`,
+            fontSize: '12px',
+            color: features.canSyncFunnelWithSales ? '#1e40af' : '#92400e',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            {features.canSyncFunnelWithSales ? (
+              <>
+                <div style={{ fontSize: '14px' }}>🔄</div>
+                <div>
+                  <strong>Auto-sync enabled:</strong> Data syncs with Sales tab
+                </div>
+              </>
+            ) : (
+              <>
+                <Lock size={14} />
+                <div>
+                  <strong>Manual entry:</strong> Upgrade to Pro for auto-sync
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Year Selector */}
