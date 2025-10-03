@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Plus, Trash2, CalendarDays, DollarSign, Download, Edit, X } from "lucide-react";
+import { Plus, Trash2, CalendarDays, DollarSign, Download, Edit, X, Edit3, Check } from "lucide-react";
 
 // Types
 export type Client = {
@@ -12,12 +12,20 @@ export type ServiceType = {
   id: string;
   name: string;
   isCustom: boolean;
+  tracksInFunnel: boolean;
+};
+
+export type LeadSource = {
+  id: string;
+  name: string;
+  isCustom: boolean;
 };
 
 export type Booking = {
   id: string;
   projectName: string; // Required
   serviceTypeId: string; // Required
+  leadSourceId: string; // Required
   dateInquired?: string; // Optional
   dateBooked?: string; // Optional
   projectDate?: string; // Optional
@@ -34,22 +42,44 @@ export type Payment = {
   memo?: string;
 };
 
-// Mock Data
+// Mock Data - Include service types and lead sources for existing bookings
 const defaultServiceTypes: ServiceType[] = [
-  { id: "st_1", name: "Wedding", isCustom: false },
-  { id: "st_2", name: "Associate Wedding", isCustom: false },
-  { id: "st_3", name: "Event", isCustom: false },
-  { id: "st_4", name: "Engagement", isCustom: false },
-  { id: "st_5", name: "Family", isCustom: false },
-  { id: "st_6", name: "Print Sale", isCustom: false },
-  { id: "st_7", name: "Album Upgrade", isCustom: false },
+  {
+    id: "st_wedding",
+    name: "Wedding Photography",
+    tracksInFunnel: true
+  },
+  {
+    id: "st_engagement",
+    name: "Engagement Photography", 
+    tracksInFunnel: true
+  }
+];
+
+const defaultLeadSources: LeadSource[] = [
+  {
+    id: "ls_instagram",
+    name: "Instagram Ads",
+    isCustom: true // Allow editing/deleting, but will reset on reload
+  },
+  {
+    id: "ls_google",
+    name: "Google",
+    isCustom: true // Allow editing/deleting, but will reset on reload
+  },
+  {
+    id: "ls_referral",
+    name: "Client Referral",
+    isCustom: true // Allow editing/deleting, but will reset on reload
+  }
 ];
 
 const mockBookings: Booking[] = [
   {
     id: "b_1",
     projectName: "Kelly & Shig Wedding",
-    serviceTypeId: "st_1",
+    serviceTypeId: "st_wedding", // Wedding service type
+    leadSourceId: "ls_instagram", // Instagram Ads
     dateInquired: "2025-01-15",
     dateBooked: "2025-02-03",
     projectDate: "2025-10-18",
@@ -59,7 +89,8 @@ const mockBookings: Booking[] = [
   {
     id: "b_2",
     projectName: "Ashley & Devon Engagement",
-    serviceTypeId: "st_4",
+    serviceTypeId: "st_engagement", // Engagement service type
+    leadSourceId: "ls_google", // Google
     dateInquired: "2025-02-20",
     dateBooked: "2025-03-01",
     projectDate: "2025-05-12",
@@ -71,7 +102,7 @@ const mockBookings: Booking[] = [
 const mockPayments: Payment[] = [
   { id: "p_1", bookingId: "b_1", dueDate: "2025-02-10", amount: 200000, paidAt: "2025-02-10", memo: "Retainer" },
   { id: "p_2", bookingId: "b_1", dueDate: "2025-06-15", amount: 300000, paidAt: "2025-06-15", memo: "Milestone" },
-  { id: "p_3", bookingId: "b_1", dueDate: "2025-10-05", amount: 300000, paidAt: null, memo: "Balance" },
+  { id: "p_3", bookingId: "b_1", dueDate: "2025-10-05", amount: 300000, paidAt: "2025-10-05", memo: "Balance" },
   { id: "p_4", bookingId: "b_2", dueDate: "2025-03-05", amount: 60000, paidAt: "2025-03-05", memo: "Retainer" },
   { id: "p_5", bookingId: "b_2", dueDate: "2025-04-20", amount: 60000, paidAt: "2025-04-20", memo: "Final Payment" },
 ];
@@ -84,8 +115,10 @@ export default function BookingsAndBillingsPOC() {
   const [bookings, setBookings] = useState<Booking[]>(mockBookings);
   const [payments, setPayments] = useState<Payment[]>(mockPayments);
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>(defaultServiceTypes);
+  const [leadSources, setLeadSources] = useState<LeadSource[]>(defaultLeadSources);
   const [showAddBooking, setShowAddBooking] = useState(false);
   const [showServiceTypes, setShowServiceTypes] = useState(false);
+  const [showLeadSources, setShowLeadSources] = useState(false);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
@@ -93,7 +126,7 @@ export default function BookingsAndBillingsPOC() {
   
   // Filtering and sorting state
   const [filters, setFilters] = useState({
-    serviceTypes: defaultServiceTypes.map(st => st.id), // All selected by default
+    serviceTypes: [], // Start with no filters when no service types exist
     search: ''
   });
   const [sortBy, setSortBy] = useState<keyof Booking>('createdAt');
@@ -104,11 +137,13 @@ export default function BookingsAndBillingsPOC() {
     let filtered = bookings.filter(booking => {
       const serviceType = serviceTypes.find(st => st.id === booking.serviceTypeId);
       const matchesServiceType = filters.serviceTypes.length === 0 || 
-        filters.serviceTypes.length === serviceTypes.length || 
-        filters.serviceTypes.includes(booking.serviceTypeId);
+        (serviceTypes.length > 0 && filters.serviceTypes.length === serviceTypes.length) || 
+        filters.serviceTypes.includes(booking.serviceTypeId) ||
+        (!booking.serviceTypeId && filters.serviceTypes.includes('')); // Handle deleted service types
       const matchesSearch = !filters.search || 
         booking.projectName.toLowerCase().includes(filters.search.toLowerCase()) ||
-        (serviceType?.name.toLowerCase().includes(filters.search.toLowerCase()) ?? false);
+        (serviceType?.name.toLowerCase().includes(filters.search.toLowerCase()) ?? false) ||
+        (!serviceType && 'deleted service type'.includes(filters.search.toLowerCase()));
       
       return matchesServiceType && matchesSearch;
     });
@@ -174,13 +209,86 @@ export default function BookingsAndBillingsPOC() {
       id: `st_${Math.random().toString(36).slice(2, 9)}`,
       name,
       isCustom: true,
+      tracksInFunnel: true, // Default to tracking in funnel
     };
     setServiceTypes(prev => [...prev, newServiceType]);
   };
 
   // Remove custom service type
   const removeServiceType = (id: string) => {
+    // Check if any bookings are using this service type
+    const bookingsUsingServiceType = bookings.filter(b => b.serviceTypeId === id);
+    
+    if (bookingsUsingServiceType.length > 0) {
+      const confirmMessage = `This service type is used by ${bookingsUsingServiceType.length} booking(s). Deleting it will remove the service type association from those bookings. Are you sure you want to continue?`;
+      
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+      
+      // Remove service type from bookings that use it
+      setBookings(prev => prev.map(booking => 
+        booking.serviceTypeId === id 
+          ? { ...booking, serviceTypeId: '' } // Set to empty string to maintain data integrity
+          : booking
+      ));
+    }
+    
     setServiceTypes(prev => prev.filter(st => st.id !== id));
+  };
+
+  // Update service type
+  const updateServiceType = (id: string, newName: string) => {
+    setServiceTypes(prev => prev.map(st => 
+      st.id === id ? { ...st, name: newName } : st
+    ));
+  };
+
+  // Toggle funnel tracking for service type
+  const toggleFunnelTracking = (id: string) => {
+    setServiceTypes(prev => prev.map(st => 
+      st.id === id ? { ...st, tracksInFunnel: !st.tracksInFunnel } : st
+    ));
+  };
+
+  // Add lead source
+  const addLeadSource = (name: string) => {
+    const newLeadSource: LeadSource = {
+      id: `ls_${Math.random().toString(36).slice(2, 9)}`,
+      name,
+      isCustom: true, // Keep for potential future use
+    };
+    setLeadSources(prev => [...prev, newLeadSource]);
+  };
+
+  // Remove lead source
+  const removeLeadSource = (id: string) => {
+    // Check if any bookings are using this lead source
+    const bookingsUsingLeadSource = bookings.filter(b => b.leadSourceId === id);
+    
+    if (bookingsUsingLeadSource.length > 0) {
+      const confirmMessage = `This lead source is used by ${bookingsUsingLeadSource.length} booking(s). Deleting it will remove the lead source association from those bookings. Are you sure you want to continue?`;
+      
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+      
+      // Remove lead source from bookings that use it
+      setBookings(prev => prev.map(booking => 
+        booking.leadSourceId === id 
+          ? { ...booking, leadSourceId: '' } // Set to empty string to maintain data integrity
+          : booking
+      ));
+    }
+    
+    setLeadSources(prev => prev.filter(ls => ls.id !== id));
+  };
+
+  // Update lead source
+  const updateLeadSource = (id: string, newName: string) => {
+    setLeadSources(prev => prev.map(ls => 
+      ls.id === id ? { ...ls, name: newName } : ls
+    ));
   };
 
   // Update existing booking
@@ -208,6 +316,7 @@ export default function BookingsAndBillingsPOC() {
 
   // Select all service types
   const selectAllServiceTypes = () => {
+    if (serviceTypes.length === 0) return; // Don't do anything if no service types exist
     setFilters(prev => ({
       ...prev,
       serviceTypes: serviceTypes.map(st => st.id)
@@ -224,6 +333,7 @@ export default function BookingsAndBillingsPOC() {
 
   // Get display text for service type filter
   const getServiceTypeFilterText = () => {
+    if (serviceTypes.length === 0) return "No service types created";
     if (filters.serviceTypes.length === 0) return "No service types selected";
     if (filters.serviceTypes.length === serviceTypes.length) return "All service types";
     if (filters.serviceTypes.length === 1) {
@@ -272,8 +382,8 @@ export default function BookingsAndBillingsPOC() {
         `}
       </style>
       <header style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>Bookings & Billings – Proof of Concept</h1>
-        <p style={{ fontSize: '14px', color: '#666' }}>Primary data source for the app. Normalized model with client → booking → payments. Mobile-first UI.</p>
+        <h1 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>Sales Tracker</h1>
+        <p style={{ fontSize: '14px', color: '#666' }}>Manage and track your sales data.</p>
       </header>
 
 
@@ -317,6 +427,26 @@ export default function BookingsAndBillingsPOC() {
           <Edit size={16} />
           Manage Service Types
         </button>
+        
+        <button
+          onClick={() => setShowLeadSources(true)}
+          style={{
+            backgroundColor: '#10b981',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <Edit size={16} />
+          Manage Lead Sources
+        </button>
       </section>
 
       {/* Filters and Search */}
@@ -328,7 +458,7 @@ export default function BookingsAndBillingsPOC() {
           alignItems: 'end'
         }}>
           <div style={{ minWidth: '200px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
               Search Projects
             </label>
             <input
@@ -348,7 +478,7 @@ export default function BookingsAndBillingsPOC() {
           </div>
           
           <div style={{ position: 'relative', minWidth: '200px' }} data-dropdown>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
               Filter by Service Type
             </label>
             <button
@@ -444,7 +574,7 @@ export default function BookingsAndBillingsPOC() {
           </div>
           
           <div style={{ minWidth: '200px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
               Sort by
             </label>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -490,6 +620,7 @@ export default function BookingsAndBillingsPOC() {
       {showAddBooking && (
         <AddBookingModal
           serviceTypes={serviceTypes}
+          leadSources={leadSources}
           onAdd={addBooking}
           onAddPayments={(payments) => {
             payments.forEach(payment => {
@@ -505,7 +636,17 @@ export default function BookingsAndBillingsPOC() {
         <EditBookingModal
           booking={editingBooking}
           serviceTypes={serviceTypes}
+          leadSources={leadSources}
+          payments={payments.filter(p => p.bookingId === editingBooking.id)}
           onUpdate={updateBooking}
+          onUpdatePayments={(updatedPayments) => {
+            // Remove existing payments for this booking
+            setPayments(prev => prev.filter(p => p.bookingId !== editingBooking.id));
+            // Add updated payments
+            updatedPayments.forEach(payment => {
+              addPayment(payment);
+            });
+          }}
           onClose={() => setEditingBooking(null)}
         />
       )}
@@ -516,7 +657,20 @@ export default function BookingsAndBillingsPOC() {
           serviceTypes={serviceTypes}
           onAdd={addServiceType}
           onRemove={removeServiceType}
+          onUpdate={updateServiceType}
+          onToggleFunnelTracking={toggleFunnelTracking}
           onClose={() => setShowServiceTypes(false)}
+        />
+      )}
+
+      {/* Lead Sources Modal */}
+      {showLeadSources && (
+        <LeadSourcesModal
+          leadSources={leadSources}
+          onAdd={addLeadSource}
+          onRemove={removeLeadSource}
+          onUpdate={updateLeadSource}
+          onClose={() => setShowLeadSources(false)}
         />
       )}
 
@@ -545,30 +699,56 @@ export default function BookingsAndBillingsPOC() {
               <tr>
                 <Th>Project Name</Th>
                 <Th>Service Type</Th>
+                <Th>Lead Source</Th>
                 <Th>Date Inquired</Th>
                 <Th>Date Booked</Th>
                 <Th>Project Date</Th>
-                <Th>Revenue</Th>
+                <Th align="right">Revenue</Th>
                 <Th>Actions</Th>
               </tr>
             </thead>
             <tbody>
-              {filteredAndSortedBookings.map((booking) => {
+              {filteredAndSortedBookings.map((booking, index) => {
                 const serviceType = serviceTypes.find(st => st.id === booking.serviceTypeId);
+                const leadSource = leadSources.find(ls => ls.id === booking.leadSourceId);
                 const bookingPayments = payments.filter(p => p.bookingId === booking.id);
                 const collected = sum(bookingPayments.filter(p => p.paidAt).map(p => p.amount));
                 const outstanding = booking.bookedRevenue - collected;
                 
                 return (
-                  <tr key={booking.id} style={{ borderBottom: '1px solid #eee' }}>
+                  <tr key={booking.id} style={{ 
+                    borderBottom: '1px solid #eee',
+                    backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb'
+                  }}>
                     <Td>
                       <div style={{ fontWeight: '500' }}>{booking.projectName}</div>
                     </Td>
-                    <Td>{serviceType?.name || 'Unknown'}</Td>
+                    <Td>
+                      {serviceType?.name || (
+                        <span style={{ 
+                          color: '#ef4444', 
+                          fontStyle: 'italic',
+                          fontSize: '12px'
+                        }}>
+                          Deleted Service Type
+                        </span>
+                      )}
+                    </Td>
+                    <Td>
+                      {leadSource?.name || (
+                        <span style={{ 
+                          color: '#ef4444', 
+                          fontStyle: 'italic',
+                          fontSize: '12px'
+                        }}>
+                          Deleted Lead Source
+                        </span>
+                      )}
+                    </Td>
                     <Td>{booking.dateInquired ? new Date(booking.dateInquired).toLocaleDateString() : '—'}</Td>
                     <Td>{booking.dateBooked ? new Date(booking.dateBooked).toLocaleDateString() : '—'}</Td>
                     <Td>{booking.projectDate ? new Date(booking.projectDate).toLocaleDateString() : '—'}</Td>
-                    <Td>
+                    <Td align="right">
                       <div style={{ fontWeight: '500' }}>{toUSD(booking.bookedRevenue)}</div>
                       <div style={{ fontSize: '12px', color: '#666' }}>
                         Collected: {toUSD(collected)} | Outstanding: {toUSD(outstanding)}
@@ -624,17 +804,18 @@ function SummaryCard({ title, value, icon }: { title: string; value: string; ico
   );
 }
 
-function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <th style={{ textAlign: 'left', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#666', padding: '12px 16px' }}>{children}</th>;
+function Th({ children, className = "", align = 'left' }: { children: React.ReactNode; className?: string; align?: 'left' | 'right' | 'center' }) {
+  return <th style={{ textAlign: align, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#666', padding: '12px 16px' }}>{children}</th>;
 }
 
-function Td({ children }: { children: React.ReactNode }) {
-  return <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>{children}</td>;
+function Td({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' | 'center' }) {
+  return <td style={{ padding: '12px 16px', verticalAlign: 'top', textAlign: align }}>{children}</td>;
 }
 
 // Add Booking Modal
-function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
+function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddPayments, onClose }: {
   serviceTypes: ServiceType[];
+  leadSources: LeadSource[];
   onAdd: (booking: Omit<Booking, 'id' | 'createdAt'>) => void;
   onAddPayments: (payments: Omit<Payment, 'id'>[]) => void;
   onClose: () => void;
@@ -642,6 +823,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
   const [formData, setFormData] = useState({
     projectName: '',
     serviceTypeId: '',
+    leadSourceId: '',
     dateInquired: '',
     dateBooked: '',
     projectDate: '',
@@ -743,7 +925,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.projectName || !formData.serviceTypeId || !formData.bookedRevenue) {
+    if (!formData.projectName || !formData.serviceTypeId || !formData.leadSourceId || !formData.bookedRevenue) {
       alert('Please fill in all required fields');
       return;
     }
@@ -752,6 +934,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
     const newBooking = {
       projectName: formData.projectName,
       serviceTypeId: formData.serviceTypeId,
+      leadSourceId: formData.leadSourceId,
       dateInquired: formData.dateInquired || undefined,
       dateBooked: formData.dateBooked || undefined,
       projectDate: formData.projectDate || undefined,
@@ -799,7 +982,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Project Name *
               </label>
               <input
@@ -820,7 +1003,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Service Type *
               </label>
               <select
@@ -842,11 +1025,35 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
                 ))}
               </select>
             </div>
+            
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+                Lead Source *
+              </label>
+              <select
+                value={formData.leadSourceId}
+                onChange={(e) => setFormData({ ...formData, leadSourceId: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  height: '40px'
+                }}
+              >
+                <option value="">Select lead source</option>
+                {leadSources.map(ls => (
+                  <option key={ls.id} value={ls.id}>{ls.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Date Inquired
               </label>
               <input
@@ -866,7 +1073,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Date Booked
               </label>
               <input
@@ -886,7 +1093,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Project Date
               </label>
               <input
@@ -907,7 +1114,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
               Booked Revenue *
             </label>
             <input
@@ -943,7 +1150,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
 
             {/* Payment Type Selection */}
             <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'flex-start' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                   <input
                     type="radio"
@@ -980,7 +1187,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
             {/* One-time Payment - Due Date */}
             {paymentType === 'one-time' && (
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                   Payment Due Date
                 </label>
                 <input
@@ -1007,7 +1214,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
             {paymentType === 'installments' && (
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{ fontSize: '14px', fontWeight: '500' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '500', textAlign: 'left' }}>
                     Payment Schedule
                   </label>
                   <button
@@ -1038,7 +1245,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                       Payment Frequency
                     </label>
                     <select
@@ -1059,7 +1266,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
                     </select>
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                       Start Date
                     </label>
                     <input
@@ -1078,7 +1285,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                       End Date
                     </label>
                     <input
@@ -1133,7 +1340,7 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
                 borderRadius: '8px',
                 padding: '16px',
                 marginBottom: '12px',
-                backgroundColor: 'white',
+                backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -1239,18 +1446,47 @@ function AddBookingModal({ serviceTypes, onAdd, onAddPayments, onClose }: {
 }
 
 // Service Types Modal
-function ServiceTypesModal({ serviceTypes, onAdd, onRemove, onClose }: {
+function ServiceTypesModal({ serviceTypes, onAdd, onRemove, onUpdate, onToggleFunnelTracking, onClose }: {
   serviceTypes: ServiceType[];
   onAdd: (name: string) => void;
   onRemove: (id: string) => void;
+  onUpdate: (id: string, newName: string) => void;
+  onToggleFunnelTracking: (id: string) => void;
   onClose: () => void;
 }) {
   const [newServiceType, setNewServiceType] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
 
   const handleAdd = () => {
     if (newServiceType.trim()) {
       onAdd(newServiceType.trim());
       setNewServiceType('');
+    }
+  };
+
+  const handleEdit = (serviceType: ServiceType) => {
+    setEditingId(serviceType.id);
+    setEditingName(serviceType.name);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingId && editingName.trim()) {
+      onUpdate(editingId, editingName.trim());
+      setEditingId(null);
+      setEditingName('');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingName('');
+  };
+
+  const handleDelete = (id: string, name: string) => {
+    const confirmMessage = `Are you sure you want to delete "${name}"? This action cannot be undone.`;
+    if (confirm(confirmMessage)) {
+      onRemove(id);
     }
   };
 
@@ -1272,7 +1508,7 @@ function ServiceTypesModal({ serviceTypes, onAdd, onRemove, onClose }: {
         borderRadius: '12px',
         padding: '24px',
         width: '90%',
-        maxWidth: '500px',
+        maxWidth: '600px',
         maxHeight: '90vh',
         overflow: 'auto'
       }}>
@@ -1316,7 +1552,20 @@ function ServiceTypesModal({ serviceTypes, onAdd, onRemove, onClose }: {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {serviceTypes.map(st => (
+            {serviceTypes.length === 0 ? (
+              <div style={{
+                textAlign: 'left',
+                padding: '24px',
+                color: '#6b7280',
+                fontSize: '14px',
+                backgroundColor: '#f9fafb',
+                borderRadius: '6px',
+                border: '1px solid #e5e7eb'
+              }}>
+                No service types created yet. Add your first service type above to get started.
+              </div>
+            ) : (
+              serviceTypes.map(st => (
               <div key={st.id} style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -1326,29 +1575,411 @@ function ServiceTypesModal({ serviceTypes, onAdd, onRemove, onClose }: {
                 borderRadius: '6px',
                 border: '1px solid #e5e7eb'
               }}>
-                <span style={{ fontSize: '14px' }}>{st.name}</span>
-                {st.isCustom && (
-                  <button
-                    onClick={() => onRemove(st.id)}
-                    style={{
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '4px 8px',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <Trash2 size={12} />
-                    Remove
-                  </button>
+                {editingId === st.id ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                    <input
+                      type="text"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      style={{
+                        flex: 1,
+                        padding: '6px 8px',
+                        border: '1px solid #3b82f6',
+                        borderRadius: '4px',
+                        fontSize: '14px'
+                      }}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') handleSaveEdit();
+                        if (e.key === 'Escape') handleCancelEdit();
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleSaveEdit}
+                      style={{
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Check size={12} />
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      style={{
+                        backgroundColor: '#6b7280',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <X size={12} />
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                      <span style={{ fontSize: '14px' }}>{st.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <input
+                          type="checkbox"
+                          checked={st.tracksInFunnel}
+                          onChange={() => onToggleFunnelTracking(st.id)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <span style={{ 
+                          fontSize: '11px', 
+                          color: st.tracksInFunnel ? '#10b981' : '#6b7280',
+                          fontWeight: '500'
+                        }}>
+                          Track in Funnel
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        onClick={() => handleEdit(st)}
+                        style={{
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Edit3 size={12} />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(st.id, st.name)}
+                        style={{
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Trash2 size={12} />
+                        Delete
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
-            ))}
+            ))
+            )}
+          </div>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#f3f4f6', 
+          padding: '12px', 
+          borderRadius: '6px', 
+          marginBottom: '20px',
+          fontSize: '12px',
+          color: '#6b7280',
+          textAlign: 'left'
+        }}>
+          <div style={{ marginBottom: '8px' }}>
+            <strong>Funnel Tracking:</strong> Service types marked as "Track in Funnel" will be included in your funnel analytics for Closes, Bookings and Cash. 
+            Uncheck for any Sales that you do not want to track in your Sales Funnel.
+          </div>
+          <div>
+            <strong>Deletion:</strong> Deleting a service type will remove it from any existing bookings that use it. 
+            The booking data will be preserved, but the service type association will be lost.
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={onClose}
+            style={{
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '10px 20px',
+              fontSize: '14px',
+              cursor: 'pointer'
+            }}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Lead Sources Modal
+function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onClose }: {
+  leadSources: LeadSource[];
+  onAdd: (name: string) => void;
+  onRemove: (id: string) => void;
+  onUpdate: (id: string, newName: string) => void;
+  onClose: () => void;
+}) {
+  const [newLeadSource, setNewLeadSource] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+
+  const handleAdd = () => {
+    if (newLeadSource.trim()) {
+      onAdd(newLeadSource.trim());
+      setNewLeadSource('');
+    }
+  };
+
+  const handleEdit = (id: string, currentName: string) => {
+    setEditingId(id);
+    setEditingName(currentName);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingId && editingName.trim()) {
+      onUpdate(editingId, editingName.trim());
+      setEditingId(null);
+      setEditingName('');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingName('');
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        padding: '24px',
+        width: '90%',
+        maxWidth: '600px',
+        maxHeight: '90vh',
+        overflow: 'auto'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Manage Lead Sources</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <input
+              type="text"
+              value={newLeadSource}
+              onChange={(e) => setNewLeadSource(e.target.value)}
+              placeholder="Add new lead source"
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
+              onKeyPress={(e) => e.key === 'Enter' && handleAdd()}
+            />
+            <button
+              onClick={handleAdd}
+              style={{
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '8px 16px',
+                fontSize: '14px',
+                cursor: 'pointer'
+              }}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {leadSources.length === 0 ? (
+              <div style={{
+                textAlign: 'left',
+                padding: '24px',
+                color: '#6b7280',
+                fontSize: '14px',
+                backgroundColor: '#f9fafb',
+                borderRadius: '6px',
+                border: '1px solid #e5e7eb'
+              }}>
+                No lead sources created yet. Add your first lead source above to get started.
+              </div>
+            ) : (
+              leadSources.map((leadSource) => (
+                <div key={leadSource.id} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '6px',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  {editingId === leadSource.id ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                      <input
+                        type="text"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        style={{
+                          flex: 1,
+                          padding: '6px 8px',
+                          border: '1px solid #3b82f6',
+                          borderRadius: '4px',
+                          fontSize: '14px'
+                        }}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') handleSaveEdit();
+                          if (e.key === 'Escape') handleCancelEdit();
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        onClick={handleSaveEdit}
+                        style={{
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Check size={12} />
+                        Save
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        style={{
+                          backgroundColor: '#6b7280',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <X size={12} />
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                        <span style={{ fontSize: '14px' }}>{leadSource.name}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          onClick={() => handleEdit(leadSource.id, leadSource.name)}
+                          style={{
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Edit3 size={12} />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => onRemove(leadSource.id)}
+                          style={{
+                            backgroundColor: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Trash2 size={12} />
+                          Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div style={{ 
+          backgroundColor: '#f3f4f6', 
+          padding: '12px', 
+          borderRadius: '6px', 
+          marginBottom: '20px',
+          fontSize: '12px',
+          color: '#6b7280',
+          textAlign: 'left'
+        }}>
+          <div>
+            <strong>Lead Sources:</strong> Lead sources help you track where your bookings come from. 
+            You can add, edit, and delete lead sources. Changes will reset when you reload the app.
           </div>
         </div>
 
@@ -1434,7 +2065,7 @@ function AddPaymentModal({ bookingId, onAdd, onClose }: {
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
                 Amount *
               </label>
               <input
@@ -1454,7 +2085,7 @@ function AddPaymentModal({ bookingId, onAdd, onClose }: {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
                 Due Date *
               </label>
               <input
@@ -1473,7 +2104,7 @@ function AddPaymentModal({ bookingId, onAdd, onClose }: {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
               Paid Date (optional)
             </label>
             <input
@@ -1491,7 +2122,7 @@ function AddPaymentModal({ bookingId, onAdd, onClose }: {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
               Memo (optional)
             </label>
             <input
@@ -1547,24 +2178,60 @@ function AddPaymentModal({ bookingId, onAdd, onClose }: {
 }
 
 // Edit Booking Modal
-function EditBookingModal({ booking, serviceTypes, onUpdate, onClose }: {
+function EditBookingModal({ booking, serviceTypes, leadSources, payments, onUpdate, onUpdatePayments, onClose }: {
   booking: Booking;
   serviceTypes: ServiceType[];
+  leadSources: LeadSource[];
+  payments: Payment[];
   onUpdate: (booking: Omit<Booking, 'id' | 'createdAt'>) => void;
+  onUpdatePayments: (payments: Omit<Payment, 'id'>[]) => void;
   onClose: () => void;
 }) {
   const [formData, setFormData] = useState({
     projectName: booking.projectName,
     serviceTypeId: booking.serviceTypeId,
+    leadSourceId: booking.leadSourceId,
     dateInquired: booking.dateInquired || '',
     dateBooked: booking.dateBooked || '',
     projectDate: booking.projectDate || '',
     bookedRevenue: (booking.bookedRevenue / 100).toString(),
   });
 
+  const [bookingPayments, setBookingPayments] = useState<Omit<Payment, 'id' | 'bookingId'>[]>(
+    payments.map(p => ({
+      amount: p.amount,
+      dueDate: p.dueDate,
+      paidAt: p.paidAt,
+      memo: p.memo || ''
+    }))
+  );
+  const [paymentType, setPaymentType] = useState<'one-time' | 'installments' | 'recurring' | null>(null);
+  const [recurringInterval, setRecurringInterval] = useState<'monthly' | 'bi-monthly'>('monthly');
+  const [recurringStartDate, setRecurringStartDate] = useState('');
+
+  // Payment management functions
+  const addPayment = () => {
+    setBookingPayments(prev => [...prev, {
+      amount: 0,
+      dueDate: '',
+      paidAt: null,
+      memo: ''
+    }]);
+  };
+
+  const removePayment = (index: number) => {
+    setBookingPayments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updatePayment = (index: number, field: keyof Omit<Payment, 'id' | 'bookingId'>, value: any) => {
+    setBookingPayments(prev => prev.map((payment, i) => 
+      i === index ? { ...payment, [field]: value } : payment
+    ));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.projectName || !formData.serviceTypeId || !formData.bookedRevenue) {
+    if (!formData.projectName || !formData.serviceTypeId || !formData.leadSourceId || !formData.bookedRevenue) {
       alert('Please fill in all required fields');
       return;
     }
@@ -1572,11 +2239,18 @@ function EditBookingModal({ booking, serviceTypes, onUpdate, onClose }: {
     onUpdate({
       projectName: formData.projectName,
       serviceTypeId: formData.serviceTypeId,
+      leadSourceId: formData.leadSourceId,
       dateInquired: formData.dateInquired || undefined,
       dateBooked: formData.dateBooked || undefined,
       projectDate: formData.projectDate || undefined,
       bookedRevenue: Math.round(parseFloat(formData.bookedRevenue) * 100),
     });
+
+    // Update payments
+    onUpdatePayments(bookingPayments.map(payment => ({
+      ...payment,
+      bookingId: booking.id
+    })));
   };
 
   return (
@@ -1611,7 +2285,7 @@ function EditBookingModal({ booking, serviceTypes, onUpdate, onClose }: {
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Project Name *
               </label>
               <input
@@ -1631,7 +2305,7 @@ function EditBookingModal({ booking, serviceTypes, onUpdate, onClose }: {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Service Type *
               </label>
               <select
@@ -1652,11 +2326,34 @@ function EditBookingModal({ booking, serviceTypes, onUpdate, onClose }: {
                 ))}
               </select>
             </div>
+            
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+                Lead Source *
+              </label>
+              <select
+                value={formData.leadSourceId}
+                onChange={(e) => setFormData({ ...formData, leadSourceId: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <option value="">Select lead source</option>
+                {leadSources.map(ls => (
+                  <option key={ls.id} value={ls.id}>{ls.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Date Inquired
               </label>
               <input
@@ -1675,7 +2372,7 @@ function EditBookingModal({ booking, serviceTypes, onUpdate, onClose }: {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Date Booked
               </label>
               <input
@@ -1694,7 +2391,7 @@ function EditBookingModal({ booking, serviceTypes, onUpdate, onClose }: {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Project Date
               </label>
               <input
@@ -1714,7 +2411,7 @@ function EditBookingModal({ booking, serviceTypes, onUpdate, onClose }: {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
               Booked Revenue *
             </label>
             <input
@@ -1732,6 +2429,176 @@ function EditBookingModal({ booking, serviceTypes, onUpdate, onClose }: {
               }}
               placeholder="0.00"
             />
+          </div>
+
+          {/* Payment Schedule Section */}
+          <div style={{ 
+            border: '1px solid #e5e7eb', 
+            borderRadius: '8px', 
+            padding: '20px',
+            backgroundColor: '#f9fafb'
+          }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 16px 0', color: '#1f2937' }}>
+              Payment Schedule
+            </h3>
+            
+            {bookingPayments.length > 0 && (
+              <div style={{
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '16px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '500' }}>
+                    Total Payment Schedule: {toUSD(bookingPayments.reduce((sum, p) => sum + p.amount, 0))}
+                  </span>
+                  <span style={{ 
+                    fontSize: '12px', 
+                    color: bookingPayments.reduce((sum, p) => sum + p.amount, 0) === Math.round(parseFloat(formData.bookedRevenue || '0') * 100) 
+                      ? '#10b981' 
+                      : '#f59e0b' 
+                  }}>
+                    {bookingPayments.reduce((sum, p) => sum + p.amount, 0) === Math.round(parseFloat(formData.bookedRevenue || '0') * 100) 
+                      ? '✓ Matches booking amount' 
+                      : '⚠ Amount mismatch'}
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            {bookingPayments.map((payment, index) => (
+              <div key={index} style={{
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '12px',
+                backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '500' }}>Payment {index + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => removePayment(index)}
+                    style={{
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '4px 8px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px' }}>
+                      Amount ($)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={payment.amount / 100}
+                      onChange={(e) => updatePayment(index, 'amount', Math.round(parseFloat(e.target.value || '0') * 100))}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px' }}>
+                      Due Date
+                    </label>
+                    <input
+                      type="date"
+                      value={payment.dueDate}
+                      onChange={(e) => updatePayment(index, 'dueDate', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px' }}>
+                      Paid Date (optional)
+                    </label>
+                    <input
+                      type="date"
+                      value={payment.paidAt || ''}
+                      onChange={(e) => updatePayment(index, 'paidAt', e.target.value || null)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px' }}>
+                      Memo
+                    </label>
+                    <input
+                      type="text"
+                      value={payment.memo}
+                      onChange={(e) => updatePayment(index, 'memo', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
+                      }}
+                      placeholder="e.g., Retainer, Milestone"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            <button
+              type="button"
+              onClick={addPayment}
+              style={{
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '10px 16px',
+                fontSize: '14px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <span>+</span>
+              Add Payment
+            </button>
           </div>
 
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>

@@ -19,6 +19,7 @@ export interface SubscriptionFeatures {
   canUseDataIntegration: boolean;
   canEditFunnelManually: boolean;
   canSyncFunnelWithSales: boolean;
+  advertising: boolean;
   maxDataRetentionMonths: number;
 }
 
@@ -30,6 +31,7 @@ export const SUBSCRIPTION_FEATURES: Record<SubscriptionTier, SubscriptionFeature
     canUseDataIntegration: false,
     canEditFunnelManually: true,
     canSyncFunnelWithSales: false,
+    advertising: false,
     maxDataRetentionMonths: 12, // 1 year
   },
   pro: {
@@ -38,6 +40,7 @@ export const SUBSCRIPTION_FEATURES: Record<SubscriptionTier, SubscriptionFeature
     canUseDataIntegration: true,
     canEditFunnelManually: true,
     canSyncFunnelWithSales: true,
+    advertising: true,
     maxDataRetentionMonths: -1, // Unlimited
   },
 };

@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit, Lock, Crown } from "lucide-react";
+import { useState, useMemo } from "react";
+import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit, Lock, Crown, Calculator } from "lucide-react";
 import { useAuth } from "./AuthContext";
+import CalculatorComponent from "./Calculator";
 
 interface FunnelData {
   id: string;
@@ -11,6 +12,7 @@ interface FunnelData {
   callsTaken: number;
   closes: number;
   bookings: number;
+  cash: number; // Cash received in this month (in cents)
   lastUpdated?: string;
 }
 
@@ -22,8 +24,14 @@ interface FunnelProps {
 }
 
 // Helper functions
-const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
-const formatNumber = (num: number) => num.toLocaleString();
+const toUSD = (cents: number) => {
+  if (isNaN(cents) || cents === null || cents === undefined) return "$0.00";
+  return (cents / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
+};
+const formatNumber = (num: number) => {
+  if (isNaN(num) || num === null || num === undefined) return "0";
+  return num.toLocaleString();
+};
 
 // Conversion rate calculation
 const calculateConversionRate = (from: number, to: number) => {
@@ -35,6 +43,86 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
   const { user, features } = useAuth();
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingMonth, setEditingMonth] = useState<FunnelData | null>(null);
+  const [funnelView, setFunnelView] = useState<'funnel' | 'calculator'>('funnel');
+
+  // Check if user has Pro features (Pro or Trial account)
+  const isProAccount = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'trial';
+
+  // Calculate dynamic data from sales for Pro accounts
+  const calculateDynamicData = useMemo(() => {
+    if (!isProAccount) return {};
+
+    const monthlyData: { [key: string]: { bookings: number; closes: number; cash: number } } = {};
+
+    // Initialize all months with zeros
+    for (let month = 1; month <= 12; month++) {
+      monthlyData[month] = { bookings: 0, closes: 0, cash: 0 };
+    }
+
+    // Calculate bookings and closes from sales data
+    salesData.forEach((booking: any) => {
+      if (booking.dateBooked) {
+        const bookedDate = new Date(booking.dateBooked);
+        const month = bookedDate.getMonth() + 1; // getMonth() returns 0-11, we want 1-12
+        
+        if (bookedDate.getFullYear() === selectedYear) {
+          monthlyData[month].bookings += booking.bookedRevenue || 0;
+          monthlyData[month].closes += 1; // Each booking is a close
+        }
+      }
+    });
+
+    // Calculate cash from payments data
+    paymentsData.forEach((payment: any) => {
+      if (payment.paidAt) {
+        const paidDate = new Date(payment.paidAt);
+        const month = paidDate.getMonth() + 1;
+        
+        if (paidDate.getFullYear() === selectedYear) {
+          monthlyData[month].cash += payment.amount || 0;
+        }
+      }
+    });
+
+    return monthlyData;
+  }, [isProAccount, salesData, paymentsData, selectedYear]);
+
+  // Handler functions for edit modal
+  const handleEditMonth = (month: FunnelData) => {
+    setEditingMonth(month);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsEditModalOpen(false);
+    setEditingMonth(null);
+  };
+
+  const handleSave = () => {
+    if (!editingMonth) return;
+    
+    // For Pro accounts, don't save bookings, closes, or cash as they're calculated dynamically
+    const dataToSave = isProAccount 
+      ? {
+          ...editingMonth,
+          bookings: calculateDynamicData[editingMonth.month]?.bookings || 0,
+          closes: calculateDynamicData[editingMonth.month]?.closes || 0,
+          cash: calculateDynamicData[editingMonth.month]?.cash || 0,
+          lastUpdated: new Date().toISOString()
+        }
+      : { ...editingMonth, lastUpdated: new Date().toISOString() };
+    
+    const updatedData = funnelData.map(data => 
+      data.id === editingMonth.id 
+        ? dataToSave
+        : data
+    );
+    
+    setFunnelData(updatedData);
+    handleCloseModal();
+  };
 
   // Filter data by selected year
   const filteredData = useMemo(() => {
@@ -43,36 +131,62 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
     
     // Create all 12 months for the selected year, using existing data or default values
     const allMonths = months.map((month, index) => {
-      const existingData = yearData.find(data => data.month === index + 1);
-      if (existingData) {
-        return existingData;
-      }
+      const monthNumber = index + 1;
+      const existingData = yearData.find(data => data.month === monthNumber);
       
-      // Create default month data
-      return {
-        id: `${selectedYear}_${month.toLowerCase()}`,
-        month: index + 1,
-        year: selectedYear,
-        inquiries: 0,
-        callsBooked: 0,
-        callsTaken: 0,
-        closes: 0,
-        bookings: 0,
-        lastUpdated: new Date().toISOString()
-      };
+      if (isProAccount) {
+        // For Pro accounts, use dynamic data from sales/payments
+        const dynamicData = calculateDynamicData[monthNumber] || { bookings: 0, closes: 0, cash: 0 };
+        
+        return {
+          id: `${selectedYear}_${month.toLowerCase()}`,
+          month: monthNumber,
+          year: selectedYear,
+          inquiries: existingData?.inquiries || 0, // Keep manual inquiries for now
+          callsBooked: existingData?.callsBooked || 0, // Keep manual calls for now
+          callsTaken: existingData?.callsTaken || 0, // Keep manual calls for now
+          closes: dynamicData.closes,
+          bookings: dynamicData.bookings,
+          cash: dynamicData.cash,
+          lastUpdated: new Date().toISOString()
+        };
+      } else {
+        // For Free accounts, use static mock data
+        if (existingData) {
+          return existingData;
+        }
+        
+        // Create default month data
+        return {
+          id: `${selectedYear}_${month.toLowerCase()}`,
+          month: monthNumber,
+          year: selectedYear,
+          inquiries: 0,
+          callsBooked: 0,
+          callsTaken: 0,
+          closes: 0,
+          bookings: 0,
+          cash: 0,
+          lastUpdated: new Date().toISOString()
+        };
+      }
     });
     
     return allMonths;
-  }, [funnelData, selectedYear]);
+  }, [funnelData, selectedYear, isProAccount, calculateDynamicData]);
 
   // Calculate analytics metrics
   const analyticsMetrics = useMemo(() => {
     const currentYearData = filteredData;
-    const totalInquiries = currentYearData.reduce((sum, month) => sum + month.inquiries, 0);
-    const totalCallsBooked = currentYearData.reduce((sum, month) => sum + month.callsBooked, 0);
-    const totalCallsTaken = currentYearData.reduce((sum, month) => sum + month.callsTaken, 0);
-    const totalCloses = currentYearData.reduce((sum, month) => sum + month.closes, 0);
-    const totalBookings = currentYearData.reduce((sum, month) => sum + month.bookings, 0);
+    const totalInquiries = currentYearData.reduce((sum, month) => sum + (month.inquiries || 0), 0);
+    const totalCallsBooked = currentYearData.reduce((sum, month) => sum + (month.callsBooked || 0), 0);
+    const totalCallsTaken = currentYearData.reduce((sum, month) => sum + (month.callsTaken || 0), 0);
+    const totalCloses = currentYearData.reduce((sum, month) => sum + (month.closes || 0), 0);
+    const totalBookings = currentYearData.reduce((sum, month) => sum + (month.bookings || 0), 0);
+    const totalCash = currentYearData.reduce((sum, month) => {
+      const cash = month.cash || 0;
+      return sum + (isNaN(cash) ? 0 : cash);
+    }, 0);
 
     const monthsWithData = currentYearData.filter(month => 
       month.inquiries > 0 || month.callsBooked > 0 || month.callsTaken > 0 || month.closes > 0 || month.bookings > 0
@@ -89,6 +203,8 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
       avgCallsTaken: monthsWithData > 0 ? Math.round(totalCallsTaken / monthsWithData) : 0,
       avgCloses: monthsWithData > 0 ? Math.round(totalCloses / monthsWithData) : 0,
       avgBookings: monthsWithData > 0 ? Math.round(totalBookings / monthsWithData) : 0,
+      totalCash,
+      avgCash: monthsWithData > 0 ? Math.round(totalCash / monthsWithData) : 0,
       inquiryToCloseRate: calculateConversionRate(totalInquiries, totalCloses),
       callBookedToCloseRate: calculateConversionRate(totalCallsBooked, totalCloses),
       callTakenToCloseRate: calculateConversionRate(totalCallsTaken, totalCloses),
@@ -302,6 +418,25 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
           boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <DollarSign size={20} color="#10b981" />
+            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Cash</span>
+          </div>
+          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
+            {toUSD(analyticsMetrics.totalCash)}
+          </div>
+          <div style={{ fontSize: '12px', color: '#6b7280' }}>
+            Avg: {toUSD(analyticsMetrics.avgCash)}/month
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: 'white',
+          padding: '20px',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
             <TrendingUp size={20} color="#06b6d4" />
             <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Inquiry to Close %</span>
           </div>
@@ -421,9 +556,76 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
           <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
             Monthly Data - {selectedYear}
           </h2>
+          {isProAccount && (
+            <div style={{
+              backgroundColor: '#f0f9ff',
+              border: '1px solid #0ea5e9',
+              borderRadius: '8px',
+              padding: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '14px',
+              color: '#0c4a6e',
+              marginTop: '12px'
+            }}>
+              <Crown size={16} color="#0ea5e9" />
+              <span>
+                <strong>Pro Account:</strong> Closes, Bookings, and Cash are automatically calculated from your Sales data.
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Sub-navigation */}
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ display: 'flex', gap: '8px', backgroundColor: '#f3f4f6', borderRadius: '8px', padding: '4px', width: 'fit-content' }}>
+            <button
+              onClick={() => setFunnelView('funnel')}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: funnelView === 'funnel' ? '#3b82f6' : 'transparent',
+                color: funnelView === 'funnel' ? 'white' : '#374151',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <TrendingUp size={16} />
+              Sales Funnel
+            </button>
+            <button
+              onClick={() => setFunnelView('calculator')}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: funnelView === 'calculator' ? '#3b82f6' : 'transparent',
+                color: funnelView === 'calculator' ? 'white' : '#374151',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Calculator size={16} />
+              Funnel Calculator
+            </button>
+          </div>
         </div>
         
-        <div style={{ overflowX: 'auto' }}>
+        {/* Conditional Content Based on View */}
+        {funnelView === 'funnel' ? (
+          <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', fontSize: '14px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f9fafb' }}>
@@ -433,7 +635,8 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
                 <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Calls Taken</th>
                 <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Closes</th>
                 <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Bookings</th>
-                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Actions</th>
+                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Cash</th>
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -447,7 +650,7 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
                       backgroundColor: index % 2 === 0 ? '#fafafa' : '#f5f5f5'
                     }}
                   >
-                    <td style={{ padding: '12px', fontWeight: '500', color: '#1f2937' }}>
+                    <td style={{ padding: '12px', fontWeight: '500', color: '#1f2937', textAlign: 'left' }}>
                       {monthName}
                     </td>
                     <td style={{ padding: '12px', textAlign: 'right', color: '#374151' }}>
@@ -465,9 +668,12 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
                     <td style={{ padding: '12px', textAlign: 'right', color: '#374151' }}>
                       {toUSD(month.bookings)}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right' }}>
+                    <td style={{ padding: '12px', textAlign: 'right', color: '#374151' }}>
+                      {toUSD(month.cash)}
+                    </td>
+                    <td style={{ padding: '12px', textAlign: 'left' }}>
                       <button
-                        onClick={() => {/* TODO: Add edit functionality */}}
+                        onClick={() => handleEditMonth(month)}
                         style={{
                           backgroundColor: '#3b82f6',
                           color: 'white',
@@ -480,6 +686,7 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
                           alignItems: 'center',
                           gap: '4px'
                         }}
+                        title={isProAccount ? 'Edit Inquiries, Calls Booked, and Calls Taken (Closes, Bookings, and Cash are calculated automatically)' : 'Edit month data'}
                       >
                         <Edit size={14} />
                         Edit
@@ -495,7 +702,7 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
                 borderTop: '2px solid #9ca3af',
                 fontWeight: '600'
               }}>
-                <td style={{ padding: '12px', color: '#1f2937' }}>Total</td>
+                <td style={{ padding: '12px', color: '#1f2937', textAlign: 'left' }}>Total</td>
                 <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
                   {formatNumber(analyticsMetrics.totalInquiries)}
                 </td>
@@ -511,12 +718,298 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
                 <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
                   {toUSD(analyticsMetrics.totalBookings)}
                 </td>
+                <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
+                  {toUSD(analyticsMetrics.totalCash)}
+                </td>
                 <td style={{ padding: '12px' }}></td>
               </tr>
             </tbody>
           </table>
         </div>
+        ) : (
+          <CalculatorComponent funnelData={funnelData} />
+        )}
       </div>
+
+      {/* Edit Modal */}
+      {isEditModalOpen && editingMonth && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '90%',
+            maxWidth: '500px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937', textAlign: 'left' }}>
+                Edit {new Date(editingMonth.year, editingMonth.month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </h3>
+              <button
+                onClick={handleCloseModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {isProAccount && (
+              <div style={{
+                backgroundColor: '#f0f9ff',
+                border: '1px solid #0ea5e9',
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '20px',
+                fontSize: '14px',
+                color: '#0c4a6e'
+              }}>
+                <strong>Pro Account:</strong> Closes, Bookings, and Cash are calculated automatically from your Sales data.
+              </div>
+            )}
+
+            {editingMonth.lastUpdated && (
+              <div style={{ marginBottom: '16px' }}>
+                <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 8px 0' }}>
+                  <strong>Last updated:</strong> {new Date(editingMonth.lastUpdated).toLocaleString()}
+                </p>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Inquiries */}
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                  Inquiries
+                </label>
+                <input
+                  type="number"
+                  value={editingMonth.inquiries}
+                  onChange={(e) => setEditingMonth({ ...editingMonth, inquiries: parseInt(e.target.value) || 0 })}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              {/* Calls Booked */}
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                  Calls Booked
+                </label>
+                <input
+                  type="number"
+                  value={editingMonth.callsBooked}
+                  onChange={(e) => setEditingMonth({ ...editingMonth, callsBooked: parseInt(e.target.value) || 0 })}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              {/* Calls Taken */}
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                  Calls Taken
+                </label>
+                <input
+                  type="number"
+                  value={editingMonth.callsTaken}
+                  onChange={(e) => setEditingMonth({ ...editingMonth, callsTaken: parseInt(e.target.value) || 0 })}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              {/* Read-only fields for Pro accounts */}
+              {isProAccount && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#6b7280', marginBottom: '4px' }}>
+                      Closes (Calculated)
+                    </label>
+                    <input
+                      type="number"
+                      value={editingMonth.closes}
+                      disabled
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        backgroundColor: '#f9fafb',
+                        color: '#6b7280'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#6b7280', marginBottom: '4px' }}>
+                      Bookings (Calculated)
+                    </label>
+                    <input
+                      type="text"
+                      value={toUSD(editingMonth.bookings)}
+                      disabled
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        backgroundColor: '#f9fafb',
+                        color: '#6b7280'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#6b7280', marginBottom: '4px' }}>
+                      Cash (Calculated)
+                    </label>
+                    <input
+                      type="text"
+                      value={toUSD(editingMonth.cash)}
+                      disabled
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        backgroundColor: '#f9fafb',
+                        color: '#6b7280'
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Free account fields */}
+              {!isProAccount && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                      Closes
+                    </label>
+                    <input
+                      type="number"
+                      value={editingMonth.closes}
+                      onChange={(e) => setEditingMonth({ ...editingMonth, closes: parseInt(e.target.value) || 0 })}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                      Bookings ($)
+                    </label>
+                    <input
+                      type="number"
+                      value={editingMonth.bookings / 100}
+                      onChange={(e) => setEditingMonth({ ...editingMonth, bookings: (parseFloat(e.target.value) || 0) * 100 })}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                      Cash ($)
+                    </label>
+                    <input
+                      type="number"
+                      value={editingMonth.cash / 100}
+                      onChange={(e) => setEditingMonth({ ...editingMonth, cash: (parseFloat(e.target.value) || 0) * 100 })}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+              <button
+                onClick={handleCloseModal}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  backgroundColor: 'white',
+                  color: '#374151',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

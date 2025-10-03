@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext';
 import { Lock, Crown } from 'lucide-react';
 
 interface FeatureGateProps {
-  feature: 'sales' | 'forecast' | 'dataIntegration';
+  feature: 'sales' | 'forecast' | 'dataIntegration' | 'advertising';
   children: ReactNode;
   fallback?: ReactNode;
 }
@@ -19,6 +19,8 @@ export default function FeatureGate({ feature, children, fallback }: FeatureGate
         return features.canAccessForecast;
       case 'dataIntegration':
         return features.canUseDataIntegration;
+      case 'advertising':
+        return features.advertising;
       default:
         return false;
     }
@@ -32,6 +34,8 @@ export default function FeatureGate({ feature, children, fallback }: FeatureGate
         return 'Forecast Analytics';
       case 'dataIntegration':
         return 'Data Integration';
+      case 'advertising':
+        return 'Advertising Tracking';
       default:
         return 'Feature';
     }
@@ -79,6 +83,7 @@ export default function FeatureGate({ feature, children, fallback }: FeatureGate
         {feature === 'sales' && 'Access the full Sales management system with booking and payment tracking.'}
         {feature === 'forecast' && 'Create forecast models and analyze trends with advanced analytics.'}
         {feature === 'dataIntegration' && 'Enable automatic data sync between all views for seamless workflow.'}
+        {feature === 'advertising' && 'Track your paid advertising performance, ROI, and lead generation metrics.'}
       </p>
       
       <button
@@ -111,7 +116,7 @@ export default function FeatureGate({ feature, children, fallback }: FeatureGate
 }
 
 // Component for showing upgrade prompts in navigation
-export function UpgradePrompt({ feature }: { feature: 'sales' | 'forecast' | 'dataIntegration' }) {
+export function UpgradePrompt({ feature }: { feature: 'sales' | 'forecast' | 'dataIntegration' | 'advertising' }) {
   const { user } = useAuth();
 
   if (!user || user.subscriptionTier === 'pro') {
@@ -126,6 +131,8 @@ export function UpgradePrompt({ feature }: { feature: 'sales' | 'forecast' | 'da
         return 'Forecast';
       case 'dataIntegration':
         return 'Data Integration';
+      case 'advertising':
+        return 'Advertising';
       default:
         return 'Feature';
     }

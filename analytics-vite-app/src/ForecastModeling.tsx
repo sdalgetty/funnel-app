@@ -414,7 +414,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                 backgroundColor: '#f3f4f6',
                 padding: '8px 16px',
                 borderRadius: '8px',
-                textAlign: 'center'
+                textAlign: 'left'
               }}>
                 <div style={{ 
                   fontSize: '12px', 
@@ -439,18 +439,18 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
               <thead style={{ backgroundColor: '#f5f5f5' }}>
                 <tr>
                   <Th>Service Type</Th>
-                  <Th>Forecast Goal</Th>
-                  <Th>Actual $</Th>
-                  <Th>Remaining</Th>
-                  <Th>% of Plan</Th>
-                  <Th>Pacing Delta</Th>
+                  <Th align="right">Forecast Goal</Th>
+                  <Th align="right">Actual $</Th>
+                  <Th align="right">Remaining</Th>
+                  <Th align="right">% of Plan</Th>
+                  <Th align="right">Pacing Delta</Th>
                 </tr>
               </thead>
               <tbody>
                 {performanceMetrics.length === 0 ? (
                   <tr>
                     <td colSpan={6} style={{ 
-                      textAlign: 'center', 
+                      textAlign: 'left', 
                       padding: '40px 20px',
                       color: '#6b7280',
                       fontStyle: 'italic'
@@ -472,22 +472,22 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                     }}
                   >
                     <Td style={{ fontWeight: '500' }}>{metric.serviceTypeName}</Td>
-                    <Td>{toUSD(metric.forecastGoal)}</Td>
-                    <Td>{toUSD(metric.actualRevenue)}</Td>
-                    <Td style={{ 
+                    <Td align="right">{toUSD(metric.forecastGoal)}</Td>
+                    <Td align="right">{toUSD(metric.actualRevenue)}</Td>
+                    <Td align="right" style={{ 
                       color: metric.remaining < 0 ? '#ef4444' : '#10b981',
                       fontWeight: '500'
                     }}>
                       {toUSD(metric.remaining)}
                     </Td>
-                    <Td style={{ 
+                    <Td align="right" style={{ 
                       color: metric.percentOfPlan >= 100 ? '#10b981' : 
                             metric.percentOfPlan < 80 ? '#ef4444' : '#f59e0b',
                       fontWeight: '600'
                     }}>
                       {metric.percentOfPlan}%
                     </Td>
-                    <Td style={{ 
+                    <Td align="right" style={{ 
                       color: metric.pacingDelta >= 0 ? '#10b981' : '#ef4444',
                       fontWeight: '500'
                     }}>
@@ -505,20 +505,20 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                   fontWeight: '600'
                 }}>
                   <Td style={{ fontWeight: '700', fontSize: '14px' }}>Total</Td>
-                  <Td style={{ fontWeight: '700', fontSize: '14px' }}>
+                  <Td align="right" style={{ fontWeight: '700', fontSize: '14px' }}>
                     {toUSD(performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0))}
                   </Td>
-                  <Td style={{ fontWeight: '700', fontSize: '14px' }}>
+                  <Td align="right" style={{ fontWeight: '700', fontSize: '14px' }}>
                     {toUSD(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0))}
                   </Td>
-                  <Td style={{ 
+                  <Td align="right" style={{ 
                     fontWeight: '700', 
                     fontSize: '14px',
                     color: performanceMetrics.reduce((sum, m) => sum + m.remaining, 0) < 0 ? '#ef4444' : '#10b981'
                   }}>
                     {toUSD(performanceMetrics.reduce((sum, m) => sum + m.remaining, 0))}
                   </Td>
-                  <Td style={{ 
+                  <Td align="right" style={{ 
                     fontWeight: '700', 
                     fontSize: '14px',
                     color: Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100) >= 100 ? '#10b981' : 
@@ -526,7 +526,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                   }}>
                     {Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100)}%
                   </Td>
-                  <Td style={{ 
+                  <Td align="right" style={{ 
                     fontWeight: '700', 
                     fontSize: '14px',
                     color: Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100) - yearProgress >= 0 ? '#10b981' : '#ef4444'
@@ -615,9 +615,9 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
               <thead style={{ backgroundColor: '#f5f5f5' }}>
                 <tr>
                   <Th>Service Type</Th>
-                  <Th>Quantity</Th>
-                  <Th>Avg Booking</Th>
-                  <Th>Total Forecast</Th>
+                  <Th align="right">Quantity</Th>
+                  <Th align="right">Avg Booking</Th>
+                  <Th align="right">Total Forecast</Th>
                 </tr>
               </thead>
               <tbody>
@@ -632,9 +632,9 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                       }}
                     >
                       <Td style={{ fontWeight: '500' }}>{serviceType?.name || 'Unknown'}</Td>
-                      <Td>{formatNumber(service.quantity)}</Td>
-                      <Td>{toUSD(service.avgBooking)}</Td>
-                      <Td style={{ fontWeight: '600' }}>{toUSD(service.totalForecast)}</Td>
+                      <Td align="right">{formatNumber(service.quantity)}</Td>
+                      <Td align="right">{toUSD(service.avgBooking)}</Td>
+                      <Td align="right" style={{ fontWeight: '600' }}>{toUSD(service.totalForecast)}</Td>
                     </tr>
                   );
                 })}
@@ -646,9 +646,9 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                   fontWeight: '600'
                 }}>
                   <Td style={{ fontWeight: '700', fontSize: '14px' }}>Total</Td>
-                  <Td style={{ fontWeight: '700', fontSize: '14px' }}>—</Td>
-                  <Td style={{ fontWeight: '700', fontSize: '14px' }}>—</Td>
-                  <Td style={{ fontWeight: '700', fontSize: '14px' }}>
+                  <Td align="right" style={{ fontWeight: '700', fontSize: '14px' }}>—</Td>
+                  <Td align="right" style={{ fontWeight: '700', fontSize: '14px' }}>—</Td>
+                  <Td align="right" style={{ fontWeight: '700', fontSize: '14px' }}>
                     {toUSD(activeModel.serviceTypes.reduce((sum, s) => sum + s.totalForecast, 0))}
                   </Td>
                 </tr>
@@ -691,10 +691,10 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
 };
 
 // UI Components
-function Th({ children }: { children: React.ReactNode }) {
+function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' | 'center' }) {
   return (
     <th style={{ 
-      textAlign: 'left', 
+      textAlign: align, 
       fontSize: '12px', 
       fontWeight: '600', 
       textTransform: 'uppercase', 
@@ -707,11 +707,12 @@ function Th({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Td({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function Td({ children, style, align = 'left' }: { children: React.ReactNode; style?: React.CSSProperties; align?: 'left' | 'right' | 'center' }) {
   return (
     <td style={{ 
       padding: '12px 16px', 
       verticalAlign: 'top', 
+      textAlign: align,
       ...style 
     }}>
       {children}
@@ -885,7 +886,7 @@ function ModelModal({
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Model Name *
               </label>
               <input
@@ -938,7 +939,7 @@ function ModelModal({
                 borderRadius: '8px',
                 padding: '16px',
                 marginBottom: '16px',
-                textAlign: 'center'
+                textAlign: 'left'
               }}>
                 <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
                   No service types added yet. You can add them now or edit this model later.
@@ -982,7 +983,7 @@ function ModelModal({
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '12px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
                         Service Type
                       </label>
                       <select
@@ -1066,7 +1067,7 @@ function ModelModal({
                       )}
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
                         Quantity
                       </label>
                       <input
@@ -1085,7 +1086,7 @@ function ModelModal({
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
                         Avg Booking ($)
                       </label>
                       <input
@@ -1105,7 +1106,7 @@ function ModelModal({
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
                         Total Forecast
                       </label>
                       <div style={{

@@ -320,12 +320,12 @@ const Forecast: React.FC<ForecastProps> = ({
             <thead style={{ backgroundColor: '#f5f5f5' }}>
               <tr>
                 <Th>Month</Th>
-                <Th>Year</Th>
-                <Th>Inquiries</Th>
-                <Th>Calls Booked</Th>
-                <Th>Calls Taken</Th>
-                <Th>Closes</Th>
-                <Th>Revenue</Th>
+                <Th align="right">Year</Th>
+                <Th align="right">Inquiries</Th>
+                <Th align="right">Calls Booked</Th>
+                <Th align="right">Calls Taken</Th>
+                <Th align="right">Closes</Th>
+                <Th align="right">Revenue</Th>
               </tr>
             </thead>
             <tbody>
@@ -338,12 +338,12 @@ const Forecast: React.FC<ForecastProps> = ({
                   }}
                 >
                   <Td style={{ fontWeight: '500' }}>{month.month}</Td>
-                  <Td>{month.year}</Td>
-                  <Td>{formatNumber(month.inquiries)}</Td>
-                  <Td>{formatNumber(month.callsBooked)}</Td>
-                  <Td>{formatNumber(month.callsTaken)}</Td>
-                  <Td>{formatNumber(month.closes)}</Td>
-                  <Td>{toUSD(month.bookings)}</Td>
+                  <Td align="right">{month.year}</Td>
+                  <Td align="right">{formatNumber(month.inquiries)}</Td>
+                  <Td align="right">{formatNumber(month.callsBooked)}</Td>
+                  <Td align="right">{formatNumber(month.callsTaken)}</Td>
+                  <Td align="right">{formatNumber(month.closes)}</Td>
+                  <Td align="right">{toUSD(month.bookings)}</Td>
                 </tr>
               ))}
             </tbody>
@@ -460,10 +460,10 @@ function ForecastCard({ title, value, icon, color }: {
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' | 'center' }) {
   return (
     <th style={{ 
-      textAlign: 'left', 
+      textAlign: align, 
       fontSize: '12px', 
       fontWeight: '600', 
       textTransform: 'uppercase', 
@@ -476,11 +476,12 @@ function Th({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Td({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function Td({ children, style, align = 'left' }: { children: React.ReactNode; style?: React.CSSProperties; align?: 'left' | 'right' | 'center' }) {
   return (
     <td style={{ 
       padding: '12px 16px', 
       verticalAlign: 'top', 
+      textAlign: align,
       ...style 
     }}>
       {children}
