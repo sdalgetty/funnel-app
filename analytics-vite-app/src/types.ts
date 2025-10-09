@@ -1,4 +1,7 @@
-// User and Subscription Types
+// ============================================================================
+// USER & AUTHENTICATION TYPES
+// ============================================================================
+
 export type SubscriptionTier = 'free' | 'pro';
 export type SubscriptionStatus = 'active' | 'trial' | 'expired' | 'cancelled';
 
@@ -23,7 +26,113 @@ export interface SubscriptionFeatures {
   maxDataRetentionMonths: number;
 }
 
-// Feature definitions for each tier
+// ============================================================================
+// FUNNEL TYPES
+// ============================================================================
+
+export interface FunnelData {
+  id: string;
+  year: number;
+  month: number;
+  inquiries: number;
+  callsBooked: number;
+  callsTaken: number;
+  closes: number;
+  bookings: number; // in cents
+  cash: number; // in cents
+  lastUpdated?: string;
+}
+
+// ============================================================================
+// SALES/BOOKINGS TYPES
+// ============================================================================
+
+export interface Client {
+  id: string;
+  name: string;
+  email?: string;
+}
+
+export interface ServiceType {
+  id: string;
+  name: string;
+  isCustom: boolean;
+  tracksInFunnel: boolean;
+}
+
+export interface LeadSource {
+  id: string;
+  name: string;
+  isCustom: boolean;
+}
+
+export interface Booking {
+  id: string;
+  projectName: string;
+  serviceTypeId: string;
+  leadSourceId: string;
+  dateInquired?: string;
+  dateBooked?: string;
+  projectDate?: string;
+  bookedRevenue: number; // in cents
+  createdAt: string;
+}
+
+export interface Payment {
+  id: string;
+  bookingId: string;
+  amount: number; // in cents
+  dueDate: string;
+  paidAt?: string | null;
+  memo?: string;
+}
+
+// ============================================================================
+// ADVERTISING TYPES
+// ============================================================================
+
+export interface AdSource {
+  id: string;
+  name: string;
+  leadSourceId: string; // Reference to LeadSource for ROI tracking
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface AdCampaign {
+  id: string;
+  adSourceId: string;
+  year: number;
+  month: number;
+  spend: number; // in cents
+  leadsGenerated: number;
+  createdAt: string;
+  lastUpdated?: string;
+}
+
+// ============================================================================
+// FORECAST TYPES
+// ============================================================================
+
+export interface ForecastModel {
+  id: string;
+  name: string;
+  year: number;
+  isActive: boolean;
+  serviceTypes: {
+    serviceTypeId: string;
+    quantity: number;
+    avgBooking: number;
+    totalForecast: number;
+  }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
+// FEATURE DEFINITIONS
+// ============================================================================
+
 export const SUBSCRIPTION_FEATURES: Record<SubscriptionTier, SubscriptionFeatures> = {
   free: {
     canAccessSales: false,
@@ -45,7 +154,10 @@ export const SUBSCRIPTION_FEATURES: Record<SubscriptionTier, SubscriptionFeature
   },
 };
 
-// Mock users for development
+// ============================================================================
+// MOCK USERS (Development Only)
+// ============================================================================
+
 export const MOCK_USERS: User[] = [
   {
     id: 'user_1',
@@ -76,3 +188,16 @@ export const MOCK_USERS: User[] = [
     lastLoginAt: new Date(),
   },
 ];
+
+// ============================================================================
+// UTILITY TYPES
+// ============================================================================
+
+export type Page = 'funnel' | 'advertising' | 'forecast' | 'bookings' | 'profile';
+
+export type SortOrder = 'asc' | 'desc';
+
+export interface Filters {
+  serviceTypes: string[];
+  search: string;
+}

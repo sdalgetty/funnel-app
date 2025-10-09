@@ -1,25 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { TrendingUp, Calendar, Target, DollarSign, Users, Phone, CheckCircle, BarChart3 } from 'lucide-react';
 import ForecastModeling from './ForecastModeling';
-
-interface FunnelData {
-  id: string;
-  year: number;
-  month: string | number;
-  inquiries: number;
-  callsBooked: number;
-  callsTaken: number;
-  closes: number;
-  bookings: number;
-  lastUpdated?: string;
-}
+import type { FunnelData, ServiceType, Booking, Payment } from './types';
 
 interface ForecastProps {
   funnelData?: FunnelData[];
-  serviceTypes?: any[];
-  setServiceTypes?: (types: any[]) => void;
-  bookings?: any[];
-  payments?: any[];
+  serviceTypes?: ServiceType[];
+  setServiceTypes?: (types: ServiceType[]) => void;
+  bookings?: Booking[];
+  payments?: Payment[];
 }
 
 const Forecast: React.FC<ForecastProps> = ({ 
@@ -115,23 +104,36 @@ const Forecast: React.FC<ForecastProps> = ({
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
       {/* View Mode Toggle - Always Visible */}
       <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: '8px', backgroundColor: '#f3f4f6', borderRadius: '8px', padding: '4px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px' }}>
             <button
               onClick={() => setViewMode('trends')}
               style={{
-                padding: '8px 16px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: viewMode === 'trends' ? '#3b82f6' : 'transparent',
+                padding: '10px 18px',
+                borderRadius: '8px',
+                border: viewMode === 'trends' ? '2px solid #3b82f6' : '2px solid #e5e7eb',
+                backgroundColor: viewMode === 'trends' ? '#3b82f6' : 'white',
                 color: viewMode === 'trends' ? 'white' : '#374151',
                 fontSize: '14px',
-                fontWeight: '500',
+                fontWeight: '600',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s'
+                gap: '8px',
+                transition: 'all 0.2s',
+                boxShadow: viewMode === 'trends' ? '0 1px 3px rgba(59, 130, 246, 0.3)' : '0 1px 2px rgba(0, 0, 0, 0.05)'
+              }}
+              onMouseEnter={(e) => {
+                if (viewMode !== 'trends') {
+                  e.currentTarget.style.borderColor = '#9ca3af';
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (viewMode !== 'trends') {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.backgroundColor = 'white';
+                }
               }}
             >
               <TrendingUp size={16} />
@@ -140,18 +142,31 @@ const Forecast: React.FC<ForecastProps> = ({
             <button
               onClick={() => setViewMode('modeling')}
               style={{
-                padding: '8px 16px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: viewMode === 'modeling' ? '#3b82f6' : 'transparent',
+                padding: '10px 18px',
+                borderRadius: '8px',
+                border: viewMode === 'modeling' ? '2px solid #3b82f6' : '2px solid #e5e7eb',
+                backgroundColor: viewMode === 'modeling' ? '#3b82f6' : 'white',
                 color: viewMode === 'modeling' ? 'white' : '#374151',
                 fontSize: '14px',
-                fontWeight: '500',
+                fontWeight: '600',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s'
+                gap: '8px',
+                transition: 'all 0.2s',
+                boxShadow: viewMode === 'modeling' ? '0 1px 3px rgba(59, 130, 246, 0.3)' : '0 1px 2px rgba(0, 0, 0, 0.05)'
+              }}
+              onMouseEnter={(e) => {
+                if (viewMode !== 'modeling') {
+                  e.currentTarget.style.borderColor = '#9ca3af';
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (viewMode !== 'modeling') {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.backgroundColor = 'white';
+                }
               }}
             >
               <BarChart3 size={16} />

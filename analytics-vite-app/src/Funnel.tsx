@@ -2,25 +2,13 @@ import { useState, useMemo } from "react";
 import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit, Lock, Crown, Calculator } from "lucide-react";
 import { useAuth } from "./AuthContext";
 import CalculatorComponent from "./Calculator";
-
-interface FunnelData {
-  id: string;
-  year: number;
-  month: number;
-  inquiries: number;
-  callsBooked: number;
-  callsTaken: number;
-  closes: number;
-  bookings: number;
-  cash: number; // Cash received in this month (in cents)
-  lastUpdated?: string;
-}
+import type { FunnelData, Booking, Payment } from "./types";
 
 interface FunnelProps {
   funnelData: FunnelData[];
   setFunnelData: (data: FunnelData[]) => void;
-  salesData?: any[]; // Optional sales data for Pro users
-  paymentsData?: any[]; // Optional payments data for Pro users
+  salesData?: Booking[];
+  paymentsData?: Payment[];
 }
 
 // Helper functions
@@ -578,23 +566,36 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
         </div>
 
         {/* Sub-navigation */}
-        <div style={{ marginBottom: '32px' }}>
-          <div style={{ display: 'flex', gap: '8px', backgroundColor: '#f3f4f6', borderRadius: '8px', padding: '4px', width: 'fit-content' }}>
+        <div style={{ padding: '20px 20px 20px 20px' }}>
+          <div style={{ display: 'flex', gap: '12px' }}>
             <button
               onClick={() => setFunnelView('funnel')}
               style={{
-                padding: '8px 16px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: funnelView === 'funnel' ? '#3b82f6' : 'transparent',
+                padding: '10px 18px',
+                borderRadius: '8px',
+                border: funnelView === 'funnel' ? '2px solid #3b82f6' : '2px solid #e5e7eb',
+                backgroundColor: funnelView === 'funnel' ? '#3b82f6' : 'white',
                 color: funnelView === 'funnel' ? 'white' : '#374151',
                 fontSize: '14px',
-                fontWeight: '500',
+                fontWeight: '600',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s'
+                gap: '8px',
+                transition: 'all 0.2s',
+                boxShadow: funnelView === 'funnel' ? '0 1px 3px rgba(59, 130, 246, 0.3)' : '0 1px 2px rgba(0, 0, 0, 0.05)'
+              }}
+              onMouseEnter={(e) => {
+                if (funnelView !== 'funnel') {
+                  e.currentTarget.style.borderColor = '#9ca3af';
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (funnelView !== 'funnel') {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.backgroundColor = 'white';
+                }
               }}
             >
               <TrendingUp size={16} />
@@ -603,18 +604,31 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
             <button
               onClick={() => setFunnelView('calculator')}
               style={{
-                padding: '8px 16px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: funnelView === 'calculator' ? '#3b82f6' : 'transparent',
+                padding: '10px 18px',
+                borderRadius: '8px',
+                border: funnelView === 'calculator' ? '2px solid #3b82f6' : '2px solid #e5e7eb',
+                backgroundColor: funnelView === 'calculator' ? '#3b82f6' : 'white',
                 color: funnelView === 'calculator' ? 'white' : '#374151',
                 fontSize: '14px',
-                fontWeight: '500',
+                fontWeight: '600',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s'
+                gap: '8px',
+                transition: 'all 0.2s',
+                boxShadow: funnelView === 'calculator' ? '0 1px 3px rgba(59, 130, 246, 0.3)' : '0 1px 2px rgba(0, 0, 0, 0.05)'
+              }}
+              onMouseEnter={(e) => {
+                if (funnelView !== 'calculator') {
+                  e.currentTarget.style.borderColor = '#9ca3af';
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (funnelView !== 'calculator') {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.backgroundColor = 'white';
+                }
               }}
             >
               <Calculator size={16} />

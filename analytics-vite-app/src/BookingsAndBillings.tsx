@@ -1,46 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Plus, Trash2, CalendarDays, DollarSign, Download, Edit, X, Edit3, Check } from "lucide-react";
-
-// Types
-export type Client = {
-  id: string;
-  name: string;
-  email?: string;
-};
-
-export type ServiceType = {
-  id: string;
-  name: string;
-  isCustom: boolean;
-  tracksInFunnel: boolean;
-};
-
-export type LeadSource = {
-  id: string;
-  name: string;
-  isCustom: boolean;
-};
-
-export type Booking = {
-  id: string;
-  projectName: string; // Required
-  serviceTypeId: string; // Required
-  leadSourceId: string; // Required
-  dateInquired?: string; // Optional
-  dateBooked?: string; // Optional
-  projectDate?: string; // Optional
-  bookedRevenue: number; // Required - cents
-  createdAt: string;
-};
-
-export type Payment = {
-  id: string;
-  bookingId: string;
-  amount: number; // cents
-  dueDate: string;
-  paidAt?: string | null;
-  memo?: string;
-};
+import type { ServiceType, LeadSource, Booking, Payment } from './types';
 
 // Mock Data - Include service types and lead sources for existing bookings
 const defaultServiceTypes: ServiceType[] = [
@@ -123,6 +83,8 @@ export default function BookingsAndBillingsPOC() {
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [showServiceTypeDropdown, setShowServiceTypeDropdown] = useState(false);
+  const [deleteServiceTypeConfirmation, setDeleteServiceTypeConfirmation] = useState<{ id: string; name: string; bookingCount: number } | null>(null);
+  const [deleteLeadSourceConfirmation, setDeleteLeadSourceConfirmation] = useState<{ id: string; name: string; bookingCount: number } | null>(null);
   
   // Filtering and sorting state
   const [filters, setFilters] = useState({
@@ -218,14 +180,24 @@ export default function BookingsAndBillingsPOC() {
   const removeServiceType = (id: string) => {
     // Check if any bookings are using this service type
     const bookingsUsingServiceType = bookings.filter(b => b.serviceTypeId === id);
+    const serviceType = serviceTypes.find(st => st.id === id);
     
-    if (bookingsUsingServiceType.length > 0) {
-      const confirmMessage = `This service type is used by ${bookingsUsingServiceType.length} booking(s). Deleting it will remove the service type association from those bookings. Are you sure you want to continue?`;
-      
-      if (!confirm(confirmMessage)) {
-        return;
-      }
-      
+    if (!serviceType) return;
+    
+    // Show confirmation modal
+    setDeleteServiceTypeConfirmation({
+      id,
+      name: serviceType.name,
+      bookingCount: bookingsUsingServiceType.length
+    });
+  };
+
+  const confirmDeleteServiceType = () => {
+    if (!deleteServiceTypeConfirmation) return;
+    
+    const { id, bookingCount } = deleteServiceTypeConfirmation;
+    
+    if (bookingCount > 0) {
       // Remove service type from bookings that use it
       setBookings(prev => prev.map(booking => 
         booking.serviceTypeId === id 
@@ -235,6 +207,7 @@ export default function BookingsAndBillingsPOC() {
     }
     
     setServiceTypes(prev => prev.filter(st => st.id !== id));
+    setDeleteServiceTypeConfirmation(null);
   };
 
   // Update service type
@@ -265,14 +238,24 @@ export default function BookingsAndBillingsPOC() {
   const removeLeadSource = (id: string) => {
     // Check if any bookings are using this lead source
     const bookingsUsingLeadSource = bookings.filter(b => b.leadSourceId === id);
+    const leadSource = leadSources.find(ls => ls.id === id);
     
-    if (bookingsUsingLeadSource.length > 0) {
-      const confirmMessage = `This lead source is used by ${bookingsUsingLeadSource.length} booking(s). Deleting it will remove the lead source association from those bookings. Are you sure you want to continue?`;
-      
-      if (!confirm(confirmMessage)) {
-        return;
-      }
-      
+    if (!leadSource) return;
+    
+    // Show confirmation modal
+    setDeleteLeadSourceConfirmation({
+      id,
+      name: leadSource.name,
+      bookingCount: bookingsUsingLeadSource.length
+    });
+  };
+
+  const confirmDeleteLeadSource = () => {
+    if (!deleteLeadSourceConfirmation) return;
+    
+    const { id, bookingCount } = deleteLeadSourceConfirmation;
+    
+    if (bookingCount > 0) {
       // Remove lead source from bookings that use it
       setBookings(prev => prev.map(booking => 
         booking.leadSourceId === id 
@@ -282,6 +265,7 @@ export default function BookingsAndBillingsPOC() {
     }
     
     setLeadSources(prev => prev.filter(ls => ls.id !== id));
+    setDeleteLeadSourceConfirmation(null);
   };
 
   // Update lead source
@@ -392,17 +376,27 @@ export default function BookingsAndBillingsPOC() {
         <button
           onClick={() => setShowAddBooking(true)}
           style={{
-            backgroundColor: '#3b82f6',
+            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
-            padding: '12px 16px',
+            padding: '12px 18px',
             fontSize: '14px',
-            fontWeight: '500',
+            fontWeight: '600',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-1px)';
+            e.currentTarget.style.boxShadow = '0 4px 6px rgba(37, 99, 235, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 2px 4px rgba(37, 99, 235, 0.3)';
           }}
         >
           <Plus size={16} />
@@ -411,17 +405,26 @@ export default function BookingsAndBillingsPOC() {
         <button
           onClick={() => setShowServiceTypes(true)}
           style={{
-            backgroundColor: '#6b7280',
-            color: 'white',
-            border: 'none',
+            backgroundColor: 'white',
+            color: '#374151',
+            border: '2px solid #d1d5db',
             borderRadius: '8px',
-            padding: '12px 16px',
+            padding: '10px 16px',
             fontSize: '14px',
             fontWeight: '500',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = '#9ca3af';
+            e.currentTarget.style.backgroundColor = '#f9fafb';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = '#d1d5db';
+            e.currentTarget.style.backgroundColor = 'white';
           }}
         >
           <Edit size={16} />
@@ -431,17 +434,26 @@ export default function BookingsAndBillingsPOC() {
         <button
           onClick={() => setShowLeadSources(true)}
           style={{
-            backgroundColor: '#10b981',
-            color: 'white',
-            border: 'none',
+            backgroundColor: 'white',
+            color: '#374151',
+            border: '2px solid #d1d5db',
             borderRadius: '8px',
-            padding: '12px 16px',
+            padding: '10px 16px',
             fontSize: '14px',
             fontWeight: '500',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = '#9ca3af';
+            e.currentTarget.style.backgroundColor = '#f9fafb';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = '#d1d5db';
+            e.currentTarget.style.backgroundColor = 'white';
           }}
         >
           <Edit size={16} />
@@ -785,6 +797,184 @@ export default function BookingsAndBillingsPOC() {
       <footer style={{ fontSize: '12px', color: '#666', marginTop: '32px' }}>
         <p>POC-only. Replace with real data access (Supabase) and integrate auth. All amounts are shown in USD.</p>
       </footer>
+
+      {/* Delete Service Type Confirmation Modal */}
+      {deleteServiceTypeConfirmation && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '450px',
+            width: '90%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: '#fee2e2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Trash2 size={24} color="#dc2626" />
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937', textAlign: 'left' }}>
+                Delete Service Type
+              </h3>
+            </div>
+            
+            <p style={{ color: '#374151', margin: '0 0 8px 0', fontSize: '14px', textAlign: 'left', lineHeight: '1.5' }}>
+              Are you sure you want to delete <strong>{deleteServiceTypeConfirmation.name}</strong>?
+            </p>
+            
+            {deleteServiceTypeConfirmation.bookingCount > 0 ? (
+              <p style={{ color: '#dc2626', margin: '0 0 20px 0', fontSize: '13px', textAlign: 'left', lineHeight: '1.5', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '6px' }}>
+                <strong>Warning:</strong> This service type is used by {deleteServiceTypeConfirmation.bookingCount} booking(s). Deleting it will remove the service type association from those bookings. This action cannot be undone.
+              </p>
+            ) : (
+              <p style={{ color: '#dc2626', margin: '0 0 20px 0', fontSize: '13px', textAlign: 'left', lineHeight: '1.5', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '6px' }}>
+                <strong>Warning:</strong> This action cannot be undone.
+              </p>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeleteServiceTypeConfirmation(null)}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteServiceType}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: '#dc2626',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Delete Service Type
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Lead Source Confirmation Modal */}
+      {deleteLeadSourceConfirmation && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '450px',
+            width: '90%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: '#fee2e2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Trash2 size={24} color="#dc2626" />
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937', textAlign: 'left' }}>
+                Delete Lead Source
+              </h3>
+            </div>
+            
+            <p style={{ color: '#374151', margin: '0 0 8px 0', fontSize: '14px', textAlign: 'left', lineHeight: '1.5' }}>
+              Are you sure you want to delete <strong>{deleteLeadSourceConfirmation.name}</strong>?
+            </p>
+            
+            {deleteLeadSourceConfirmation.bookingCount > 0 ? (
+              <p style={{ color: '#dc2626', margin: '0 0 20px 0', fontSize: '13px', textAlign: 'left', lineHeight: '1.5', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '6px' }}>
+                <strong>Warning:</strong> This lead source is used by {deleteLeadSourceConfirmation.bookingCount} booking(s). Deleting it will remove the lead source association from those bookings. This action cannot be undone.
+              </p>
+            ) : (
+              <p style={{ color: '#dc2626', margin: '0 0 20px 0', fontSize: '13px', textAlign: 'left', lineHeight: '1.5', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '6px' }}>
+                <strong>Warning:</strong> This action cannot be undone.
+              </p>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeleteLeadSourceConfirmation(null)}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteLeadSource}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: '#dc2626',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Delete Lead Source
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

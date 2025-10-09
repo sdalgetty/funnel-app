@@ -1,53 +1,20 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import { TrendingUp, DollarSign, Users, Target, BarChart3, Plus, Edit, Trash2 } from 'lucide-react';
-
-// Types
-interface AdSource {
-  id: string;
-  name: string;
-  platform: string; // "Instagram", "Google", "Facebook", etc.
-  isActive: boolean;
-  createdAt: string;
-}
-
-interface AdCampaign {
-  id: string;
-  adSourceId: string;
-  year: number;
-  month: number;
-  spend: number; // in cents
-  leadsGenerated: number;
-  createdAt: string;
-  lastUpdated?: string;
-}
+import type { AdSource, AdCampaign, Booking, LeadSource, FunnelData } from './types';
+import { MOCK_AD_SOURCES, MOCK_AD_CAMPAIGNS } from './data/mockData';
 
 interface AdvertisingProps {
-  bookings: any[];
-  leadSources: any[];
-  funnelData: any[];
+  bookings: Booking[];
+  leadSources: LeadSource[];
+  funnelData: FunnelData[];
 }
-
-// Mock data
-const mockAdSources: AdSource[] = [
-  { id: 'ads_instagram', name: 'Instagram Ads', platform: 'Instagram', isActive: true, createdAt: '2025-01-01' },
-  { id: 'ads_google', name: 'Google Ads', platform: 'Google', isActive: true, createdAt: '2025-01-01' },
-];
-
-const mockAdCampaigns: AdCampaign[] = [
-  { id: 'ac_1', adSourceId: 'ads_instagram', year: 2025, month: 1, spend: 200000, leadsGenerated: 15, createdAt: '2025-01-01', lastUpdated: '2025-01-15T10:30:00Z' },
-  { id: 'ac_2', adSourceId: 'ads_instagram', year: 2025, month: 2, spend: 250000, leadsGenerated: 18, createdAt: '2025-02-01', lastUpdated: '2025-02-10T14:20:00Z' },
-  { id: 'ac_3', adSourceId: 'ads_instagram', year: 2025, month: 3, spend: 300000, leadsGenerated: 22, createdAt: '2025-03-01', lastUpdated: '2025-03-05T09:15:00Z' },
-  { id: 'ac_4', adSourceId: 'ads_google', year: 2025, month: 1, spend: 150000, leadsGenerated: 12, createdAt: '2025-01-01', lastUpdated: '2025-01-20T16:45:00Z' },
-  { id: 'ac_5', adSourceId: 'ads_google', year: 2025, month: 2, spend: 180000, leadsGenerated: 14, createdAt: '2025-02-01', lastUpdated: '2025-02-12T11:30:00Z' },
-];
 
 export default function Advertising({ bookings, leadSources, funnelData }: AdvertisingProps) {
   const { user } = useAuth();
-  const [adSources, setAdSources] = useState<AdSource[]>(mockAdSources);
-  const [adCampaigns, setAdCampaigns] = useState<AdCampaign[]>(mockAdCampaigns);
+  const [adSources, setAdSources] = useState<AdSource[]>(MOCK_AD_SOURCES);
+  const [adCampaigns, setAdCampaigns] = useState<AdCampaign[]>(MOCK_AD_CAMPAIGNS);
   const [showAdSources, setShowAdSources] = useState(false);
-  const [showAddCampaign, setShowAddCampaign] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<{
     adSource: AdSource;
@@ -141,20 +108,20 @@ export default function Advertising({ bookings, leadSources, funnelData }: Adver
       // Calculate total leads generated
       const totalAdLeads = campaigns.reduce((sum, campaign) => sum + campaign.leadsGenerated, 0);
 
-      // Find matching lead sources (simple name matching)
-      const matchingLeadSources = leadSources.filter(ls => 
-        ls.name.toLowerCase().includes(adSource.platform.toLowerCase())
-      );
+      // Find the matching lead source using direct reference
+      const matchingLeadSource = leadSources.find(ls => ls.id === adSource.leadSourceId);
 
       // Calculate total booked revenue from ads
-      const totalBookedFromAds = bookings
-        .filter(booking => matchingLeadSources.some(ls => ls.id === booking.leadSourceId))
-        .reduce((sum, booking) => sum + booking.revenue, 0);
+      const totalBookedFromAds = matchingLeadSource
+        ? bookings
+            .filter(booking => booking.leadSourceId === matchingLeadSource.id)
+            .reduce((sum, booking) => sum + booking.revenue, 0)
+        : 0;
 
       // Calculate number of closes from ads
-      const closesFromAds = bookings
-        .filter(booking => matchingLeadSources.some(ls => ls.id === booking.leadSourceId))
-        .length;
+      const closesFromAds = matchingLeadSource
+        ? bookings.filter(booking => booking.leadSourceId === matchingLeadSource.id).length
+        : 0;
 
       // Calculate total inquiries from funnel data
       const totalInquiries = funnelData
@@ -213,53 +180,42 @@ export default function Advertising({ bookings, leadSources, funnelData }: Adver
   }, [adSourceMetrics]);
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
           <h1 style={{ fontSize: '28px', fontWeight: '700', margin: 0, color: '#1f2937' }}>
             Advertising Performance
           </h1>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button
-              onClick={() => setShowAdSources(true)}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#f3f4f6',
-                color: '#374151',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <Edit size={16} />
-              Manage Ad Sources
-            </button>
-            <button
-              onClick={() => setShowAddCampaign(true)}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <Plus size={16} />
-              Add Campaign
-            </button>
-          </div>
+          <button
+            onClick={() => setShowAdSources(true)}
+            style={{
+              padding: '10px 18px',
+              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 6px rgba(37, 99, 235, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 4px rgba(37, 99, 235, 0.3)';
+            }}
+          >
+            <Edit size={16} />
+            Manage Ad Sources
+          </button>
         </div>
         <p style={{ color: '#6b7280', margin: 0, fontSize: '16px' }}>
           Track your paid advertising ROI and performance metrics
@@ -267,7 +223,7 @@ export default function Advertising({ bookings, leadSources, funnelData }: Adver
       </div>
 
       {/* Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '32px' }}>
         <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
             <DollarSign size={20} color="#3b82f6" />
@@ -409,7 +365,7 @@ export default function Advertising({ bookings, leadSources, funnelData }: Adver
         })}
       </div>
 
-      {/* Ad Source Performance Table */}
+      {/* Ad Source Performance Table - Transposed */}
       <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
         <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb' }}>
           <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
@@ -421,71 +377,119 @@ export default function Advertising({ bookings, leadSources, funnelData }: Adver
           <table style={{ width: '100%', fontSize: '14px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f9fafb' }}>
-                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Ad Source</th>
-                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Total Ad Spend</th>
-                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Total Booked from Ads</th>
-                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Ad Spend ROI</th>
-                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Avg Booking Amount</th>
-                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>% of Total Inquiries</th>
-                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Cost Per Inquiry</th>
-                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Cost Per Close</th>
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151', minWidth: '180px' }}>Metric</th>
+                {adSourceMetrics.map((metric) => (
+                  <th key={metric.adSource.id} style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151', minWidth: '120px' }}>
+                    {metric.adSource.name}
+                  </th>
+                ))}
+                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151', minWidth: '120px', backgroundColor: '#f3f4f6' }}>
+                  Total
+                </th>
               </tr>
             </thead>
             <tbody>
-              {adSourceMetrics.map((metric, index) => (
-                <tr key={metric.adSource.id} style={{ 
-                  borderBottom: '1px solid #f3f4f6',
-                  backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb'
-                }}>
-                  <td style={{ padding: '12px', fontWeight: '500', color: '#1f2937', textAlign: 'left' }}>
-                    {metric.adSource.name}
-                  </td>
-                  <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
+              {/* Total Ad Spend Row */}
+              <tr style={{ borderBottom: '1px solid #f3f4f6', backgroundColor: 'white' }}>
+                <td style={{ padding: '12px', fontWeight: '500', color: '#1f2937', textAlign: 'left' }}>
+                  Total Ad Spend
+                </td>
+                {adSourceMetrics.map((metric) => (
+                  <td key={metric.adSource.id} style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
                     {toUSD(metric.totalAdSpend)}
                   </td>
-                  <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
-                    {toUSD(metric.totalBookedFromAds)}
-                  </td>
-                  <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
-                    {metric.adSpendROI !== null ? `${metric.adSpendROI.toFixed(1)}%` : 'N/A'}
-                  </td>
-                  <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
-                    {toUSD(metric.averageBookingAmount)}
-                  </td>
-                  <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
-                    {metric.percentOfTotalInquiries.toFixed(1)}%
-                  </td>
-                  <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
-                    {toUSD(metric.costPerInquiry)}
-                  </td>
-                  <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
-                    {toUSD(metric.costPerClose)}
-                  </td>
-                </tr>
-              ))}
-              
-              {/* Totals Row */}
-              <tr style={{ backgroundColor: '#f9fafb', borderTop: '2px solid #e5e7eb' }}>
-                <td style={{ padding: '12px', fontWeight: '600', color: '#1f2937' }}>Total</td>
-                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937' }}>
+                ))}
+                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937', backgroundColor: '#f9fafb' }}>
                   {toUSD(totals.totalAdSpend)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937' }}>
+              </tr>
+
+              {/* Total Booked from Ads Row */}
+              <tr style={{ borderBottom: '1px solid #f3f4f6', backgroundColor: '#f9fafb' }}>
+                <td style={{ padding: '12px', fontWeight: '500', color: '#1f2937', textAlign: 'left' }}>
+                  Total Booked from Ads
+                </td>
+                {adSourceMetrics.map((metric) => (
+                  <td key={metric.adSource.id} style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
+                    {toUSD(metric.totalBookedFromAds)}
+                  </td>
+                ))}
+                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937', backgroundColor: '#f3f4f6' }}>
                   {toUSD(totals.totalBookedFromAds)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937' }}>
+              </tr>
+
+              {/* Ad Spend ROI Row */}
+              <tr style={{ borderBottom: '1px solid #f3f4f6', backgroundColor: 'white' }}>
+                <td style={{ padding: '12px', fontWeight: '500', color: '#1f2937', textAlign: 'left' }}>
+                  Ad Spend ROI
+                </td>
+                {adSourceMetrics.map((metric) => (
+                  <td key={metric.adSource.id} style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
+                    {metric.adSpendROI !== null ? `${metric.adSpendROI.toFixed(1)}%` : 'N/A'}
+                  </td>
+                ))}
+                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937', backgroundColor: '#f9fafb' }}>
                   {totals.overallROI !== null ? `${totals.overallROI.toFixed(1)}%` : 'N/A'}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937' }}>
+              </tr>
+
+              {/* Avg Booking Amount Row */}
+              <tr style={{ borderBottom: '1px solid #f3f4f6', backgroundColor: '#f9fafb' }}>
+                <td style={{ padding: '12px', fontWeight: '500', color: '#1f2937', textAlign: 'left' }}>
+                  Avg Booking Amount
+                </td>
+                {adSourceMetrics.map((metric) => (
+                  <td key={metric.adSource.id} style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
+                    {toUSD(metric.averageBookingAmount)}
+                  </td>
+                ))}
+                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937', backgroundColor: '#f3f4f6' }}>
                   {toUSD(totals.overallAverageBooking)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937' }}>
+              </tr>
+
+              {/* % of Total Inquiries Row */}
+              <tr style={{ borderBottom: '1px solid #f3f4f6', backgroundColor: 'white' }}>
+                <td style={{ padding: '12px', fontWeight: '500', color: '#1f2937', textAlign: 'left' }}>
+                  % of Total Inquiries
+                </td>
+                {adSourceMetrics.map((metric) => (
+                  <td key={metric.adSource.id} style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
+                    {metric.percentOfTotalInquiries.toFixed(1)}%
+                  </td>
+                ))}
+                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937', backgroundColor: '#f9fafb' }}>
                   {totals.overallPercentOfInquiries.toFixed(1)}%
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937' }}>
+              </tr>
+
+              {/* Cost Per Inquiry Row */}
+              <tr style={{ borderBottom: '1px solid #f3f4f6', backgroundColor: '#f9fafb' }}>
+                <td style={{ padding: '12px', fontWeight: '500', color: '#1f2937', textAlign: 'left' }}>
+                  Cost Per Inquiry
+                </td>
+                {adSourceMetrics.map((metric) => (
+                  <td key={metric.adSource.id} style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
+                    {toUSD(metric.costPerInquiry)}
+                  </td>
+                ))}
+                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937', backgroundColor: '#f3f4f6' }}>
                   {toUSD(totals.overallCostPerInquiry)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937' }}>
+              </tr>
+
+              {/* Cost Per Close Row */}
+              <tr style={{ backgroundColor: 'white' }}>
+                <td style={{ padding: '12px', fontWeight: '500', color: '#1f2937', textAlign: 'left' }}>
+                  Cost Per Close
+                </td>
+                {adSourceMetrics.map((metric) => (
+                  <td key={metric.adSource.id} style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
+                    {toUSD(metric.costPerClose)}
+                  </td>
+                ))}
+                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937', backgroundColor: '#f9fafb' }}>
                   {toUSD(totals.overallCostPerClose)}
                 </td>
               </tr>
@@ -494,99 +498,26 @@ export default function Advertising({ bookings, leadSources, funnelData }: Adver
         </div>
       </div>
 
-      {/* Placeholder for modals */}
+      {/* Manage Ad Sources Modal */}
       {showAdSources && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '24px',
-            maxWidth: '500px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflow: 'auto'
-          }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0', color: '#1f2937' }}>
-              Manage Ad Sources
-            </h3>
-            <p style={{ color: '#6b7280', margin: '0 0 16px 0' }}>
-              Ad source management functionality will be implemented here.
-            </p>
-            <button
-              onClick={() => setShowAdSources(false)}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer'
-              }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showAddCampaign && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '24px',
-            maxWidth: '500px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflow: 'auto'
-          }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0', color: '#1f2937' }}>
-              Add Campaign
-            </h3>
-            <p style={{ color: '#6b7280', margin: '0 0 16px 0' }}>
-              Campaign creation functionality will be implemented here.
-            </p>
-            <button
-              onClick={() => setShowAddCampaign(false)}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer'
-              }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <ManageAdSourcesModal
+          adSources={adSources}
+          leadSources={leadSources}
+          onClose={() => setShowAdSources(false)}
+          onAddAdSource={(newAdSource) => {
+            setAdSources(prev => [...prev, newAdSource]);
+          }}
+          onUpdateAdSource={(updatedAdSource) => {
+            setAdSources(prev => prev.map(source => 
+              source.id === updatedAdSource.id ? updatedAdSource : source
+            ));
+          }}
+          onDeleteAdSource={(adSourceId) => {
+            setAdSources(prev => prev.filter(source => source.id !== adSourceId));
+            // Also remove all campaigns associated with this ad source
+            setAdCampaigns(prev => prev.filter(campaign => campaign.adSourceId !== adSourceId));
+          }}
+        />
       )}
 
       {/* Edit Modal */}
@@ -665,6 +596,466 @@ export default function Advertising({ bookings, leadSources, funnelData }: Adver
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Manage Ad Sources Modal Component
+function ManageAdSourcesModal({
+  adSources,
+  leadSources,
+  onClose,
+  onAddAdSource,
+  onUpdateAdSource,
+  onDeleteAdSource
+}: {
+  adSources: AdSource[];
+  leadSources: any[];
+  onClose: () => void;
+  onAddAdSource: (adSource: AdSource) => void;
+  onUpdateAdSource: (adSource: AdSource) => void;
+  onDeleteAdSource: (adSourceId: string) => void;
+}) {
+  const [newAdSourceName, setNewAdSourceName] = useState('');
+  const [newLeadSourceId, setNewLeadSourceId] = useState('');
+  const [editingAdSource, setEditingAdSource] = useState<AdSource | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editLeadSourceId, setEditLeadSourceId] = useState('');
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ id: string; name: string } | null>(null);
+
+  const handleAddAdSource = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAdSourceName.trim() || !newLeadSourceId) return;
+
+    const newAdSource: AdSource = {
+      id: `ads_${Date.now()}`,
+      name: newAdSourceName.trim(),
+      leadSourceId: newLeadSourceId,
+      isActive: true,
+      createdAt: new Date().toISOString()
+    };
+
+    onAddAdSource(newAdSource);
+    setNewAdSourceName('');
+    setNewLeadSourceId('');
+  };
+
+  const handleStartEdit = (adSource: AdSource) => {
+    setEditingAdSource(adSource);
+    setEditName(adSource.name);
+    setEditLeadSourceId(adSource.leadSourceId);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingAdSource || !editName.trim() || !editLeadSourceId) return;
+
+    const updatedAdSource: AdSource = {
+      ...editingAdSource,
+      name: editName.trim(),
+      leadSourceId: editLeadSourceId
+    };
+
+    onUpdateAdSource(updatedAdSource);
+    setEditingAdSource(null);
+    setEditName('');
+    setEditLeadSourceId('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingAdSource(null);
+    setEditName('');
+    setEditLeadSourceId('');
+  };
+
+  const handleDelete = (adSource: AdSource) => {
+    setDeleteConfirmation({ id: adSource.id, name: adSource.name });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmation) {
+      onDeleteAdSource(deleteConfirmation.id);
+      setDeleteConfirmation(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmation(null);
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        padding: '24px',
+        maxWidth: '600px',
+        width: '90%',
+        maxHeight: '80vh',
+        overflow: 'auto'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937', textAlign: 'left' }}>
+            Manage Ad Sources
+          </h3>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '24px',
+              cursor: 'pointer',
+              color: '#6b7280',
+              lineHeight: 1
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        <p style={{ color: '#6b7280', margin: '0 0 20px 0', fontSize: '14px', textAlign: 'left' }}>
+          Add, edit, or remove advertising sources. Each ad source tracks campaigns and their performance.
+        </p>
+
+        {/* Add New Ad Source Form */}
+        <form onSubmit={handleAddAdSource} style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
+          <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 12px 0', color: '#1f2937', textAlign: 'left' }}>
+            Add New Ad Source
+          </h4>
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '4px', textAlign: 'left' }}>
+              Ad Source Name *
+            </label>
+            <input
+              type="text"
+              value={newAdSourceName}
+              onChange={(e) => setNewAdSourceName(e.target.value)}
+              placeholder="e.g., Facebook Ads"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px',
+                boxSizing: 'border-box'
+              }}
+              required
+            />
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '4px', textAlign: 'left' }}>
+              Lead Source *
+            </label>
+            <select
+              value={newLeadSourceId}
+              onChange={(e) => setNewLeadSourceId(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px',
+                boxSizing: 'border-box',
+                backgroundColor: 'white'
+              }}
+              required
+            >
+              <option value="">Select a lead source...</option>
+              {leadSources.map((ls) => (
+                <option key={ls.id} value={ls.id}>
+                  {ls.name}
+                </option>
+              ))}
+            </select>
+            <p style={{ fontSize: '12px', color: '#6b7280', margin: '4px 0 0 0', textAlign: 'left' }}>
+              This links the ad source to a lead source for accurate ROI tracking
+            </p>
+          </div>
+          <button
+            type="submit"
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }}
+          >
+            <Plus size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
+            Add Ad Source
+          </button>
+        </form>
+
+        {/* Existing Ad Sources List */}
+        <div>
+          <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 12px 0', color: '#1f2937', textAlign: 'left' }}>
+            Existing Ad Sources
+          </h4>
+          {adSources.length === 0 ? (
+            <p style={{ color: '#9ca3af', fontSize: '14px', textAlign: 'left', padding: '20px', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
+              No ad sources yet. Add your first ad source above.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {adSources.map((adSource) => (
+                <div
+                  key={adSource.id}
+                  style={{
+                    padding: '12px',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    backgroundColor: 'white'
+                  }}
+                >
+                  {editingAdSource?.id === adSource.id ? (
+                    // Edit Mode
+                    <div>
+                      <div style={{ marginBottom: '8px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#374151', marginBottom: '4px', textAlign: 'left' }}>
+                          Ad Source Name
+                        </label>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '6px 10px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '13px',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+                      <div style={{ marginBottom: '8px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#374151', marginBottom: '4px', textAlign: 'left' }}>
+                          Lead Source
+                        </label>
+                        <select
+                          value={editLeadSourceId}
+                          onChange={(e) => setEditLeadSourceId(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '6px 10px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '13px',
+                            boxSizing: 'border-box',
+                            backgroundColor: 'white'
+                          }}
+                        >
+                          <option value="">Select a lead source...</option>
+                          {leadSources.map((ls) => (
+                            <option key={ls.id} value={ls.id}>
+                              {ls.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={handleSaveEdit}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#6b7280',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    // View Mode
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ textAlign: 'left' }}>
+                        <div style={{ fontWeight: '500', color: '#1f2937', fontSize: '14px' }}>
+                          {adSource.name}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                          Lead Source: {leadSources.find(ls => ls.id === adSource.leadSourceId)?.name || 'Unknown'}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => handleStartEdit(adSource)}
+                          style={{
+                            padding: '6px 10px',
+                            backgroundColor: '#f3f4f6',
+                            color: '#374151',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Edit size={12} />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(adSource)}
+                          style={{
+                            padding: '6px 10px',
+                            backgroundColor: '#fee2e2',
+                            color: '#dc2626',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Trash2 size={12} />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Close Button */}
+        <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#f3f4f6',
+              color: '#374151',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }}
+          >
+            Done
+          </button>
+        </div>
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirmation && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1001
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  backgroundColor: '#fee2e2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Trash2 size={24} color="#dc2626" />
+                </div>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937', textAlign: 'left' }}>
+                  Delete Ad Source
+                </h3>
+              </div>
+              
+              <p style={{ color: '#374151', margin: '0 0 8px 0', fontSize: '14px', textAlign: 'left', lineHeight: '1.5' }}>
+                Are you sure you want to delete <strong>{deleteConfirmation.name}</strong>?
+              </p>
+              
+              <p style={{ color: '#dc2626', margin: '0 0 20px 0', fontSize: '13px', textAlign: 'left', lineHeight: '1.5', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '6px' }}>
+                <strong>Warning:</strong> All associated campaign data and monthly tracking will be permanently deleted. This action cannot be undone.
+              </p>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={cancelDelete}
+                  style={{
+                    padding: '10px 16px',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  style={{
+                    padding: '10px 16px',
+                    backgroundColor: '#dc2626',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Delete Ad Source
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

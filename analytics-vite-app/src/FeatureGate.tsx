@@ -1,6 +1,6 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 import { useAuth } from './AuthContext';
-import { Lock, Crown } from 'lucide-react';
+import { Lock, Crown, X } from 'lucide-react';
 
 interface FeatureGateProps {
   feature: 'sales' | 'forecast' | 'dataIntegration' | 'advertising';
@@ -10,6 +10,7 @@ interface FeatureGateProps {
 
 export default function FeatureGate({ feature, children, fallback }: FeatureGateProps) {
   const { user, features } = useAuth();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const hasAccess = () => {
     switch (feature) {
@@ -87,13 +88,7 @@ export default function FeatureGate({ feature, children, fallback }: FeatureGate
       </p>
       
       <button
-        onClick={() => {
-          // This will be handled by the parent component
-          if (window.confirm('Upgrade to Pro to access this feature?')) {
-            // In a real app, this would redirect to billing
-            alert('Upgrade functionality will be implemented with your billing system');
-          }
-        }}
+        onClick={() => setShowUpgradeModal(true)}
         style={{
           backgroundColor: '#3b82f6',
           color: 'white',
@@ -111,6 +106,136 @@ export default function FeatureGate({ feature, children, fallback }: FeatureGate
         <Crown size={16} />
         Upgrade to Pro
       </button>
+
+      {/* Upgrade Confirmation Modal */}
+      {showUpgradeModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '32px',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Crown size={28} color="white" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '20px', fontWeight: '700', margin: 0, color: '#1f2937', textAlign: 'left' }}>
+                    Upgrade to Pro
+                  </h3>
+                  <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0', textAlign: 'left' }}>
+                    Unlock {getFeatureName()}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  padding: '4px'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div style={{ 
+              backgroundColor: '#fef3c7', 
+              borderRadius: '8px', 
+              padding: '16px', 
+              marginBottom: '24px',
+              borderLeft: '4px solid #f59e0b'
+            }}>
+              <p style={{ color: '#92400e', margin: 0, fontSize: '14px', textAlign: 'left', lineHeight: '1.6' }}>
+                {feature === 'sales' && 'Get full access to Sales management with booking and payment tracking, revenue analytics, and more.'}
+                {feature === 'forecast' && 'Create unlimited forecast models, analyze trends with advanced analytics, and plan for growth.'}
+                {feature === 'dataIntegration' && 'Enable automatic data sync between all views for a seamless workflow and real-time updates.'}
+                {feature === 'advertising' && 'Track your paid advertising performance, calculate ROI, monitor lead generation, and optimize your ad spend.'}
+              </p>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 12px 0', color: '#1f2937', textAlign: 'left' }}>
+                Pro Features Include:
+              </h4>
+              <ul style={{ margin: 0, paddingLeft: '20px', color: '#374151', fontSize: '14px', lineHeight: '1.8' }}>
+                <li>Unlimited bookings and payments</li>
+                <li>Advanced forecast modeling</li>
+                <li>Advertising ROI tracking</li>
+                <li>Priority support</li>
+                <li>Data export capabilities</li>
+              </ul>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                style={{
+                  padding: '12px 20px',
+                  backgroundColor: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Maybe Later
+              </button>
+              <button
+                onClick={() => {
+                  // In a real app, this would redirect to billing
+                  alert('Upgrade functionality will be implemented with your billing system');
+                  setShowUpgradeModal(false);
+                }}
+                style={{
+                  padding: '12px 20px',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Crown size={16} />
+                Upgrade Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

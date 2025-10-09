@@ -1,46 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Edit, Trash2, Target, TrendingUp, DollarSign, Calendar, CheckCircle, X } from 'lucide-react';
-
-interface ServiceType {
-  id: string;
-  name: string;
-  isCustom: boolean;
-}
-
-interface ForecastModel {
-  id: string;
-  name: string;
-  year: number;
-  isActive: boolean;
-  serviceTypes: {
-    serviceTypeId: string;
-    quantity: number;
-    avgBooking: number;
-    totalForecast: number;
-  }[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Payment {
-  id: string;
-  bookingId: string;
-  amount: number; // cents
-  dueDate: string;
-  paidAt?: string | null;
-  memo?: string;
-}
-
-interface Booking {
-  id: string;
-  projectName: string;
-  serviceTypeId: string;
-  dateInquired?: string;
-  dateBooked?: string;
-  projectDate?: string;
-  bookedRevenue: number; // cents
-  createdAt: string;
-}
+import type { ServiceType, Booking, Payment, ForecastModel } from './types';
 
 interface ForecastModelingProps {
   serviceTypes: ServiceType[];
@@ -249,17 +209,27 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
         <button
           onClick={() => setShowModelModal(true)}
           style={{
-            backgroundColor: '#3b82f6',
+            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
-            padding: '12px 16px',
+            padding: '12px 18px',
             fontSize: '14px',
-            fontWeight: '500',
+            fontWeight: '600',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-1px)';
+            e.currentTarget.style.boxShadow = '0 4px 6px rgba(37, 99, 235, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 2px 4px rgba(37, 99, 235, 0.3)';
           }}
         >
           <Plus size={16} />

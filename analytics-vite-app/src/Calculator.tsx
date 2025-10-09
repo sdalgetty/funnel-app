@@ -1,17 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Target, TrendingUp, Users, Phone, CheckCircle, DollarSign } from 'lucide-react';
-
-interface FunnelData {
-  id: string;
-  year: number;
-  month: string | number;
-  inquiries: number;
-  callsBooked: number;
-  callsTaken: number;
-  closes: number;
-  bookings: number;
-  lastUpdated?: string;
-}
+import type { FunnelData } from './types';
 
 interface CalculatorData {
   bookingsGoal: number;
