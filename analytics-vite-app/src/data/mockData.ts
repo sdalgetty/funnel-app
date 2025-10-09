@@ -5,7 +5,7 @@
  * When integrating with a backend, this data will be replaced by API calls.
  */
 
-import { 
+import type { 
   FunnelData, 
   ServiceType, 
   LeadSource, 
