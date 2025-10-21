@@ -31,12 +31,13 @@ import {
   MOCK_AD_SOURCES,
   MOCK_AD_CAMPAIGNS
 } from '../data/mockData';
+import { SupabaseDataService } from './supabaseDataService';
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
-const USE_MOCK_DATA = true; // Set to false when backend is ready
+const USE_MOCK_DATA = false; // Set to false when backend is ready
 
 // ============================================================================
 // FUNNEL DATA OPERATIONS
@@ -53,16 +54,7 @@ export const FunnelService = {
       return MOCK_FUNNEL_DATA.filter(d => d.year === year);
     }
     
-    // TODO: Replace with real Supabase query
-    // const { data, error } = await supabase
-    //   .from('funnel_data')
-    //   .select('*')
-    //   .eq('year', year)
-    //   .order('month', { ascending: true });
-    // if (error) throw error;
-    // return data;
-    
-    return [];
+    return await SupabaseDataService.getAllFunnels();
   },
 
   /**
@@ -74,8 +66,7 @@ export const FunnelService = {
       return MOCK_FUNNEL_DATA;
     }
     
-    // TODO: Replace with real Supabase query
-    return [];
+    return await SupabaseDataService.getAllFunnels();
   },
 
   /**
@@ -89,8 +80,7 @@ export const FunnelService = {
       return { ...existing, ...data, lastUpdated: new Date().toISOString() };
     }
     
-    // TODO: Replace with real Supabase mutation
-    throw new Error('Not implemented');
+    return await SupabaseDataService.updateFunnel(id, data);
   },
 
   /**
@@ -107,8 +97,7 @@ export const FunnelService = {
       return newData;
     }
     
-    // TODO: Replace with real Supabase insert
-    throw new Error('Not implemented');
+    return await SupabaseDataService.createFunnel(data);
   }
 };
 
@@ -122,7 +111,7 @@ export const BookingService = {
       await delay(100);
       return MOCK_BOOKINGS;
     }
-    return [];
+    return await SupabaseDataService.getAllBookings();
   },
 
   async create(data: Omit<Booking, 'id' | 'createdAt'>): Promise<Booking> {
@@ -135,7 +124,7 @@ export const BookingService = {
       };
       return newBooking;
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.createBooking(data);
   },
 
   async update(id: string, data: Partial<Booking>): Promise<Booking> {
@@ -145,7 +134,7 @@ export const BookingService = {
       if (!existing) throw new Error('Booking not found');
       return { ...existing, ...data };
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.updateBooking(id, data);
   },
 
   async delete(id: string): Promise<void> {
@@ -153,7 +142,7 @@ export const BookingService = {
       await delay(100);
       return;
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.deleteBooking(id);
   }
 };
 
@@ -167,7 +156,7 @@ export const PaymentService = {
       await delay(100);
       return MOCK_PAYMENTS.filter(p => p.bookingId === bookingId);
     }
-    return [];
+    return await SupabaseDataService.getPaymentsByBookingId(bookingId);
   },
 
   async create(data: Omit<Payment, 'id'>): Promise<Payment> {
@@ -179,7 +168,7 @@ export const PaymentService = {
       };
       return newPayment;
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.createPayment(data);
   },
 
   async update(id: string, data: Partial<Payment>): Promise<Payment> {
@@ -189,7 +178,7 @@ export const PaymentService = {
       if (!existing) throw new Error('Payment not found');
       return { ...existing, ...data };
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.updatePayment(id, data);
   },
 
   async delete(id: string): Promise<void> {
@@ -197,7 +186,7 @@ export const PaymentService = {
       await delay(100);
       return;
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.deletePayment(id);
   }
 };
 
@@ -211,7 +200,7 @@ export const ServiceTypeService = {
       await delay(100);
       return MOCK_SERVICE_TYPES;
     }
-    return [];
+    return await SupabaseDataService.getAllServiceTypes();
   },
 
   async create(data: Omit<ServiceType, 'id'>): Promise<ServiceType> {
@@ -223,7 +212,7 @@ export const ServiceTypeService = {
       };
       return newServiceType;
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.createServiceType(data);
   },
 
   async update(id: string, data: Partial<ServiceType>): Promise<ServiceType> {
@@ -233,7 +222,7 @@ export const ServiceTypeService = {
       if (!existing) throw new Error('Service type not found');
       return { ...existing, ...data };
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.updateServiceType(id, data);
   },
 
   async delete(id: string): Promise<void> {
@@ -241,7 +230,7 @@ export const ServiceTypeService = {
       await delay(100);
       return;
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.deleteServiceType(id);
   }
 };
 
@@ -255,7 +244,7 @@ export const LeadSourceService = {
       await delay(100);
       return MOCK_LEAD_SOURCES;
     }
-    return [];
+    return await SupabaseDataService.getAllLeadSources();
   },
 
   async create(data: Omit<LeadSource, 'id'>): Promise<LeadSource> {
@@ -267,7 +256,7 @@ export const LeadSourceService = {
       };
       return newLeadSource;
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.createLeadSource(data);
   },
 
   async update(id: string, data: Partial<LeadSource>): Promise<LeadSource> {
@@ -277,7 +266,7 @@ export const LeadSourceService = {
       if (!existing) throw new Error('Lead source not found');
       return { ...existing, ...data };
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.updateLeadSource(id, data);
   },
 
   async delete(id: string): Promise<void> {
@@ -285,7 +274,7 @@ export const LeadSourceService = {
       await delay(100);
       return;
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.deleteLeadSource(id);
   }
 };
 
@@ -299,7 +288,7 @@ export const AdSourceService = {
       await delay(100);
       return MOCK_AD_SOURCES;
     }
-    return [];
+    return await SupabaseDataService.getAllAdSources();
   },
 
   async create(data: Omit<AdSource, 'id' | 'createdAt'>): Promise<AdSource> {
@@ -312,7 +301,7 @@ export const AdSourceService = {
       };
       return newAdSource;
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.createAdSource(data);
   },
 
   async update(id: string, data: Partial<AdSource>): Promise<AdSource> {
@@ -322,7 +311,7 @@ export const AdSourceService = {
       if (!existing) throw new Error('Ad source not found');
       return { ...existing, ...data };
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.updateAdSource(id, data);
   },
 
   async delete(id: string): Promise<void> {
@@ -330,7 +319,7 @@ export const AdSourceService = {
       await delay(100);
       return;
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.deleteAdSource(id);
   }
 };
 
@@ -340,7 +329,7 @@ export const AdCampaignService = {
       await delay(100);
       return MOCK_AD_CAMPAIGNS.filter(c => c.year === year);
     }
-    return [];
+    return await SupabaseDataService.getAllAdCampaigns();
   },
 
   async getByAdSource(adSourceId: string): Promise<AdCampaign[]> {
@@ -348,7 +337,7 @@ export const AdCampaignService = {
       await delay(100);
       return MOCK_AD_CAMPAIGNS.filter(c => c.adSourceId === adSourceId);
     }
-    return [];
+    return await SupabaseDataService.getAdCampaignsBySourceId(adSourceId);
   },
 
   async create(data: Omit<AdCampaign, 'id' | 'createdAt'>): Promise<AdCampaign> {
@@ -362,7 +351,7 @@ export const AdCampaignService = {
       };
       return newCampaign;
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.createAdCampaign(data);
   },
 
   async update(id: string, data: Partial<AdCampaign>): Promise<AdCampaign> {
@@ -376,7 +365,7 @@ export const AdCampaignService = {
         lastUpdated: new Date().toISOString() 
       };
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.updateAdCampaign(id, data);
   },
 
   async delete(id: string): Promise<void> {
@@ -384,7 +373,7 @@ export const AdCampaignService = {
       await delay(100);
       return;
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.deleteAdCampaign(id);
   }
 };
 
@@ -398,7 +387,7 @@ export const ForecastModelService = {
       await delay(100);
       return []; // No mock forecast models yet
     }
-    return [];
+    return await SupabaseDataService.getAllForecastModels();
   },
 
   async create(data: Omit<ForecastModel, 'id' | 'createdAt' | 'updatedAt'>): Promise<ForecastModel> {
@@ -413,7 +402,7 @@ export const ForecastModelService = {
       };
       return newModel;
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.createForecastModel(data);
   },
 
   async update(id: string, data: Partial<ForecastModel>): Promise<ForecastModel> {
@@ -422,7 +411,7 @@ export const ForecastModelService = {
       // Mock implementation - would come from database
       throw new Error('Forecast model not found');
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.updateForecastModel(id, data);
   },
 
   async delete(id: string): Promise<void> {
@@ -430,7 +419,7 @@ export const ForecastModelService = {
       await delay(100);
       return;
     }
-    throw new Error('Not implemented');
+    return await SupabaseDataService.deleteForecastModel(id);
   }
 };
 

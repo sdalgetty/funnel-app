@@ -7,7 +7,9 @@ import UserProfile from './UserProfile'
 import Advertising from './Advertising'
 import AuthModal from './AuthModal'
 import FeatureGate from './FeatureGate'
-import { AuthProvider, useAuth } from './AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import LoginForm from './components/LoginForm'
+import TestConnection from './components/TestConnection'
 import { UpgradePrompt } from './FeatureGate'
 import { User, Crown, LogOut, Settings } from 'lucide-react'
 import type { Page, FunnelData, ServiceType, LeadSource, Booking, Payment } from './types'
@@ -21,7 +23,7 @@ import {
 import './App.css'
 
 function AppContent() {
-  const { user, logout, features } = useAuth()
+  const { user, signOut, loading } = useAuth()
   const [currentPage, setCurrentPage] = useState<Page>('funnel')
   const [showAuthModal, setShowAuthModal] = useState(false)
   
@@ -44,6 +46,31 @@ function AppContent() {
     
     return () => window.removeEventListener('resize', checkDevice)
   }, [])
+
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        fontSize: '18px'
+      }}>
+        Loading...
+      </div>
+    )
+  }
+
+  // Show login form if not authenticated
+  if (!user) {
+    return (
+      <div>
+        <LoginForm />
+        <TestConnection />
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
@@ -195,7 +222,7 @@ function AppContent() {
                 </span>
               </div>
               <button
-                onClick={logout}
+                onClick={signOut}
                 style={{
                   display: 'flex',
                   alignItems: 'center',

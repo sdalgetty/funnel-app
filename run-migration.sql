@@ -1,3 +1,6 @@
+-- Run this SQL in your Supabase SQL Editor
+-- Copy and paste the contents of supabase/migrations/001_init.sql
+
 -- Enable necessary extensions
 create extension if not exists "uuid-ossp";
 
