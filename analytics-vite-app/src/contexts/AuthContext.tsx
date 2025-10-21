@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
 interface AuthContextType {
-  user: User | null
-  session: Session | null
+  user: any | null
+  session: any | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, fullName?: string) => Promise<void>
@@ -26,8 +25,8 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<any | null>(null)
+  const [session, setSession] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

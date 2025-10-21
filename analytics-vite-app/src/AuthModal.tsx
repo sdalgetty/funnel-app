@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, CreditCard } from 'lucide-react';
-import { useAuth } from './AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import type { SubscriptionTier } from './types';
 
 interface AuthModalProps {

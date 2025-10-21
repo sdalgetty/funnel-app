@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import { TrendingUp, DollarSign, Users, Target, BarChart3, Plus, Edit, Trash2 } from 'lucide-react';
 import type { AdSource, AdCampaign, Booking, LeadSource, FunnelData } from './types';
 import { MOCK_AD_SOURCES, MOCK_AD_CAMPAIGNS } from './data/mockData';

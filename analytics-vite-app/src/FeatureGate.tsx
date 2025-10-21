@@ -1,5 +1,5 @@
 import React, { ReactNode, useState } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import { Lock, Crown, X } from 'lucide-react';
 
 interface FeatureGateProps {

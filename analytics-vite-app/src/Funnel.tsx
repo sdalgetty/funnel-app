@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit, Lock, Crown, Calculator } from "lucide-react";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "./contexts/AuthContext";
 import CalculatorComponent from "./Calculator";
 import type { FunnelData, Booking, Payment } from "./types";
 
