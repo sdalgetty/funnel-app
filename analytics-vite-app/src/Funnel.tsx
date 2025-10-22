@@ -32,7 +32,10 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
   console.log('Funnel component loaded!', { funnelData, salesData, paymentsData });
   
   const { user, features } = useAuth();
-  console.log('Auth context loaded:', { user: !!user, features });
+  console.log('Auth context loaded:', { 
+    user: user ? { id: user.id, email: user.email, subscriptionTier: user.subscriptionTier } : null, 
+    features 
+  });
   
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);

@@ -26,7 +26,11 @@ function AppContent() {
   console.log('AppContent component loaded!');
   
   const { user, signOut, loading, features } = useAuth()
-  console.log('App auth state:', { user: !!user, loading, features });
+  console.log('App auth state:', { 
+    user: user ? { id: user.id, email: user.email, subscriptionTier: user.subscriptionTier } : null, 
+    loading, 
+    features 
+  });
   
   const [currentPage, setCurrentPage] = useState<Page>('funnel')
   const [showAuthModal, setShowAuthModal] = useState(false)
