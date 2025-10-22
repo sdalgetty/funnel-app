@@ -202,7 +202,16 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
     };
   }, [filteredData]);
 
-  const availableYears = [...new Set(funnelData.map(data => data.year))].sort((a, b) => b - a);
+  // Generate years from current year back 5 years for new users
+  const generateAvailableYears = () => {
+    const years = [];
+    for (let i = 0; i < 6; i++) { // Current year + 5 previous years
+      years.push(currentYear - i);
+    }
+    return years;
+  };
+  
+  const availableYears = generateAvailableYears();
 
   return (
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>

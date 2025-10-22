@@ -2,70 +2,17 @@ import React, { useMemo, useState } from "react";
 import { Plus, Trash2, CalendarDays, DollarSign, Download, Edit, X, Edit3, Check } from "lucide-react";
 import type { ServiceType, LeadSource, Booking, Payment } from './types';
 
-// Mock Data - Include service types and lead sources for existing bookings
-const defaultServiceTypes: ServiceType[] = [
-  {
-    id: "st_wedding",
-    name: "Wedding Photography",
-    tracksInFunnel: true
-  },
-  {
-    id: "st_engagement",
-    name: "Engagement Photography", 
-    tracksInFunnel: true
-  }
-];
+// Empty data for new users - they should start fresh
+const defaultServiceTypes: ServiceType[] = [];
 
-const defaultLeadSources: LeadSource[] = [
-  {
-    id: "ls_instagram",
-    name: "Instagram Ads",
-    isCustom: true // Allow editing/deleting, but will reset on reload
-  },
-  {
-    id: "ls_google",
-    name: "Google",
-    isCustom: true // Allow editing/deleting, but will reset on reload
-  },
-  {
-    id: "ls_referral",
-    name: "Client Referral",
-    isCustom: true // Allow editing/deleting, but will reset on reload
-  }
-];
+// Empty data for new users - they should start fresh
+const defaultLeadSources: LeadSource[] = [];
 
-const mockBookings: Booking[] = [
-  {
-    id: "b_1",
-    projectName: "Kelly & Shig Wedding",
-    serviceTypeId: "st_wedding", // Wedding service type
-    leadSourceId: "ls_instagram", // Instagram Ads
-    dateInquired: "2025-01-15",
-    dateBooked: "2025-02-03",
-    projectDate: "2025-10-18",
-    bookedRevenue: 800000, // $8,000
-    createdAt: "2025-02-03",
-  },
-  {
-    id: "b_2",
-    projectName: "Ashley & Devon Engagement",
-    serviceTypeId: "st_engagement", // Engagement service type
-    leadSourceId: "ls_google", // Google
-    dateInquired: "2025-02-20",
-    dateBooked: "2025-03-01",
-    projectDate: "2025-05-12",
-    bookedRevenue: 120000, // $1,200
-    createdAt: "2025-03-01",
-  },
-];
+// Empty data for new users - they should start fresh
+const mockBookings: Booking[] = [];
 
-const mockPayments: Payment[] = [
-  { id: "p_1", bookingId: "b_1", dueDate: "2025-02-10", amount: 200000, paidAt: "2025-02-10", memo: "Retainer" },
-  { id: "p_2", bookingId: "b_1", dueDate: "2025-06-15", amount: 300000, paidAt: "2025-06-15", memo: "Milestone" },
-  { id: "p_3", bookingId: "b_1", dueDate: "2025-10-05", amount: 300000, paidAt: "2025-10-05", memo: "Balance" },
-  { id: "p_4", bookingId: "b_2", dueDate: "2025-03-05", amount: 60000, paidAt: "2025-03-05", memo: "Retainer" },
-  { id: "p_5", bookingId: "b_2", dueDate: "2025-04-20", amount: 60000, paidAt: "2025-04-20", memo: "Final Payment" },
-];
+// Empty data for new users - they should start fresh
+const mockPayments: Payment[] = [];
 
 // Helpers
 const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });

@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name: 'An Endless Pursuit',
         subscriptionTier: 'pro', // Give demo user pro features
         subscriptionStatus: 'active',
-        createdAt: new Date('2024-01-01'),
+        createdAt: new Date('2025-01-01'), // Current year for new users
         lastLoginAt: new Date(),
         trialEndsAt: null
       }
@@ -100,7 +100,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name: 'Demo User',
         subscriptionTier: 'pro',
         subscriptionStatus: 'active',
-        createdAt: new Date('2024-01-01'),
+        createdAt: new Date('2025-01-01'), // Current year for new users
         lastLoginAt: new Date(),
         trialEndsAt: null
       }
@@ -127,7 +127,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name: fullName || 'Demo User',
         subscriptionTier: 'pro',
         subscriptionStatus: 'active',
-        createdAt: new Date('2024-01-01'),
+        createdAt: new Date('2025-01-01'), // Current year for new users
         lastLoginAt: new Date(),
         trialEndsAt: null
       }
