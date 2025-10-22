@@ -50,21 +50,35 @@ export class UnifiedDataService {
 
       const recordId = existingData?.id || undefined;
 
+      // Prepare the data for upsert - only include fields that exist in the database
+      const upsertData: any = {
+        id: recordId, // Use existing ID or let database generate new one
+        user_id: userId,
+        year: funnelData.year,
+        month: funnelData.month,
+        inquiries: funnelData.inquiries || 0,
+        calls_booked: funnelData.callsBooked || 0,
+        calls_taken: funnelData.callsTaken || 0,
+        closes: funnelData.closes || 0,
+        bookings: funnelData.bookings || 0,
+        cash: funnelData.cash || 0,
+        updated_at: new Date().toISOString()
+      };
+
+      // Add optional fields if they exist in the funnelData
+      if (funnelData.name) upsertData.name = funnelData.name;
+      if (funnelData.bookingsGoal) upsertData.bookings_goal = funnelData.bookingsGoal;
+      if (funnelData.inquiryToCall) upsertData.inquiry_to_call = funnelData.inquiryToCall;
+      if (funnelData.callToBooking) upsertData.call_to_booking = funnelData.callToBooking;
+      if (funnelData.inquiriesYtd) upsertData.inquiries_ytd = funnelData.inquiriesYtd;
+      if (funnelData.callsYtd) upsertData.calls_ytd = funnelData.callsYtd;
+      if (funnelData.bookingsYtd) upsertData.bookings_ytd = funnelData.bookingsYtd;
+
+      console.log('Upsert data:', upsertData);
+
       const { error } = await supabase
         .from('funnels')
-        .upsert({
-          id: recordId, // Use existing ID or let database generate new one
-          user_id: userId,
-          year: funnelData.year,
-          month: funnelData.month,
-          inquiries: funnelData.inquiries || 0,
-          calls_booked: funnelData.callsBooked || 0,
-          calls_taken: funnelData.callsTaken || 0,
-          closes: funnelData.closes || 0,
-          bookings: funnelData.bookings || 0,
-          cash: funnelData.cash || 0,
-          updated_at: new Date().toISOString()
-        }, {
+        .upsert(upsertData, {
           onConflict: 'user_id,year,month'
         });
 
