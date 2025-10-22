@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit, Lock, Crown, Calculator } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 import CalculatorComponent from "./Calculator";
+import { FunnelService } from "./services/funnelService";
 import type { FunnelData, Booking, Payment } from "./types";
 
 interface FunnelProps {
@@ -34,6 +35,26 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMonth, setEditingMonth] = useState<FunnelData | null>(null);
   const [funnelView, setFunnelView] = useState<'funnel' | 'calculator'>('funnel');
+  const [loading, setLoading] = useState(false);
+
+  // Load funnel data from database when component mounts or year changes
+  useEffect(() => {
+    const loadFunnelData = async () => {
+      if (!user?.id) return;
+      
+      setLoading(true);
+      try {
+        const data = await FunnelService.getFunnelData(user.id, selectedYear);
+        setFunnelData(data);
+      } catch (error) {
+        console.error('Error loading funnel data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFunnelData();
+  }, [user?.id, selectedYear, setFunnelData]);
 
   // Check if user has Pro features (Pro or Trial account)
   const isProAccount = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'trial';
@@ -88,28 +109,42 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
     setEditingMonth(null);
   };
 
-  const handleSave = () => {
-    if (!editingMonth) return;
+  const handleSave = async () => {
+    if (!editingMonth || !user?.id) return;
     
-    // For Pro accounts, don't save bookings, closes, or cash as they're calculated dynamically
+    // For Pro accounts, save manual inputs (inquiries, callsBooked, callsTaken) 
+    // and use calculated values for bookings, closes, cash only if they exist
     const dataToSave = isProAccount 
       ? {
           ...editingMonth,
-          bookings: calculateDynamicData[editingMonth.month]?.bookings || 0,
-          closes: calculateDynamicData[editingMonth.month]?.closes || 0,
-          cash: calculateDynamicData[editingMonth.month]?.cash || 0,
+          // Keep user's manual inputs
+          inquiries: editingMonth.inquiries,
+          callsBooked: editingMonth.callsBooked,
+          callsTaken: editingMonth.callsTaken,
+          // Use calculated values only if they exist, otherwise keep existing values
+          bookings: calculateDynamicData[editingMonth.month]?.bookings || editingMonth.bookings || 0,
+          closes: calculateDynamicData[editingMonth.month]?.closes || editingMonth.closes || 0,
+          cash: calculateDynamicData[editingMonth.month]?.cash || editingMonth.cash || 0,
           lastUpdated: new Date().toISOString()
         }
       : { ...editingMonth, lastUpdated: new Date().toISOString() };
     
-    const updatedData = funnelData.map(data => 
-      data.id === editingMonth.id 
-        ? dataToSave
-        : data
-    );
+    // Save to database
+    const success = await FunnelService.saveFunnelData(user.id, dataToSave);
     
-    setFunnelData(updatedData);
-    handleCloseModal();
+    if (success) {
+      // Update local state
+      const updatedData = funnelData.map(data => 
+        data.id === editingMonth.id 
+          ? dataToSave
+          : data
+      );
+      
+      setFunnelData(updatedData);
+      handleCloseModal();
+    } else {
+      alert('Failed to save data. Please try again.');
+    }
   };
 
   // Filter data by selected year
@@ -212,6 +247,22 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
   };
   
   const availableYears = generateAvailableYears();
+
+  // Show loading spinner while loading funnel data
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '200px',
+        fontSize: '16px',
+        color: '#6b7280'
+      }}>
+        Loading funnel data...
+      </div>
+    )
+  }
 
   return (
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
