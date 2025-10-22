@@ -69,8 +69,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Calculate features based on user subscription
   const features = {
-    canAccessSales: user?.subscriptionTier === 'pro',
-    canAccessForecast: user?.subscriptionTier === 'pro',
+    canAccessSales: user?.subscriptionTier === 'pro' || user?.subscriptionTier === 'trial',
+    canAccessForecast: user?.subscriptionTier === 'pro' || user?.subscriptionTier === 'trial',
     canUseDataIntegration: user?.subscriptionTier === 'pro',
     canSyncFunnelWithSales: user?.subscriptionTier === 'pro',
     advertising: user?.subscriptionTier === 'pro'
