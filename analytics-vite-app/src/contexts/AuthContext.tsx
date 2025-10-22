@@ -49,71 +49,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return null;
     }
 
-    try {
-      console.log('Querying user_profiles table for user:', authUser.id);
-      
-      // Add timeout to profile query
-      const profilePromise = supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
-
-      const profileTimeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile query timeout')), 3000)
-      );
-
-      const { data: profile, error } = await Promise.race([profilePromise, profileTimeoutPromise]) as any;
-
-      console.log('Profile query result:', { profile, error });
-
-      if (error) {
-        console.error('Error loading user profile:', error);
-        if (error.code === 'PGRST116') {
-          console.log('No profile found, creating basic user object');
-        }
-        // Return basic auth user with default values
-        return {
-          ...authUser,
-          name: authUser.user_metadata?.full_name || authUser.email,
-          companyName: '',
-          subscriptionTier: 'free',
-          subscriptionStatus: 'active',
-          createdAt: new Date(authUser.created_at),
-          lastLoginAt: new Date(),
-          trialEndsAt: null
-        };
-      }
-
-      // Combine auth user with profile data
-      const userWithProfile = {
-        ...authUser,
-        name: profile.full_name,
-        companyName: profile.company_name,
-        subscriptionTier: profile.subscription_tier,
-        subscriptionStatus: profile.subscription_status,
-        createdAt: new Date(profile.created_at),
-        lastLoginAt: new Date(),
-        trialEndsAt: null // Add trial logic if needed
-      };
-      
-      console.log('Combined user profile:', userWithProfile);
-      return userWithProfile;
-    } catch (error) {
-      console.error('Exception in loadUserProfile:', error);
-      console.log('Returning basic auth user due to error');
-      // Return basic auth user with default values
-      return {
-        ...authUser,
-        name: authUser.user_metadata?.full_name || authUser.email,
-        companyName: '',
-        subscriptionTier: 'free',
-        subscriptionStatus: 'active',
-        createdAt: new Date(authUser.created_at),
-        lastLoginAt: new Date(),
-        trialEndsAt: null
-      };
-    }
+    // TEMPORARY: Skip profile query and return basic user immediately
+    console.log('Skipping profile query, returning basic user object');
+    return {
+      ...authUser,
+      name: authUser.user_metadata?.full_name || authUser.email,
+      companyName: '',
+      subscriptionTier: 'pro', // Set to pro for testing
+      subscriptionStatus: 'active',
+      createdAt: new Date(authUser.created_at),
+      lastLoginAt: new Date(),
+      trialEndsAt: null
+    };
   }
 
   // Calculate features based on user subscription
