@@ -20,13 +20,19 @@ const mockPayments: Payment[] = [];
 const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 
-export default function BookingsAndBillingsPOC() {
+interface BookingsAndBillingsProps {
+  dataManager?: any;
+}
+
+export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBillingsProps) {
   const { user } = useAuth();
-  const [bookings, setBookings] = useState<Booking[]>(mockBookings);
-  const [payments, setPayments] = useState<Payment[]>(mockPayments);
-  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>(defaultServiceTypes);
-  const [leadSources, setLeadSources] = useState<LeadSource[]>(defaultLeadSources);
-  const [loading, setLoading] = useState(true);
+  
+  // Use data manager if available, otherwise fallback to local state
+  const bookings = dataManager?.bookings || mockBookings;
+  const payments = dataManager?.payments || mockPayments;
+  const serviceTypes = dataManager?.serviceTypes || defaultServiceTypes;
+  const leadSources = dataManager?.leadSources || defaultLeadSources;
+  const loading = dataManager?.loading || false;
   const [showAddBooking, setShowAddBooking] = useState(false);
   const [showServiceTypes, setShowServiceTypes] = useState(false);
   const [showLeadSources, setShowLeadSources] = useState(false);
@@ -45,37 +51,7 @@ export default function BookingsAndBillingsPOC() {
   const [sortBy, setSortBy] = useState<keyof Booking>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Load data from database on component mount
-  useEffect(() => {
-    const loadData = async () => {
-      if (!user?.id) return;
-      
-      setLoading(true);
-      try {
-        console.log('Loading bookings and billings data for user:', user.id);
-        
-        const [bookingsData, paymentsData, serviceTypesData, leadSourcesData] = await Promise.all([
-          UnifiedDataService.getBookings(user.id),
-          UnifiedDataService.getPayments(user.id),
-          UnifiedDataService.getServiceTypes(user.id),
-          UnifiedDataService.getLeadSources(user.id)
-        ]);
-        
-        console.log('Loaded data:', { bookingsData, paymentsData, serviceTypesData, leadSourcesData });
-        
-        setBookings(bookingsData);
-        setPayments(paymentsData);
-        setServiceTypes(serviceTypesData);
-        setLeadSources(leadSourcesData);
-      } catch (error) {
-        console.error('Error loading bookings and billings data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [user?.id]);
+  // Data is now managed by the parent component's data manager
 
   // Filtered and sorted bookings
   const filteredAndSortedBookings = useMemo(() => {
@@ -150,20 +126,22 @@ export default function BookingsAndBillingsPOC() {
 
   // Add custom service type
   const addServiceType = async (name: string) => {
-    if (!user?.id) return;
-    
-    try {
-      console.log('Creating service type:', name);
-      const newServiceType = await UnifiedDataService.createServiceType(user.id, name);
-      
-      if (newServiceType) {
-        console.log('Service type created successfully:', newServiceType);
-        setServiceTypes(prev => [...prev, newServiceType]);
-      } else {
-        console.error('Failed to create service type');
+    if (dataManager) {
+      await dataManager.createServiceType(name);
+    } else if (user?.id) {
+      try {
+        console.log('Creating service type:', name);
+        const newServiceType = await UnifiedDataService.createServiceType(user.id, name);
+        
+        if (newServiceType) {
+          console.log('Service type created successfully:', newServiceType);
+          // Note: This won't update the UI without data manager
+        } else {
+          console.error('Failed to create service type');
+        }
+      } catch (error) {
+        console.error('Error creating service type:', error);
       }
-    } catch (error) {
-      console.error('Error creating service type:', error);
     }
   };
 
@@ -184,32 +162,26 @@ export default function BookingsAndBillingsPOC() {
   };
 
   const confirmDeleteServiceType = async () => {
-    if (!deleteServiceTypeConfirmation || !user?.id) return;
+    if (!deleteServiceTypeConfirmation) return;
     
     const { id, bookingCount } = deleteServiceTypeConfirmation;
     
-    try {
-      console.log('Deleting service type:', id);
-      const success = await UnifiedDataService.deleteServiceType(user.id, id);
-      
-      if (success) {
-        console.log('Service type deleted successfully');
+    if (dataManager) {
+      await dataManager.deleteServiceType(id);
+    } else if (user?.id) {
+      try {
+        console.log('Deleting service type:', id);
+        const success = await UnifiedDataService.deleteServiceType(user.id, id);
         
-        if (bookingCount > 0) {
-          // Remove service type from bookings that use it
-          setBookings(prev => prev.map(booking => 
-            booking.serviceTypeId === id 
-              ? { ...booking, serviceTypeId: '' } // Set to empty string to maintain data integrity
-              : booking
-          ));
+        if (success) {
+          console.log('Service type deleted successfully');
+          // Note: This won't update the UI without data manager
+        } else {
+          console.error('Failed to delete service type');
         }
-        
-        setServiceTypes(prev => prev.filter(st => st.id !== id));
-      } else {
-        console.error('Failed to delete service type');
+      } catch (error) {
+        console.error('Error deleting service type:', error);
       }
-    } catch (error) {
-      console.error('Error deleting service type:', error);
     }
     
     setDeleteServiceTypeConfirmation(null);
@@ -217,22 +189,22 @@ export default function BookingsAndBillingsPOC() {
 
   // Update service type
   const updateServiceType = async (id: string, newName: string) => {
-    if (!user?.id) return;
-    
-    try {
-      console.log('Updating service type:', id, 'to:', newName);
-      const success = await UnifiedDataService.updateServiceType(user.id, id, newName);
-      
-      if (success) {
-        console.log('Service type updated successfully');
-        setServiceTypes(prev => prev.map(st => 
-          st.id === id ? { ...st, name: newName } : st
-        ));
-      } else {
-        console.error('Failed to update service type');
+    if (dataManager) {
+      await dataManager.updateServiceType(id, newName);
+    } else if (user?.id) {
+      try {
+        console.log('Updating service type:', id, 'to:', newName);
+        const success = await UnifiedDataService.updateServiceType(user.id, id, newName);
+        
+        if (success) {
+          console.log('Service type updated successfully');
+          // Note: This won't update the UI without data manager
+        } else {
+          console.error('Failed to update service type');
+        }
+      } catch (error) {
+        console.error('Error updating service type:', error);
       }
-    } catch (error) {
-      console.error('Error updating service type:', error);
     }
   };
 
