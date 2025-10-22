@@ -56,8 +56,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // For development without Supabase, create a mock user
       const mockUser = {
         id: 'mock-user-id',
-        email: 'demo@example.com',
-        name: 'Demo User',
+        email: 'hello@anendlesspursuit.com',
+        name: 'An Endless Pursuit',
         subscriptionTier: 'pro', // Give demo user pro features
         subscriptionStatus: 'active',
         createdAt: new Date('2024-01-01'),
