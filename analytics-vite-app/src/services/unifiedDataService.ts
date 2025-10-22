@@ -105,11 +105,35 @@ export class UnifiedDataService {
 
       if (error) {
         console.error('Error saving funnel data:', error);
-        console.error('Error message:', error.message);
-        console.error('Error code:', error.code);
-        console.error('Error details:', error.details);
-        console.error('Error hint:', error.hint);
-        console.error('Full error object:', JSON.stringify(error, null, 2));
+        console.error('Error type:', typeof error);
+        console.error('Error constructor:', error.constructor.name);
+        
+        // Try to extract error properties safely
+        try {
+          console.error('Error message:', error.message || 'No message');
+          console.error('Error code:', error.code || 'No code');
+          console.error('Error details:', error.details || 'No details');
+          console.error('Error hint:', error.hint || 'No hint');
+          console.error('Error status:', error.status || 'No status');
+          console.error('Error statusText:', error.statusText || 'No statusText');
+        } catch (e) {
+          console.error('Error extracting error properties:', e);
+        }
+        
+        // Try to stringify with a replacer function
+        try {
+          const errorString = JSON.stringify(error, (key, value) => {
+            if (typeof value === 'function') return '[Function]';
+            if (typeof value === 'object' && value !== null) {
+              if (key === 'parent' || key === 'child') return '[Circular]';
+            }
+            return value;
+          }, 2);
+          console.error('Error as JSON:', errorString);
+        } catch (e) {
+          console.error('Error stringifying error:', e);
+        }
+        
         return false;
       }
 
