@@ -708,19 +708,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
           booking={editingBooking}
           serviceTypes={serviceTypes}
           leadSources={leadSources}
-          payments={payments.filter(p => p.bookingId === editingBooking.id)}
           onUpdate={updateBooking}
-          onUpdatePayments={async (updatedPayments) => {
-            // Use data manager to update payments
-            if (window.dataManager) {
-              // Remove existing payments for this booking
-              const existingPayments = window.dataManager.payments.filter(p => p.bookingId !== editingBooking.id);
-              // Add updated payments
-              for (const payment of updatedPayments) {
-                await window.dataManager.createPayment(payment);
-              }
-            }
-          }}
           onClose={() => setEditingBooking(null)}
         />
       )}
@@ -1064,7 +1052,7 @@ function Td({ children, align = 'left' }: { children: React.ReactNode; align?: '
   return <td style={{ padding: '12px 16px', verticalAlign: 'top', textAlign: align }}>{children}</td>;
 }
 
-// Add Booking Modal - Completely Simplified
+// Add Booking Modal - Completely Simplified (v2)
 function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose }: {
   serviceTypes: ServiceType[];
   leadSources: LeadSource[];
@@ -2608,14 +2596,12 @@ function AddPaymentModal({ bookingId, onAdd, onClose }: {
   );
 }
 
-// Edit Booking Modal
-function EditBookingModal({ booking, serviceTypes, leadSources, payments, onUpdate, onUpdatePayments, onClose }: {
+// Edit Booking Modal - Simplified
+function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClose }: {
   booking: Booking;
   serviceTypes: ServiceType[];
   leadSources: LeadSource[];
-  payments: Payment[];
   onUpdate: (booking: Omit<Booking, 'id' | 'createdAt'>) => void;
-  onUpdatePayments: (payments: Omit<Payment, 'id'>[]) => void;
   onClose: () => void;
 }) {
   const [formData, setFormData] = useState({
