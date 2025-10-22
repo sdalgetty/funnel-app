@@ -110,7 +110,12 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
   };
 
   const handleSave = async () => {
-    if (!editingMonth || !user?.id) return;
+    console.log('handleSave function called!', { editingMonth, user: user?.id });
+    
+    if (!editingMonth || !user?.id) {
+      console.log('Early return: missing editingMonth or user.id', { editingMonth: !!editingMonth, userId: !!user?.id });
+      return;
+    }
     
     console.log('Starting save process...', { editingMonth, user: user.id, isProAccount });
     
@@ -1080,7 +1085,10 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
                 Cancel
               </button>
               <button
-                onClick={handleSave}
+                onClick={() => {
+                  console.log('Save button clicked!');
+                  handleSave();
+                }}
                 style={{
                   padding: '8px 16px',
                   border: 'none',
