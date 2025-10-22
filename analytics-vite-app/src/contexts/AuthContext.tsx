@@ -156,14 +156,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event, session ? 'session exists' : 'no session');
       setSession(session)
       if (session?.user) {
+        console.log('User authenticated, loading profile...');
         const userWithProfile = await loadUserProfile(session.user)
         setUser(userWithProfile)
+        console.log('User profile loaded:', userWithProfile);
       } else {
+        console.log('No user session');
         setUser(null)
       }
+      console.log('Setting loading to false');
       setLoading(false)
     })
 
@@ -171,11 +176,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    if (error) throw error
+    console.log('SignIn called with:', email);
+    setLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      if (error) {
+        console.error('SignIn error:', error);
+        throw error;
+      }
+      console.log('SignIn successful');
+    } catch (error) {
+      console.error('SignIn failed:', error);
+      setLoading(false);
+      throw error;
+    }
   }
 
   const signUp = async (email: string, password: string, fullName?: string, companyName?: string) => {
