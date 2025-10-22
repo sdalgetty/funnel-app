@@ -100,8 +100,10 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
 
   // Handler functions for edit modal
   const handleEditMonth = (month: FunnelData) => {
+    console.log('Opening edit modal for month:', month);
     setEditingMonth(month);
     setIsEditModalOpen(true);
+    console.log('Modal should be open now');
   };
 
   const handleCloseModal = () => {
@@ -824,7 +826,9 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
       </div>
 
       {/* Edit Modal */}
-      {isEditModalOpen && editingMonth && (
+      {isEditModalOpen && editingMonth && (() => {
+        console.log('Rendering edit modal with editingMonth:', editingMonth);
+        return (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -1104,7 +1108,8 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
