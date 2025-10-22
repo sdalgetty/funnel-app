@@ -50,16 +50,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      const { data: profile, error } = await supabase
+      console.log('Querying user_profiles table for user:', authUser.id);
+      
+      // Add timeout to prevent hanging
+      const profilePromise = supabase
         .from('user_profiles')
         .select('*')
         .eq('id', authUser.id)
         .single();
 
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile query timeout')), 5000)
+      );
+
+      const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
+
       console.log('Profile query result:', { profile, error });
 
       if (error) {
         console.error('Error loading user profile:', error);
+        if (error.code === 'PGRST116') {
+          console.log('No profile found, creating basic user object');
+        }
         return authUser; // Return basic auth user if profile not found
       }
 
@@ -79,6 +91,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return userWithProfile;
     } catch (error) {
       console.error('Exception in loadUserProfile:', error);
+      console.log('Returning basic auth user due to error');
       return authUser;
     }
   }
