@@ -16,7 +16,7 @@ export class UnifiedDataService {
   
   static async getFunnelData(userId: string, year: number): Promise<FunnelData[]> {
     try {
-      console.log('Loading funnel data for user:', userId, 'year:', year);
+      console.log('Loading funnel data for user (v3):', userId, 'year:', year);
       
       const { data, error } = await supabase
         .from('funnels')

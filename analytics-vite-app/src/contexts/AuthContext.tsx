@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      console.log('Querying user_profiles table for user:', authUser.id);
+      console.log('Querying user_profiles table for user (v3):', authUser.id);
       
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
