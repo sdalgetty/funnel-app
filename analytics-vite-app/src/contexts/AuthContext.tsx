@@ -52,18 +52,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('Querying user_profiles table for user:', authUser.id);
       
-      // Add timeout to prevent hanging
-      const profilePromise = supabase
+      const { data: profile, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', authUser.id)
         .single();
-
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile query timeout')), 5000)
-      );
-
-      const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
 
       console.log('Profile query result:', { profile, error });
 
@@ -111,13 +104,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     console.log('AuthContext useEffect starting...');
     
+    // TEMPORARY: Set loading to false immediately to get app working
+    console.log('Setting loading to false immediately');
+    setLoading(false);
+    
     // Check if Supabase is properly configured
     const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && 
       import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co'
 
     if (!isSupabaseConfigured) {
       console.error('❌ Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY')
-      setLoading(false)
       return
     }
 
@@ -129,7 +125,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (error) {
         console.error('Error getting session:', error);
-        setLoading(false);
         return;
       }
       
@@ -148,11 +143,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('No user session');
         setUser(null)
       }
-      console.log('Setting loading to false');
-      setLoading(false)
     }).catch(error => {
       console.error('Error in session promise:', error);
-      setLoading(false);
     })
 
     // Listen for auth changes
