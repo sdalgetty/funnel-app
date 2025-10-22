@@ -698,11 +698,6 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
           serviceTypes={serviceTypes}
           leadSources={leadSources}
           onAdd={addBooking}
-          onAddPayments={(payments) => {
-            payments.forEach(payment => {
-              addPayment(payment);
-            });
-          }}
           onClose={() => setShowAddBooking(false)}
         />
       )}
@@ -1069,12 +1064,11 @@ function Td({ children, align = 'left' }: { children: React.ReactNode; align?: '
   return <td style={{ padding: '12px 16px', verticalAlign: 'top', textAlign: align }}>{children}</td>;
 }
 
-// Add Booking Modal
-function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddPayments, onClose }: {
+// Add Booking Modal - Simplified
+function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose }: {
   serviceTypes: ServiceType[];
   leadSources: LeadSource[];
   onAdd: (booking: Omit<Booking, 'id' | 'createdAt'>) => void;
-  onAddPayments: (payments: Omit<Payment, 'id'>[]) => void;
   onClose: () => void;
 }) {
   const [formData, setFormData] = useState({
@@ -1086,27 +1080,251 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddPayments, onCl
     projectDate: '',
     bookedRevenue: '',
   });
-  const [payments, setPayments] = useState<Omit<Payment, 'id' | 'bookingId'>[]>([]);
-  const [paymentType, setPaymentType] = useState<'one-time' | 'installments' | 'recurring' | null>(null);
-  const [recurringInterval, setRecurringInterval] = useState<'monthly' | 'bi-monthly'>('monthly');
-  const [recurringStartDate, setRecurringStartDate] = useState('');
-  const [recurringEndDate, setRecurringEndDate] = useState('');
 
-  const addPayment = () => {
-    // This is just for UI state in the modal, not actual data persistence
-    // The actual payment will be created when the booking is submitted
-    setBookingPayments(prev => [...prev, {
-      amount: 0,
-      dueDate: '',
-      paidAt: null,
-      memo: ''
-    }]);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.projectName || !formData.serviceTypeId || !formData.leadSourceId || !formData.bookedRevenue) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    const newBooking = {
+      projectName: formData.projectName,
+      serviceTypeId: formData.serviceTypeId,
+      leadSourceId: formData.leadSourceId,
+      dateInquired: formData.dateInquired || undefined,
+      dateBooked: formData.dateBooked || undefined,
+      projectDate: formData.projectDate || undefined,
+      bookedRevenue: Math.round(parseFloat(formData.bookedRevenue) * 100),
+    };
+
+    onAdd(newBooking);
   };
 
-  // Generate payment schedule based on type and booking amount
-  const generatePaymentSchedule = () => {
-    const totalAmount = parseFloat(formData.bookedRevenue) || 0;
-    if (totalAmount === 0 || !paymentType) return;
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        padding: '24px',
+        width: '95%',
+        maxWidth: '600px',
+        maxHeight: '90vh',
+        overflow: 'auto',
+        boxSizing: 'border-box'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Add New Booking</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+                Project Name *
+              </label>
+              <input
+                type="text"
+                value={formData.projectName}
+                onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  height: '40px'
+                }}
+                placeholder="e.g., Ashley & Devon"
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+                Service Type *
+              </label>
+              <select
+                value={formData.serviceTypeId}
+                onChange={(e) => setFormData({ ...formData, serviceTypeId: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  height: '40px'
+                }}
+              >
+                <option value="">Select service type</option>
+                {serviceTypes.map(st => (
+                  <option key={st.id} value={st.id}>{st.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+                Lead Source *
+              </label>
+              <select
+                value={formData.leadSourceId}
+                onChange={(e) => setFormData({ ...formData, leadSourceId: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  height: '40px'
+                }}
+              >
+                <option value="">Select lead source</option>
+                {leadSources.map(ls => (
+                  <option key={ls.id} value={ls.id}>{ls.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+                Date Inquired
+              </label>
+              <input
+                type="date"
+                value={formData.dateInquired}
+                onChange={(e) => setFormData({ ...formData, dateInquired: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  height: '40px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+                Date Booked
+              </label>
+              <input
+                type="date"
+                value={formData.dateBooked}
+                onChange={(e) => setFormData({ ...formData, dateBooked: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  height: '40px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+                Project Date
+              </label>
+              <input
+                type="date"
+                value={formData.projectDate}
+                onChange={(e) => setFormData({ ...formData, projectDate: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  height: '40px'
+                }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+              Booked Revenue *
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.bookedRevenue}
+              onChange={(e) => setFormData({ ...formData, bookedRevenue: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px',
+                boxSizing: 'border-box',
+                height: '40px'
+              }}
+              placeholder="0.00"
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#f3f4f6',
+                color: '#374151',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              Add Booking
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Service Types Modal
 
     const totalCents = Math.round(totalAmount * 100);
     let newPayments: Omit<Payment, 'id' | 'bookingId'>[] = [];

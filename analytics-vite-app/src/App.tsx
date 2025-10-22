@@ -25,6 +25,7 @@ function AppContent() {
   // Make data manager available globally for components that need it
   useEffect(() => {
     (window as any).dataManager = dataManager;
+    console.log('Data manager set globally (v2):', dataManager);
   }, [dataManager]);
   
   console.log('App auth state:', { 
