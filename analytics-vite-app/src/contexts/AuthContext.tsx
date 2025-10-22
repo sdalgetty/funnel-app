@@ -49,18 +49,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return null;
     }
 
-    // TEMPORARY: Skip profile query to prevent hanging - return basic user immediately
-    console.log('Skipping profile query (temporary fix), returning basic user object');
-    return {
-      ...authUser,
-      name: authUser.user_metadata?.full_name || authUser.email,
-      companyName: '',
-      subscriptionTier: 'pro', // Set to pro for testing
-      subscriptionStatus: 'active',
-      createdAt: new Date(authUser.created_at),
-      lastLoginAt: new Date(),
-      trialEndsAt: null
-    };
+    try {
+      console.log('Attempting profile query with 3-second timeout...');
+      
+      // Try profile query with a short timeout
+      const profilePromise = supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile query timeout')), 3000)
+      );
+
+      const result = await Promise.race([profilePromise, timeoutPromise]);
+      const { data: profileData, error: profileError } = result as any;
+
+      console.log('Profile query completed:', { profileData, profileError });
+
+      if (profileError) {
+        console.error('Profile query error:', profileError);
+        throw profileError;
+      }
+
+      // Combine auth user with profile data
+      const combinedUser = {
+        ...authUser,
+        name: profileData.full_name || authUser.user_metadata?.full_name || authUser.email,
+        companyName: profileData.company_name || '',
+        subscriptionTier: profileData.subscription_tier || 'pro',
+        subscriptionStatus: profileData.subscription_status || 'active',
+        createdAt: new Date(authUser.created_at),
+        lastLoginAt: new Date(),
+        trialEndsAt: profileData.trial_ends_at ? new Date(profileData.trial_ends_at) : null
+      };
+
+      console.log('Successfully loaded profile data:', combinedUser);
+      return combinedUser;
+    } catch (error) {
+      console.error('Profile loading failed, using basic user:', error);
+      // Return basic user if profile query fails
+      return {
+        ...authUser,
+        name: authUser.user_metadata?.full_name || authUser.email,
+        companyName: '',
+        subscriptionTier: 'pro', // Set to pro for testing
+        subscriptionStatus: 'active',
+        createdAt: new Date(authUser.created_at),
+        lastLoginAt: new Date(),
+        trialEndsAt: null
+      };
+    }
   }
 
   // Calculate features based on user subscription
