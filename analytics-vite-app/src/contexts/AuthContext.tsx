@@ -152,6 +152,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (profileError) {
         console.error('Error creating user profile:', profileError)
         // Don't throw here as the user was created successfully
+      } else {
+        // Immediately update the user object with profile data
+        const userWithProfile = await loadUserProfile(data.user)
+        setUser(userWithProfile)
       }
     }
   }
