@@ -16,6 +16,8 @@ export class UnifiedDataService {
   
   static async getFunnelData(userId: string, year: number): Promise<FunnelData[]> {
     try {
+      console.log('Loading funnel data for user:', userId, 'year:', year);
+      
       const { data, error } = await supabase
         .from('funnels')
         .select('*')
@@ -23,12 +25,37 @@ export class UnifiedDataService {
         .eq('year', year)
         .order('month', { ascending: true });
 
+      console.log('Raw funnel data from database:', data);
+      console.log('Error:', error);
+
       if (error) {
         console.error('Error fetching funnel data:', error);
         return [];
       }
 
-      return data || [];
+      // Transform database fields to frontend format
+      const transformedData = (data || []).map(record => ({
+        id: record.id,
+        year: record.year,
+        month: record.month,
+        inquiries: record.inquiries || 0,
+        callsBooked: record.calls_booked || 0,
+        callsTaken: record.calls_taken || 0,
+        closes: record.closes || 0,
+        bookings: record.bookings || 0,
+        cash: record.cash || 0,
+        name: record.name || '',
+        bookingsGoal: record.bookings_goal || 0,
+        inquiryToCall: record.inquiry_to_call || 0,
+        callToBooking: record.call_to_booking || 0,
+        inquiriesYtd: record.inquiries_ytd || 0,
+        callsYtd: record.calls_ytd || 0,
+        bookingsYtd: record.bookings_ytd || 0,
+        lastUpdated: record.updated_at || new Date().toISOString()
+      }));
+
+      console.log('Transformed funnel data:', transformedData);
+      return transformedData;
     } catch (error) {
       console.error('Error fetching funnel data:', error);
       return [];

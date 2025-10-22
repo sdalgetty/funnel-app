@@ -49,18 +49,60 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return null;
     }
 
-    // TEMPORARY: Skip profile query and return basic user immediately
-    console.log('Skipping profile query, returning basic user object');
-    return {
-      ...authUser,
-      name: authUser.user_metadata?.full_name || authUser.email,
-      companyName: '',
-      subscriptionTier: 'pro', // Set to pro for testing
-      subscriptionStatus: 'active',
-      createdAt: new Date(authUser.created_at),
-      lastLoginAt: new Date(),
-      trialEndsAt: null
-    };
+    try {
+      console.log('Querying user_profiles table for user:', authUser.id);
+      
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', authUser.id)
+        .single();
+
+      console.log('Profile query result:', { profileData, profileError });
+
+      if (profileError) {
+        console.error('Error loading user profile:', profileError);
+        // Return basic user if profile query fails
+        return {
+          ...authUser,
+          name: authUser.user_metadata?.full_name || authUser.email,
+          companyName: '',
+          subscriptionTier: 'pro',
+          subscriptionStatus: 'active',
+          createdAt: new Date(authUser.created_at),
+          lastLoginAt: new Date(),
+          trialEndsAt: null
+        };
+      }
+
+      // Combine auth user with profile data
+      const combinedUser = {
+        ...authUser,
+        name: profileData.full_name || authUser.user_metadata?.full_name || authUser.email,
+        companyName: profileData.company_name || '',
+        subscriptionTier: profileData.subscription_tier || 'free',
+        subscriptionStatus: profileData.subscription_status || 'active',
+        createdAt: new Date(authUser.created_at),
+        lastLoginAt: new Date(),
+        trialEndsAt: profileData.trial_ends_at ? new Date(profileData.trial_ends_at) : null
+      };
+
+      console.log('Combined user profile:', combinedUser);
+      return combinedUser;
+    } catch (error) {
+      console.error('Error in loadUserProfile:', error);
+      // Return basic user if anything fails
+      return {
+        ...authUser,
+        name: authUser.user_metadata?.full_name || authUser.email,
+        companyName: '',
+        subscriptionTier: 'pro',
+        subscriptionStatus: 'active',
+        createdAt: new Date(authUser.created_at),
+        lastLoginAt: new Date(),
+        trialEndsAt: null
+      };
+    }
   }
 
   // Calculate features based on user subscription
