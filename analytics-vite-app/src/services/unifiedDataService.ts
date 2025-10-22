@@ -38,43 +38,64 @@ export class UnifiedDataService {
   static async saveFunnelData(userId: string, funnelData: FunnelData): Promise<boolean> {
     try {
       console.log('Saving funnel data:', { userId, funnelData });
+      console.log('FunnelData details:', {
+        id: funnelData.id,
+        year: funnelData.year,
+        month: funnelData.month,
+        inquiries: funnelData.inquiries,
+        callsBooked: funnelData.callsBooked,
+        callsTaken: funnelData.callsTaken
+      });
       
       // First, check if a record exists for this user/year/month combination
+      console.log('Checking for existing record...');
       const { data: existingData, error: fetchError } = await supabase
         .from('funnels')
         .select('id')
         .eq('user_id', userId)
         .eq('year', funnelData.year)
-        .eq('month', funnelData.month)
-        .single();
+        .eq('month', funnelData.month);
 
-      const recordId = existingData?.id || undefined;
+      console.log('Existing data query result:', { existingData, fetchError });
+
+      const recordId = existingData && existingData.length > 0 ? existingData[0].id : undefined;
 
       // Prepare the data for upsert - only include fields that exist in the database
       const upsertData: any = {
-        id: recordId, // Use existing ID or let database generate new one
         user_id: userId,
-        year: funnelData.year,
-        month: funnelData.month,
-        inquiries: funnelData.inquiries || 0,
-        calls_booked: funnelData.callsBooked || 0,
-        calls_taken: funnelData.callsTaken || 0,
-        closes: funnelData.closes || 0,
-        bookings: funnelData.bookings || 0,
-        cash: funnelData.cash || 0,
+        year: Number(funnelData.year),
+        month: Number(funnelData.month),
+        inquiries: Number(funnelData.inquiries || 0),
+        calls_booked: Number(funnelData.callsBooked || 0),
+        calls_taken: Number(funnelData.callsTaken || 0),
+        closes: Number(funnelData.closes || 0),
+        bookings: Number(funnelData.bookings || 0),
+        cash: Number(funnelData.cash || 0),
         updated_at: new Date().toISOString()
       };
 
+      // Only include ID if we have an existing record
+      if (recordId) {
+        upsertData.id = recordId;
+      }
+
       // Add optional fields if they exist in the funnelData
       if (funnelData.name) upsertData.name = funnelData.name;
-      if (funnelData.bookingsGoal) upsertData.bookings_goal = funnelData.bookingsGoal;
-      if (funnelData.inquiryToCall) upsertData.inquiry_to_call = funnelData.inquiryToCall;
-      if (funnelData.callToBooking) upsertData.call_to_booking = funnelData.callToBooking;
-      if (funnelData.inquiriesYtd) upsertData.inquiries_ytd = funnelData.inquiriesYtd;
-      if (funnelData.callsYtd) upsertData.calls_ytd = funnelData.callsYtd;
-      if (funnelData.bookingsYtd) upsertData.bookings_ytd = funnelData.bookingsYtd;
+      if (funnelData.bookingsGoal) upsertData.bookings_goal = Number(funnelData.bookingsGoal);
+      if (funnelData.inquiryToCall) upsertData.inquiry_to_call = Number(funnelData.inquiryToCall);
+      if (funnelData.callToBooking) upsertData.call_to_booking = Number(funnelData.callToBooking);
+      if (funnelData.inquiriesYtd) upsertData.inquiries_ytd = Number(funnelData.inquiriesYtd);
+      if (funnelData.callsYtd) upsertData.calls_ytd = Number(funnelData.callsYtd);
+      if (funnelData.bookingsYtd) upsertData.bookings_ytd = Number(funnelData.bookingsYtd);
 
       console.log('Upsert data:', upsertData);
+      console.log('Data types:', {
+        year: typeof upsertData.year,
+        month: typeof upsertData.month,
+        inquiries: typeof upsertData.inquiries,
+        calls_booked: typeof upsertData.calls_booked,
+        calls_taken: typeof upsertData.calls_taken
+      });
 
       const { error } = await supabase
         .from('funnels')
