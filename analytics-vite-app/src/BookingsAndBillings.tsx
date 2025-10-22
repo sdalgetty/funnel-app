@@ -715,13 +715,16 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
           leadSources={leadSources}
           payments={payments.filter(p => p.bookingId === editingBooking.id)}
           onUpdate={updateBooking}
-          onUpdatePayments={(updatedPayments) => {
-            // Remove existing payments for this booking
-            setPayments(prev => prev.filter(p => p.bookingId !== editingBooking.id));
-            // Add updated payments
-            updatedPayments.forEach(payment => {
-              addPayment(payment);
-            });
+          onUpdatePayments={async (updatedPayments) => {
+            // Use data manager to update payments
+            if (window.dataManager) {
+              // Remove existing payments for this booking
+              const existingPayments = window.dataManager.payments.filter(p => p.bookingId !== editingBooking.id);
+              // Add updated payments
+              for (const payment of updatedPayments) {
+                await window.dataManager.createPayment(payment);
+              }
+            }
           }}
           onClose={() => setEditingBooking(null)}
         />
@@ -1090,7 +1093,9 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddPayments, onCl
   const [recurringEndDate, setRecurringEndDate] = useState('');
 
   const addPayment = () => {
-    setPayments(prev => [...prev, {
+    // This is just for UI state in the modal, not actual data persistence
+    // The actual payment will be created when the booking is submitted
+    setBookingPayments(prev => [...prev, {
       amount: 0,
       dueDate: '',
       paidAt: null,
@@ -1168,13 +1173,13 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddPayments, onCl
   }, [formData.bookedRevenue, paymentType, recurringInterval, recurringStartDate, recurringEndDate]);
 
   const updatePayment = (index: number, field: keyof Omit<Payment, 'id' | 'bookingId'>, value: any) => {
-    setPayments(prev => prev.map((payment, i) => 
+    setBookingPayments(prev => prev.map((payment, i) => 
       i === index ? { ...payment, [field]: value } : payment
     ));
   };
 
   const removePayment = (index: number) => {
-    setPayments(prev => prev.filter((_, i) => i !== index));
+    setBookingPayments(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
