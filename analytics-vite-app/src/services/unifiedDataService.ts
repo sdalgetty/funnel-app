@@ -97,11 +97,22 @@ export class UnifiedDataService {
         calls_taken: typeof upsertData.calls_taken
       });
 
-      const { error } = await supabase
-        .from('funnels')
-        .upsert(upsertData, {
-          onConflict: 'user_id,year,month'
-        });
+      // Since unique constraint doesn't exist, use manual insert/update approach
+      let error;
+      if (recordId) {
+        // Update existing record
+        const { error: updateError } = await supabase
+          .from('funnels')
+          .update(upsertData)
+          .eq('id', recordId);
+        error = updateError;
+      } else {
+        // Insert new record
+        const { error: insertError } = await supabase
+          .from('funnels')
+          .insert(upsertData);
+        error = insertError;
+      }
 
       if (error) {
         console.error('Error saving funnel data:', error);
