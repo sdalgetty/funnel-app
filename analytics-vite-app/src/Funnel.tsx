@@ -157,8 +157,10 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
     console.log('Data to save:', dataToSave);
     
     try {
-      // Save to database
-      const success = await UnifiedDataService.saveFunnelData(user.id, dataToSave);
+      // Save to database using the data manager if available, otherwise fallback to direct service call
+      const success = window.dataManager 
+        ? await window.dataManager.saveFunnelData(dataToSave)
+        : await UnifiedDataService.saveFunnelData(user.id, dataToSave);
       
       console.log('Save result:', success);
       

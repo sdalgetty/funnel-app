@@ -22,6 +22,11 @@ function AppContent() {
   const { user, signOut, loading, features } = useAuth()
   const dataManager = useDataManager()
   
+  // Make data manager available globally for components that need it
+  useEffect(() => {
+    (window as any).dataManager = dataManager;
+  }, [dataManager]);
+  
   console.log('App auth state:', { 
     user: user ? { id: user.id, email: user.email, subscriptionTier: user.subscriptionTier } : null, 
     loading, 
