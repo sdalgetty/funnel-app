@@ -52,11 +52,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('Querying user_profiles table for user:', authUser.id);
       
-      const { data: profile, error } = await supabase
+      // Add timeout to profile query
+      const profilePromise = supabase
         .from('user_profiles')
         .select('*')
         .eq('id', authUser.id)
         .single();
+
+      const profileTimeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile query timeout')), 3000)
+      );
+
+      const { data: profile, error } = await Promise.race([profilePromise, profileTimeoutPromise]) as any;
 
       console.log('Profile query result:', { profile, error });
 
@@ -65,7 +72,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (error.code === 'PGRST116') {
           console.log('No profile found, creating basic user object');
         }
-        return authUser; // Return basic auth user if profile not found
+        // Return basic auth user with default values
+        return {
+          ...authUser,
+          name: authUser.user_metadata?.full_name || authUser.email,
+          companyName: '',
+          subscriptionTier: 'free',
+          subscriptionStatus: 'active',
+          createdAt: new Date(authUser.created_at),
+          lastLoginAt: new Date(),
+          trialEndsAt: null
+        };
       }
 
       // Combine auth user with profile data
@@ -85,7 +102,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Exception in loadUserProfile:', error);
       console.log('Returning basic auth user due to error');
-      return authUser;
+      // Return basic auth user with default values
+      return {
+        ...authUser,
+        name: authUser.user_metadata?.full_name || authUser.email,
+        companyName: '',
+        subscriptionTier: 'free',
+        subscriptionStatus: 'active',
+        createdAt: new Date(authUser.created_at),
+        lastLoginAt: new Date(),
+        trialEndsAt: null
+      };
     }
   }
 
