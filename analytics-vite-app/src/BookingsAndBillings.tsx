@@ -1612,57 +1612,11 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose }: {
             />
           </div>
 
-          {/* Payment Schedule Section */}
-          <div style={{ 
-            border: '1px solid #e5e7eb', 
-            borderRadius: '8px', 
-            padding: '20px',
-            backgroundColor: '#f9fafb'
-          }}>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ fontSize: '16px', fontWeight: '600' }}>
-                Payment Schedule
-              </label>
-            </div>
+          {/* Simplified - no payment schedule needed */}
 
-            {/* Payment Type Selection */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    name="paymentType"
-                    value="one-time"
-                    checked={paymentType === 'one-time'}
-                    onChange={(e) => setPaymentType(e.target.value as any)}
-                  />
-                  <span style={{ fontSize: '14px' }}>One-time Payment</span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    name="paymentType"
-                    value="installments"
-                    checked={paymentType === 'installments'}
-                    onChange={(e) => setPaymentType(e.target.value as any)}
-                  />
-                  <span style={{ fontSize: '14px' }}>Installments</span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    name="paymentType"
-                    value="recurring"
-                    checked={paymentType === 'recurring'}
-                    onChange={(e) => setPaymentType(e.target.value as any)}
-                  />
-                  <span style={{ fontSize: '14px' }}>Recurring</span>
-                </label>
-              </div>
-            </div>
+            {/* Payment system removed - simplified booking only */}
 
-            {/* One-time Payment - Due Date */}
-            {paymentType === 'one-time' && (
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                   Payment Due Date
