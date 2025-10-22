@@ -23,7 +23,7 @@ import {
 import './App.css'
 
 function AppContent() {
-  const { user, signOut, loading } = useAuth()
+  const { user, signOut, loading, features } = useAuth()
   const [currentPage, setCurrentPage] = useState<Page>('funnel')
   const [showAuthModal, setShowAuthModal] = useState(false)
   

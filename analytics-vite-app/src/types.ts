@@ -32,13 +32,20 @@ export interface SubscriptionFeatures {
 
 export interface FunnelData {
   id: string;
+  name: string;
   year: number;
   month: number;
   inquiries: number;
+  inquiriesYtd: number;
   callsBooked: number;
   callsTaken: number;
+  callsYtd: number;
+  inquiryToCall: number;
+  callToBooking: number;
   closes: number;
   bookings: number; // in cents
+  bookingsYtd: number;
+  bookingsGoal: number;
   cash: number; // in cents
   lastUpdated?: string;
 }
@@ -56,6 +63,7 @@ export interface Client {
 export interface ServiceType {
   id: string;
   name: string;
+  description?: string;
   isCustom: boolean;
   tracksInFunnel: boolean;
 }
@@ -63,25 +71,39 @@ export interface ServiceType {
 export interface LeadSource {
   id: string;
   name: string;
+  description?: string;
   isCustom: boolean;
 }
 
 export interface Booking {
   id: string;
   projectName: string;
+  clientName: string;
+  clientEmail?: string;
+  clientPhone?: string;
   serviceTypeId: string;
   leadSourceId: string;
+  bookingDate: string;
+  status: string;
+  notes?: string;
   dateInquired?: string;
   dateBooked?: string;
   projectDate?: string;
   bookedRevenue: number; // in cents
+  revenue?: number; // in cents
   createdAt: string;
+  payments?: Payment[];
 }
 
 export interface Payment {
   id: string;
   bookingId: string;
   amount: number; // in cents
+  amountCents: number; // in cents
+  paymentDate: string;
+  paymentMethod?: string;
+  status: string;
+  notes?: string;
   dueDate: string;
   paidAt?: string | null;
   memo?: string;
@@ -104,6 +126,8 @@ export interface AdCampaign {
   adSourceId: string;
   year: number;
   month: number;
+  monthYear: string;
+  adSpendCents: number; // in cents
   spend: number; // in cents
   leadsGenerated: number;
   createdAt: string;
@@ -117,6 +141,9 @@ export interface AdCampaign {
 export interface ForecastModel {
   id: string;
   name: string;
+  description?: string;
+  modelType: string;
+  parameters?: any;
   year: number;
   isActive: boolean;
   serviceTypes: {
