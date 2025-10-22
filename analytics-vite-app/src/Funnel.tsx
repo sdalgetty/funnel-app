@@ -154,9 +154,9 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
       console.log('Save result:', success);
       
       if (success) {
-        // Update local state
+        // Update local state - use year + month combination to find the right record
         const updatedData = funnelData.map(data => 
-          data.id === editingMonth.id 
+          data.year === editingMonth.year && data.month === editingMonth.month
             ? dataToSave
             : data
         );
