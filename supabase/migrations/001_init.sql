@@ -6,6 +6,7 @@ create table if not exists user_profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
   full_name text,
+  company_name text,
   subscription_tier text not null default 'free',
   subscription_status text not null default 'active',
   created_at timestamptz not null default now(),
@@ -129,48 +130,86 @@ alter table forecast_models enable row level security;
 grant usage on schema public to anon, authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;
 
--- Create RLS policies
+-- Create RLS policies (only if they don't exist)
 -- User profiles
-create policy "Users can view own profile" on user_profiles
-  for select using (auth.uid() = id);
-
-create policy "Users can update own profile" on user_profiles
-  for update using (auth.uid() = id);
-
-create policy "Users can insert own profile" on user_profiles
-  for insert with check (auth.uid() = id);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_profiles' AND policyname = 'Users can view own profile') THEN
+    CREATE POLICY "Users can view own profile" ON user_profiles FOR SELECT USING (auth.uid() = id);
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_profiles' AND policyname = 'Users can update own profile') THEN
+    CREATE POLICY "Users can update own profile" ON user_profiles FOR UPDATE USING (auth.uid() = id);
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_profiles' AND policyname = 'Users can insert own profile') THEN
+    CREATE POLICY "Users can insert own profile" ON user_profiles FOR INSERT WITH CHECK (auth.uid() = id);
+  END IF;
+END $$;
 
 -- Service types
-create policy "Users can manage own service types" on service_types
-  for all using (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'service_types' AND policyname = 'Users can manage own service types') THEN
+    CREATE POLICY "Users can manage own service types" ON service_types FOR ALL USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- Lead sources
-create policy "Users can manage own lead sources" on lead_sources
-  for all using (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'lead_sources' AND policyname = 'Users can manage own lead sources') THEN
+    CREATE POLICY "Users can manage own lead sources" ON lead_sources FOR ALL USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- Bookings
-create policy "Users can manage own bookings" on bookings
-  for all using (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'bookings' AND policyname = 'Users can manage own bookings') THEN
+    CREATE POLICY "Users can manage own bookings" ON bookings FOR ALL USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- Payments
-create policy "Users can manage own payments" on payments
-  for all using (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'payments' AND policyname = 'Users can manage own payments') THEN
+    CREATE POLICY "Users can manage own payments" ON payments FOR ALL USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- Ad sources
-create policy "Users can manage own ad sources" on ad_sources
-  for all using (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'ad_sources' AND policyname = 'Users can manage own ad sources') THEN
+    CREATE POLICY "Users can manage own ad sources" ON ad_sources FOR ALL USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- Ad campaigns
-create policy "Users can manage own ad campaigns" on ad_campaigns
-  for all using (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'ad_campaigns' AND policyname = 'Users can manage own ad campaigns') THEN
+    CREATE POLICY "Users can manage own ad campaigns" ON ad_campaigns FOR ALL USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- Funnels
-create policy "Users can manage own funnels" on funnels
-  for all using (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'funnels' AND policyname = 'Users can manage own funnels') THEN
+    CREATE POLICY "Users can manage own funnels" ON funnels FOR ALL USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- Forecast models
-create policy "Users can manage own forecast models" on forecast_models
-  for all using (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'forecast_models' AND policyname = 'Users can manage own forecast models') THEN
+    CREATE POLICY "Users can manage own forecast models" ON forecast_models FOR ALL USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- Create indexes for performance
 create unique index if not exists funnels_user_name_key
