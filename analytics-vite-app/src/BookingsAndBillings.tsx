@@ -1064,7 +1064,7 @@ function Td({ children, align = 'left' }: { children: React.ReactNode; align?: '
   return <td style={{ padding: '12px 16px', verticalAlign: 'top', textAlign: align }}>{children}</td>;
 }
 
-// Add Booking Modal - Simplified
+// Add Booking Modal - Completely Simplified
 function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose }: {
   serviceTypes: ServiceType[];
   leadSources: LeadSource[];
