@@ -15,6 +15,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, fullName?: string) => Promise<void>
   signOut: () => Promise<void>
+  upgradeToPro: () => Promise<void>
+  downgradeToFree: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -147,6 +149,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (error) throw error
   }
 
+  const upgradeToPro = async () => {
+    // Mock upgrade for development
+    if (user) {
+      setUser({
+        ...user,
+        subscriptionTier: 'pro'
+      })
+    }
+  }
+
+  const downgradeToFree = async () => {
+    // Mock downgrade for development
+    if (user) {
+      setUser({
+        ...user,
+        subscriptionTier: 'free'
+      })
+    }
+  }
+
   const value = {
     user,
     session,
@@ -155,6 +177,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signIn,
     signUp,
     signOut,
+    upgradeToPro,
+    downgradeToFree,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
