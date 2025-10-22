@@ -8,24 +8,20 @@ import Advertising from './Advertising'
 import AuthModal from './AuthModal'
 import FeatureGate from './FeatureGate'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { useDataManager } from './hooks/useDataManager'
 import LoginForm from './components/LoginForm'
 import TestConnection from './components/TestConnection'
 import { UpgradePrompt } from './FeatureGate'
 import { User, Crown, LogOut, Settings } from 'lucide-react'
-import type { Page, FunnelData, ServiceType, LeadSource, Booking, Payment } from './types'
-import { 
-  MOCK_FUNNEL_DATA, 
-  MOCK_SERVICE_TYPES, 
-  MOCK_LEAD_SOURCES, 
-  MOCK_BOOKINGS, 
-  MOCK_PAYMENTS 
-} from './data/mockData'
+import type { Page } from './types'
 import './App.css'
 
 function AppContent() {
   console.log('AppContent component loaded!');
   
   const { user, signOut, loading, features } = useAuth()
+  const dataManager = useDataManager()
+  
   console.log('App auth state:', { 
     user: user ? { id: user.id, email: user.email, subscriptionTier: user.subscriptionTier } : null, 
     loading, 
@@ -34,14 +30,7 @@ function AppContent() {
   
   const [currentPage, setCurrentPage] = useState<Page>('funnel')
   const [showAuthModal, setShowAuthModal] = useState(false)
-  
-  // Initialize state with mock data (will be replaced with API calls)
-  const [funnelData, setFunnelData] = useState<FunnelData[]>(MOCK_FUNNEL_DATA)
   const [isMobile, setIsMobile] = useState(false)
-  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>(MOCK_SERVICE_TYPES)
-  const [leadSources, setLeadSources] = useState<LeadSource[]>(MOCK_LEAD_SOURCES)
-  const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS)
-  const [payments, setPayments] = useState<Payment[]>(MOCK_PAYMENTS)
 
   // Device detection
   useEffect(() => {
@@ -276,27 +265,47 @@ function AppContent() {
 
       {/* Page Content */}
       <div style={{ padding: '0' }}>
-        {currentPage === 'funnel' && <Funnel funnelData={funnelData} setFunnelData={setFunnelData} salesData={bookings.filter(booking => {
-          const serviceType = serviceTypes.find(st => st.id === booking.serviceTypeId);
-          return serviceType?.tracksInFunnel === true;
-        })} paymentsData={payments} />}
+        {currentPage === 'funnel' && <Funnel 
+          funnelData={dataManager.funnelData} 
+          setFunnelData={(data) => {
+            // Update local state immediately for UI responsiveness
+            dataManager.funnelData.forEach(item => {
+              if (item.year === data.year && item.month === data.month) {
+                // This will be handled by the data manager's saveFunnelData
+              }
+            });
+          }}
+          salesData={dataManager.bookings.filter(booking => {
+            const serviceType = dataManager.serviceTypes.find(st => st.id === booking.serviceTypeId);
+            return serviceType?.tracksInFunnel === true;
+          })} 
+          paymentsData={dataManager.payments} 
+        />}
         {currentPage === 'advertising' && (
           <FeatureGate feature="advertising">
             <Advertising 
-              bookings={bookings} 
-              leadSources={leadSources} 
-              funnelData={funnelData} 
+              bookings={dataManager.bookings} 
+              leadSources={dataManager.leadSources} 
+              funnelData={dataManager.funnelData} 
             />
           </FeatureGate>
         )}
         {currentPage === 'forecast' && (
           <FeatureGate feature="forecast">
-            <Forecast funnelData={funnelData} serviceTypes={serviceTypes} setServiceTypes={setServiceTypes} bookings={bookings} payments={payments} />
+            <Forecast 
+              funnelData={dataManager.funnelData} 
+              serviceTypes={dataManager.serviceTypes} 
+              setServiceTypes={() => {}} // Handled by data manager
+              bookings={dataManager.bookings} 
+              payments={dataManager.payments} 
+            />
           </FeatureGate>
         )}
         {currentPage === 'bookings' && (
           <FeatureGate feature="sales">
-            <BookingsAndBillingsPOC />
+            <BookingsAndBillingsPOC 
+              dataManager={dataManager}
+            />
           </FeatureGate>
         )}
         {currentPage === 'profile' && <UserProfile />}
