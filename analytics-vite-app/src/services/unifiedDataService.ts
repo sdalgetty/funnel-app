@@ -37,7 +37,7 @@ export class UnifiedDataService {
 
   static async saveFunnelData(userId: string, funnelData: FunnelData): Promise<boolean> {
     try {
-      console.log('Saving funnel data:', { userId, funnelData });
+      console.log('Saving funnel data (v2 - manual insert/update):', { userId, funnelData });
       console.log('FunnelData details:', {
         id: funnelData.id,
         year: funnelData.year,
