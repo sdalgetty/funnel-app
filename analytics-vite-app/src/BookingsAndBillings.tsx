@@ -216,13 +216,24 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
   };
 
   // Add lead source
-  const addLeadSource = (name: string) => {
-    const newLeadSource: LeadSource = {
-      id: `ls_${Math.random().toString(36).slice(2, 9)}`,
-      name,
-      isCustom: true, // Keep for potential future use
-    };
-    setLeadSources(prev => [...prev, newLeadSource]);
+  const addLeadSource = async (name: string) => {
+    if (dataManager) {
+      await dataManager.createLeadSource(name);
+    } else if (user?.id) {
+      try {
+        console.log('Creating lead source:', name);
+        const newLeadSource = await UnifiedDataService.createLeadSource(user.id, name);
+        
+        if (newLeadSource) {
+          console.log('Lead source created successfully:', newLeadSource);
+          // Note: This won't update the UI without data manager
+        } else {
+          console.error('Failed to create lead source');
+        }
+      } catch (error) {
+        console.error('Error creating lead source:', error);
+      }
+    }
   };
 
   // Remove lead source
@@ -241,29 +252,51 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
     });
   };
 
-  const confirmDeleteLeadSource = () => {
+  const confirmDeleteLeadSource = async () => {
     if (!deleteLeadSourceConfirmation) return;
     
     const { id, bookingCount } = deleteLeadSourceConfirmation;
     
-    if (bookingCount > 0) {
-      // Remove lead source from bookings that use it
-      setBookings(prev => prev.map(booking => 
-        booking.leadSourceId === id 
-          ? { ...booking, leadSourceId: '' } // Set to empty string to maintain data integrity
-          : booking
-      ));
+    if (dataManager) {
+      await dataManager.deleteLeadSource(id);
+    } else if (user?.id) {
+      try {
+        console.log('Deleting lead source:', id);
+        const success = await UnifiedDataService.deleteLeadSource(user.id, id);
+        
+        if (success) {
+          console.log('Lead source deleted successfully');
+          // Note: This won't update the UI without data manager
+        } else {
+          console.error('Failed to delete lead source');
+        }
+      } catch (error) {
+        console.error('Error deleting lead source:', error);
+      }
     }
     
-    setLeadSources(prev => prev.filter(ls => ls.id !== id));
     setDeleteLeadSourceConfirmation(null);
   };
 
   // Update lead source
-  const updateLeadSource = (id: string, newName: string) => {
-    setLeadSources(prev => prev.map(ls => 
-      ls.id === id ? { ...ls, name: newName } : ls
-    ));
+  const updateLeadSource = async (id: string, newName: string) => {
+    if (dataManager) {
+      await dataManager.updateLeadSource(id, newName);
+    } else if (user?.id) {
+      try {
+        console.log('Updating lead source:', id, 'to:', newName);
+        const success = await UnifiedDataService.updateLeadSource(user.id, id, newName);
+        
+        if (success) {
+          console.log('Lead source updated successfully');
+          // Note: This won't update the UI without data manager
+        } else {
+          console.error('Failed to update lead source');
+        }
+      } catch (error) {
+        console.error('Error updating lead source:', error);
+      }
+    }
   };
 
   // Update existing booking
