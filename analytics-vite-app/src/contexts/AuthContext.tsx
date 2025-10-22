@@ -42,29 +42,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Helper function to load user profile data
   const loadUserProfile = async (authUser: any) => {
-    if (!authUser) return null
-
-    const { data: profile, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', authUser.id)
-      .single()
-
-    if (error) {
-      console.error('Error loading user profile:', error)
-      return authUser // Return basic auth user if profile not found
+    console.log('Loading user profile for:', authUser?.id);
+    
+    if (!authUser) {
+      console.log('No auth user provided');
+      return null;
     }
 
-    // Combine auth user with profile data
-    return {
-      ...authUser,
-      name: profile.full_name,
-      companyName: profile.company_name,
-      subscriptionTier: profile.subscription_tier,
-      subscriptionStatus: profile.subscription_status,
-      createdAt: new Date(profile.created_at),
-      lastLoginAt: new Date(),
-      trialEndsAt: null // Add trial logic if needed
+    try {
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      console.log('Profile query result:', { profile, error });
+
+      if (error) {
+        console.error('Error loading user profile:', error);
+        return authUser; // Return basic auth user if profile not found
+      }
+
+      // Combine auth user with profile data
+      const userWithProfile = {
+        ...authUser,
+        name: profile.full_name,
+        companyName: profile.company_name,
+        subscriptionTier: profile.subscription_tier,
+        subscriptionStatus: profile.subscription_status,
+        createdAt: new Date(profile.created_at),
+        lastLoginAt: new Date(),
+        trialEndsAt: null // Add trial logic if needed
+      };
+      
+      console.log('Combined user profile:', userWithProfile);
+      return userWithProfile;
+    } catch (error) {
+      console.error('Exception in loadUserProfile:', error);
+      return authUser;
     }
   }
 
@@ -81,6 +96,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const isTrialUser = user?.subscriptionTier === 'trial'
 
   useEffect(() => {
+    console.log('AuthContext useEffect starting...');
+    
     // Check if Supabase is properly configured
     const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && 
       import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co'
@@ -91,16 +108,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return
     }
 
+    console.log('Supabase configured, getting session...');
+
     // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      console.log('Session result:', { session: !!session, error });
+      
+      if (error) {
+        console.error('Error getting session:', error);
+        setLoading(false);
+        return;
+      }
+      
       setSession(session)
       if (session?.user) {
-        const userWithProfile = await loadUserProfile(session.user)
-        setUser(userWithProfile)
+        console.log('User found, loading profile...');
+        try {
+          const userWithProfile = await loadUserProfile(session.user)
+          console.log('Profile loaded:', userWithProfile);
+          setUser(userWithProfile)
+        } catch (profileError) {
+          console.error('Error loading profile:', profileError);
+          setUser(session.user) // Use basic auth user if profile fails
+        }
       } else {
+        console.log('No user session');
         setUser(null)
       }
+      console.log('Setting loading to false');
       setLoading(false)
+    }).catch(error => {
+      console.error('Error in session promise:', error);
+      setLoading(false);
     })
 
     // Listen for auth changes
