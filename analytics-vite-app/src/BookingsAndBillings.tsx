@@ -104,24 +104,51 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
   }, [bookings, payments]);
 
   // Add new booking
-  const addBooking = (bookingData: Omit<Booking, 'id' | 'createdAt'>) => {
-    const newBooking: Booking = {
-      ...bookingData,
-      id: `b_${Math.random().toString(36).slice(2, 9)}`,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    setBookings(prev => [...prev, newBooking]);
-    setShowAddBooking(false);
+  const addBooking = async (bookingData: Omit<Booking, 'id' | 'createdAt'>) => {
+    if (dataManager) {
+      const newBooking = await dataManager.createBooking(bookingData);
+      if (newBooking) {
+        setShowAddBooking(false);
+      }
+    } else if (user?.id) {
+      try {
+        console.log('Creating booking:', bookingData);
+        const newBooking = await UnifiedDataService.createBooking(user.id, bookingData);
+        
+        if (newBooking) {
+          console.log('Booking created successfully:', newBooking);
+          setShowAddBooking(false);
+        } else {
+          console.error('Failed to create booking');
+        }
+      } catch (error) {
+        console.error('Error creating booking:', error);
+      }
+    }
   };
 
   // Add new payment
-  const addPayment = (paymentData: Omit<Payment, 'id'>) => {
-    const newPayment: Payment = {
-      ...paymentData,
-      id: `p_${Math.random().toString(36).slice(2, 9)}`,
-    };
-    setPayments(prev => [...prev, newPayment]);
-    setShowAddPayment(false);
+  const addPayment = async (paymentData: Omit<Payment, 'id'>) => {
+    if (dataManager) {
+      const newPayment = await dataManager.createPayment(paymentData);
+      if (newPayment) {
+        setShowAddPayment(false);
+      }
+    } else if (user?.id) {
+      try {
+        console.log('Creating payment:', paymentData);
+        const newPayment = await UnifiedDataService.createPayment(user.id, paymentData);
+        
+        if (newPayment) {
+          console.log('Payment created successfully:', newPayment);
+          setShowAddPayment(false);
+        } else {
+          console.error('Failed to create payment');
+        }
+      } catch (error) {
+        console.error('Error creating payment:', error);
+      }
+    }
   };
 
   // Add custom service type
@@ -300,16 +327,29 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
   };
 
   // Update existing booking
-  const updateBooking = (bookingData: Omit<Booking, 'id' | 'createdAt'>) => {
+  const updateBooking = async (bookingData: Omit<Booking, 'id' | 'createdAt'>) => {
     if (!editingBooking) return;
     
-    const updatedBooking: Booking = {
-      ...bookingData,
-      id: editingBooking.id,
-      createdAt: editingBooking.createdAt,
-    };
-    setBookings(prev => prev.map(b => b.id === editingBooking.id ? updatedBooking : b));
-    setEditingBooking(null);
+    if (dataManager) {
+      const success = await dataManager.updateBooking(editingBooking.id, bookingData);
+      if (success) {
+        setEditingBooking(null);
+      }
+    } else if (user?.id) {
+      try {
+        console.log('Updating booking:', editingBooking.id, bookingData);
+        const success = await UnifiedDataService.updateBooking(user.id, editingBooking.id, bookingData);
+        
+        if (success) {
+          console.log('Booking updated successfully');
+          setEditingBooking(null);
+        } else {
+          console.error('Failed to update booking');
+        }
+      } catch (error) {
+        console.error('Error updating booking:', error);
+      }
+    }
   };
 
   // Toggle service type filter
