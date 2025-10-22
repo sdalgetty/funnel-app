@@ -52,11 +52,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('Querying user_profiles table for user (v3):', authUser.id);
       
-      const { data: profileData, error: profileError } = await supabase
+      // Add timeout to prevent hanging
+      const profilePromise = supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', authUser.id)
         .single();
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile query timeout')), 5000)
+      );
+
+      const { data: profileData, error: profileError } = await Promise.race([
+        profilePromise,
+        timeoutPromise
+      ]) as any;
 
       console.log('Profile query result:', { profileData, profileError });
 
