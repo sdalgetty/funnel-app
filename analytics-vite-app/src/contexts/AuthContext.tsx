@@ -58,7 +58,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: 'mock-user-id',
         email: 'demo@example.com',
         name: 'Demo User',
-        subscriptionTier: 'pro' // Give demo user pro features
+        subscriptionTier: 'pro', // Give demo user pro features
+        subscriptionStatus: 'active',
+        createdAt: new Date('2024-01-01'),
+        lastLoginAt: new Date(),
+        trialEndsAt: null
       }
       setUser(mockUser)
       setLoading(false)
@@ -94,7 +98,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: 'mock-user-id',
         email: email,
         name: 'Demo User',
-        subscriptionTier: 'pro'
+        subscriptionTier: 'pro',
+        subscriptionStatus: 'active',
+        createdAt: new Date('2024-01-01'),
+        lastLoginAt: new Date(),
+        trialEndsAt: null
       }
       setUser(mockUser)
       return
@@ -117,7 +125,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: 'mock-user-id',
         email: email,
         name: fullName || 'Demo User',
-        subscriptionTier: 'pro'
+        subscriptionTier: 'pro',
+        subscriptionStatus: 'active',
+        createdAt: new Date('2024-01-01'),
+        lastLoginAt: new Date(),
+        trialEndsAt: null
       }
       setUser(mockUser)
       return

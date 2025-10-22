@@ -427,11 +427,11 @@ function AccountSection({
               textAlign: 'left'
             }}>
               <Calendar size={16} color="#6b7280" />
-              {user.createdAt.toLocaleDateString('en-US', {
+              {user.createdAt ? user.createdAt.toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
-              })}
+              }) : 'Unknown'}
             </div>
           </div>
         </div>
@@ -838,11 +838,11 @@ function SubscriptionSection({ user, onUpgrade, onDowngrade }: {
             </span>
           </div>
           <p style={{ fontSize: '14px', color: '#92400e', margin: '0 0 12px 0' }}>
-            Your trial ends on {user.trialEndsAt.toLocaleDateString('en-US', {
+            Your trial ends on {user.trialEndsAt ? user.trialEndsAt.toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'long',
               day: 'numeric'
-            })}
+            }) : 'Unknown'}
           </p>
           <button
             style={{
