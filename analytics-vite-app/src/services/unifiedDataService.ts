@@ -105,6 +105,12 @@ export class UnifiedDataService {
 
       if (error) {
         console.error('Error saving funnel data:', error);
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         return false;
       }
 
