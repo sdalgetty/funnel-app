@@ -12,6 +12,7 @@ interface AuthContextType {
     canSyncFunnelWithSales: boolean
     advertising: boolean
   }
+  isTrialUser: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, fullName?: string, companyName?: string) => Promise<void>
   signOut: () => Promise<void>
@@ -71,10 +72,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const features = {
     canAccessSales: user?.subscriptionTier === 'pro' || user?.subscriptionTier === 'trial',
     canAccessForecast: user?.subscriptionTier === 'pro' || user?.subscriptionTier === 'trial',
-    canUseDataIntegration: user?.subscriptionTier === 'pro',
-    canSyncFunnelWithSales: user?.subscriptionTier === 'pro',
-    advertising: user?.subscriptionTier === 'pro'
+    canUseDataIntegration: user?.subscriptionTier === 'pro' || user?.subscriptionTier === 'trial',
+    canSyncFunnelWithSales: user?.subscriptionTier === 'pro' || user?.subscriptionTier === 'trial',
+    advertising: user?.subscriptionTier === 'pro' || user?.subscriptionTier === 'trial'
   }
+
+  // Helper function to check if user is on trial
+  const isTrialUser = user?.subscriptionTier === 'trial'
 
   useEffect(() => {
     // Check if Supabase is properly configured
@@ -224,6 +228,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     session,
     loading,
     features,
+    isTrialUser,
     signIn,
     signUp,
     signOut,
