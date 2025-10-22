@@ -17,6 +17,7 @@ interface AuthContextType {
   signOut: () => Promise<void>
   upgradeToPro: () => Promise<void>
   downgradeToFree: () => Promise<void>
+  updateProfile: (updates: Partial<any>) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -38,6 +39,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Helper function to load user profile data
+  const loadUserProfile = async (authUser: any) => {
+    if (!authUser) return null
+
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .single()
+
+    if (error) {
+      console.error('Error loading user profile:', error)
+      return authUser // Return basic auth user if profile not found
+    }
+
+    // Combine auth user with profile data
+    return {
+      ...authUser,
+      name: profile.full_name,
+      companyName: profile.company_name,
+      subscriptionTier: profile.subscription_tier,
+      subscriptionStatus: profile.subscription_status,
+      createdAt: new Date(profile.created_at),
+      lastLoginAt: new Date(),
+      trialEndsAt: null // Add trial logic if needed
+    }
+  }
+
   // Calculate features based on user subscription
   const features = {
     canAccessSales: user?.subscriptionTier === 'pro',
@@ -53,36 +82,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co'
 
     if (!isSupabaseConfigured) {
-      // For development without Supabase, create a mock user
-      const mockUser = {
-        id: 'mock-user-id',
-        email: 'hello@anendlesspursuit.com',
-        name: 'An Endless Pursuit',
-        companyName: 'An Endless Pursuit Photography',
-        subscriptionTier: 'pro', // Give demo user pro features
-        subscriptionStatus: 'active',
-        createdAt: new Date('2025-01-01'), // Current year for new users
-        lastLoginAt: new Date(),
-        trialEndsAt: null
-      }
-      setUser(mockUser)
+      console.error('❌ Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY')
       setLoading(false)
       return
     }
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session)
-      setUser(session?.user ?? null)
+      if (session?.user) {
+        const userWithProfile = await loadUserProfile(session.user)
+        setUser(userWithProfile)
+      } else {
+        setUser(null)
+      }
       setLoading(false)
     })
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
-      setUser(session?.user ?? null)
+      if (session?.user) {
+        const userWithProfile = await loadUserProfile(session.user)
+        setUser(userWithProfile)
+      } else {
+        setUser(null)
+      }
       setLoading(false)
     })
 
@@ -90,26 +117,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && 
-      import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co'
-
-    if (!isSupabaseConfigured) {
-      // Mock sign in for development
-      const mockUser = {
-        id: 'mock-user-id',
-        email: email,
-        name: 'Demo User',
-        companyName: 'Demo Company',
-        subscriptionTier: 'pro',
-        subscriptionStatus: 'active',
-        createdAt: new Date('2025-01-01'), // Current year for new users
-        lastLoginAt: new Date(),
-        trialEndsAt: null
-      }
-      setUser(mockUser)
-      return
-    }
-
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -118,27 +125,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const signUp = async (email: string, password: string, fullName?: string, companyName?: string) => {
-    const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && 
-      import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co'
-
-    if (!isSupabaseConfigured) {
-      // Mock sign up for development
-      const mockUser = {
-        id: 'mock-user-id',
-        email: email,
-        name: fullName || 'Demo User',
-        companyName: companyName || 'Demo Company',
-        subscriptionTier: 'pro',
-        subscriptionStatus: 'active',
-        createdAt: new Date('2025-01-01'), // Current year for new users
-        lastLoginAt: new Date(),
-        trialEndsAt: null
-      }
-      setUser(mockUser)
-      return
-    }
-
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -148,25 +135,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       },
     })
     if (error) throw error
+
+    // Create user profile after successful signup
+    if (data.user) {
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: data.user.id,
+          email: email,
+          full_name: fullName,
+          company_name: companyName,
+          subscription_tier: 'free',
+          subscription_status: 'active'
+        })
+
+      if (profileError) {
+        console.error('Error creating user profile:', profileError)
+        // Don't throw here as the user was created successfully
+      }
+    }
   }
 
   const signOut = async () => {
-    const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && 
-      import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co'
-
-    if (!isSupabaseConfigured) {
-      // Mock sign out for development
-      setUser(null)
-      return
-    }
-
     const { error } = await supabase.auth.signOut()
     if (error) throw error
   }
 
   const upgradeToPro = async () => {
-    // Mock upgrade for development
     if (user) {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ subscription_tier: 'pro' })
+        .eq('id', user.id)
+
+      if (error) throw error
+
       setUser({
         ...user,
         subscriptionTier: 'pro'
@@ -175,11 +178,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const downgradeToFree = async () => {
-    // Mock downgrade for development
     if (user) {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ subscription_tier: 'free' })
+        .eq('id', user.id)
+
+      if (error) throw error
+
       setUser({
         ...user,
         subscriptionTier: 'free'
+      })
+    }
+  }
+
+  const updateProfile = async (updates: Partial<any>) => {
+    if (user) {
+      // Map frontend field names to database field names
+      const dbUpdates: any = {}
+      if (updates.name) dbUpdates.full_name = updates.name
+      if (updates.companyName) dbUpdates.company_name = updates.companyName
+      if (updates.email) dbUpdates.email = updates.email
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update(dbUpdates)
+        .eq('id', user.id)
+
+      if (error) throw error
+
+      setUser({
+        ...user,
+        ...updates
       })
     }
   }
@@ -194,6 +225,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signOut,
     upgradeToPro,
     downgradeToFree,
+    updateProfile,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

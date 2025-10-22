@@ -25,7 +25,7 @@ import {
 type ProfileSection = 'account' | 'subscription' | 'billing' | 'privacy' | 'support';
 
 export default function UserProfile() {
-  const { user, upgradeToPro, downgradeToFree } = useAuth();
+  const { user, upgradeToPro, downgradeToFree, updateProfile } = useAuth();
   const [activeSection, setActiveSection] = useState<ProfileSection>('account');
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -41,6 +41,24 @@ export default function UserProfile() {
     }
   });
 
+  // Update formData when user changes
+  React.useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        companyName: user.companyName || '',
+        email: user.email || '',
+        timezone: 'America/New_York',
+        dateFormat: 'MM/DD/YYYY',
+        notifications: {
+          email: true,
+          push: false,
+          marketing: false
+        }
+      });
+    }
+  }, [user]);
+
   if (!user) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
@@ -49,10 +67,19 @@ export default function UserProfile() {
     );
   }
 
-  const handleSave = () => {
-    // In a real app, this would update the user profile via API
-    console.log('Saving profile data:', formData);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      // Update the user profile with the form data
+      await updateProfile({
+        name: formData.name,
+        companyName: formData.companyName,
+        email: formData.email,
+        // Note: timezone, dateFormat, and notifications would be stored separately in a real app
+      });
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+    }
   };
 
   const handleCancel = () => {

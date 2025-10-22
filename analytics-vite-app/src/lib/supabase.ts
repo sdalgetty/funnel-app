@@ -19,6 +19,7 @@ export type Database = {
           id: string
           email: string | null
           full_name: string | null
+          company_name: string | null
           subscription_tier: string
           subscription_status: string
           created_at: string
@@ -28,6 +29,7 @@ export type Database = {
           id: string
           email?: string | null
           full_name?: string | null
+          company_name?: string | null
           subscription_tier?: string
           subscription_status?: string
           created_at?: string
@@ -37,6 +39,7 @@ export type Database = {
           id?: string
           email?: string | null
           full_name?: string | null
+          company_name?: string | null
           subscription_tier?: string
           subscription_status?: string
           created_at?: string
