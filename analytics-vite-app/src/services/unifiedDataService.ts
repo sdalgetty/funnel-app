@@ -610,4 +610,53 @@ export class UnifiedDataService {
       return false;
     }
   }
+
+  // ============================================================================
+  // AD SOURCES
+  // ============================================================================
+  
+  static async getAdSources(userId: string): Promise<AdSource[]> {
+    try {
+      const { data, error } = await supabase
+        .from('ad_sources')
+        .select('*')
+        .eq('user_id', userId)
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching ad sources:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching ad sources:', error);
+      return [];
+    }
+  }
+
+  // ============================================================================
+  // AD CAMPAIGNS
+  // ============================================================================
+  
+  static async getAdCampaigns(userId: string): Promise<AdCampaign[]> {
+    try {
+      const { data, error } = await supabase
+        .from('ad_campaigns')
+        .select('*')
+        .eq('user_id', userId)
+        .order('year', { ascending: false })
+        .order('month', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching ad campaigns:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching ad campaigns:', error);
+      return [];
+    }
+  }
 }

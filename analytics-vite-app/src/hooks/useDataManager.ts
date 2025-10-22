@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { UnifiedDataService } from '../services/unifiedDataService';
-import type { FunnelData, Booking, Payment, ServiceType, LeadSource } from '../types';
+import type { FunnelData, Booking, Payment, ServiceType, LeadSource, AdSource, AdCampaign } from '../types';
 
 export function useDataManager() {
   const { user } = useAuth();
@@ -14,6 +14,8 @@ export function useDataManager() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
   const [leadSources, setLeadSources] = useState<LeadSource[]>([]);
+  const [adSources, setAdSources] = useState<AdSource[]>([]);
+  const [adCampaigns, setAdCampaigns] = useState<AdCampaign[]>([]);
 
   // Load all data on mount or user change
   const loadAllData = useCallback(async () => {
@@ -28,12 +30,14 @@ export function useDataManager() {
     try {
       console.log('Loading all data for user:', user.id);
       
-      const [funnelDataResult, bookingsResult, paymentsResult, serviceTypesResult, leadSourcesResult] = await Promise.all([
+      const [funnelDataResult, bookingsResult, paymentsResult, serviceTypesResult, leadSourcesResult, adSourcesResult, adCampaignsResult] = await Promise.all([
         UnifiedDataService.getFunnelData(user.id, new Date().getFullYear()),
         UnifiedDataService.getBookings(user.id),
         UnifiedDataService.getPayments(user.id),
         UnifiedDataService.getServiceTypes(user.id),
-        UnifiedDataService.getLeadSources(user.id)
+        UnifiedDataService.getLeadSources(user.id),
+        UnifiedDataService.getAdSources(user.id),
+        UnifiedDataService.getAdCampaigns(user.id)
       ]);
 
       console.log('All data loaded successfully:', {
@@ -41,7 +45,9 @@ export function useDataManager() {
         bookings: bookingsResult.length,
         payments: paymentsResult.length,
         serviceTypes: serviceTypesResult.length,
-        leadSources: leadSourcesResult.length
+        leadSources: leadSourcesResult.length,
+        adSources: adSourcesResult.length,
+        adCampaigns: adCampaignsResult.length
       });
 
       setFunnelData(funnelDataResult);
@@ -49,6 +55,8 @@ export function useDataManager() {
       setPayments(paymentsResult);
       setServiceTypes(serviceTypesResult);
       setLeadSources(leadSourcesResult);
+      setAdSources(adSourcesResult);
+      setAdCampaigns(adCampaignsResult);
     } catch (err) {
       console.error('Error loading data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -292,6 +300,8 @@ export function useDataManager() {
     payments,
     serviceTypes,
     leadSources,
+    adSources,
+    adCampaigns,
     
     // Actions
     loadAllData,

@@ -1,19 +1,19 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { TrendingUp, DollarSign, Users, Target, BarChart3, Plus, Edit, Trash2 } from 'lucide-react';
 import type { AdSource, AdCampaign, Booking, LeadSource, FunnelData } from './types';
-import { MOCK_AD_SOURCES, MOCK_AD_CAMPAIGNS } from './data/mockData';
 
 interface AdvertisingProps {
   bookings: Booking[];
   leadSources: LeadSource[];
   funnelData: FunnelData[];
+  dataManager?: any;
 }
 
-export default function Advertising({ bookings, leadSources, funnelData }: AdvertisingProps) {
+export default function Advertising({ bookings, leadSources, funnelData, dataManager }: AdvertisingProps) {
   const { user } = useAuth();
-  const [adSources, setAdSources] = useState<AdSource[]>(MOCK_AD_SOURCES);
-  const [adCampaigns, setAdCampaigns] = useState<AdCampaign[]>(MOCK_AD_CAMPAIGNS);
+  const [adSources, setAdSources] = useState<AdSource[]>([]);
+  const [adCampaigns, setAdCampaigns] = useState<AdCampaign[]>([]);
   const [showAdSources, setShowAdSources] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<{
@@ -26,6 +26,14 @@ export default function Advertising({ bookings, leadSources, funnelData }: Adver
   } | null>(null);
 
   const currentYear = new Date().getFullYear();
+
+  // Load data from data manager
+  useEffect(() => {
+    if (dataManager) {
+      setAdSources(dataManager.adSources || []);
+      setAdCampaigns(dataManager.adCampaigns || []);
+    }
+  }, [dataManager]);
 
   // Helper functions
   const toUSD = (cents: number) => {

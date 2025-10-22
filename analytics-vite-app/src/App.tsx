@@ -292,7 +292,8 @@ function AppContent() {
             <Advertising 
               bookings={dataManager.bookings} 
               leadSources={dataManager.leadSources} 
-              funnelData={dataManager.funnelData} 
+              funnelData={dataManager.funnelData}
+              dataManager={dataManager}
             />
           </FeatureGate>
         )}
