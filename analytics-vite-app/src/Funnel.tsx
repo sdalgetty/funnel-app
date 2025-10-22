@@ -29,7 +29,11 @@ const calculateConversionRate = (from: number, to: number) => {
 };
 
 export default function Funnel({ funnelData, setFunnelData, salesData = [], paymentsData = [] }: FunnelProps) {
+  console.log('Funnel component loaded!', { funnelData, salesData, paymentsData });
+  
   const { user, features } = useAuth();
+  console.log('Auth context loaded:', { user: !!user, features });
+  
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
