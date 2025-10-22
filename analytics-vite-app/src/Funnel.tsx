@@ -112,6 +112,8 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
   const handleSave = async () => {
     if (!editingMonth || !user?.id) return;
     
+    console.log('Starting save process...', { editingMonth, user: user.id, isProAccount });
+    
     // For Pro accounts, save manual inputs (inquiries, callsBooked, callsTaken) 
     // and use calculated values for bookings, closes, cash only if they exist
     const dataToSave = isProAccount 
@@ -129,20 +131,31 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
         }
       : { ...editingMonth, lastUpdated: new Date().toISOString() };
     
+    console.log('Data to save:', dataToSave);
+    
+    try {
       // Save to database
       const success = await UnifiedDataService.saveFunnelData(user.id, dataToSave);
-    
-    if (success) {
-      // Update local state
-      const updatedData = funnelData.map(data => 
-        data.id === editingMonth.id 
-          ? dataToSave
-          : data
-      );
       
-      setFunnelData(updatedData);
-      handleCloseModal();
-    } else {
+      console.log('Save result:', success);
+      
+      if (success) {
+        // Update local state
+        const updatedData = funnelData.map(data => 
+          data.id === editingMonth.id 
+            ? dataToSave
+            : data
+        );
+        
+        setFunnelData(updatedData);
+        handleCloseModal();
+        console.log('Successfully saved and updated local state');
+      } else {
+        console.error('Save failed - service returned false');
+        alert('Failed to save data. Please try again.');
+      }
+    } catch (error) {
+      console.error('Save error:', error);
       alert('Failed to save data. Please try again.');
     }
   };
