@@ -1963,9 +1963,9 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onClose }: {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (newLeadSource.trim()) {
-      onAdd(newLeadSource.trim());
+      await onAdd(newLeadSource.trim());
       setNewLeadSource('');
     }
   };
@@ -1975,9 +1975,9 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onClose }: {
     setEditingName(currentName);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingId && editingName.trim()) {
-      onUpdate(editingId, editingName.trim());
+      await onUpdate(editingId, editingName.trim());
       setEditingId(null);
       setEditingName('');
     }
