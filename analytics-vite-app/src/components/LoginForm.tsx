@@ -5,6 +5,7 @@ const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
+  const [companyName, setCompanyName] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -18,7 +19,7 @@ const LoginForm: React.FC = () => {
 
     try {
       if (isSignUp) {
-        await signUp(email, password, fullName)
+        await signUp(email, password, fullName, companyName)
         setError('Check your email for verification link!')
       } else {
         await signIn(email, password)
@@ -45,23 +46,42 @@ const LoginForm: React.FC = () => {
       
       <form onSubmit={handleSubmit}>
         {isSignUp && (
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
-              Full Name
-            </label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required={isSignUp}
-              style={{
-                width: '100%',
-                padding: '8px',
-                border: '1px solid #ddd',
-                borderRadius: '4px'
-              }}
-            />
-          </div>
+          <>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px' }}>
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required={isSignUp}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px'
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px' }}>
+                Company Name
+              </label>
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                required={isSignUp}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px'
+                }}
+              />
+            </div>
+          </>
         )}
         
         <div style={{ marginBottom: '15px' }}>

@@ -13,7 +13,7 @@ interface AuthContextType {
     advertising: boolean
   }
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, fullName?: string) => Promise<void>
+  signUp: (email: string, password: string, fullName?: string, companyName?: string) => Promise<void>
   signOut: () => Promise<void>
   upgradeToPro: () => Promise<void>
   downgradeToFree: () => Promise<void>
@@ -58,6 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: 'mock-user-id',
         email: 'hello@anendlesspursuit.com',
         name: 'An Endless Pursuit',
+        companyName: 'An Endless Pursuit Photography',
         subscriptionTier: 'pro', // Give demo user pro features
         subscriptionStatus: 'active',
         createdAt: new Date('2025-01-01'), // Current year for new users
@@ -98,6 +99,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: 'mock-user-id',
         email: email,
         name: 'Demo User',
+        companyName: 'Demo Company',
         subscriptionTier: 'pro',
         subscriptionStatus: 'active',
         createdAt: new Date('2025-01-01'), // Current year for new users
@@ -115,7 +117,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (error) throw error
   }
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
+  const signUp = async (email: string, password: string, fullName?: string, companyName?: string) => {
     const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && 
       import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co'
 
@@ -125,6 +127,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: 'mock-user-id',
         email: email,
         name: fullName || 'Demo User',
+        companyName: companyName || 'Demo Company',
         subscriptionTier: 'pro',
         subscriptionStatus: 'active',
         createdAt: new Date('2025-01-01'), // Current year for new users

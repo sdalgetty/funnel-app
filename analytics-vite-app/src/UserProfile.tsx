@@ -30,6 +30,7 @@ export default function UserProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
+    companyName: user?.companyName || '',
     email: user?.email || '',
     timezone: 'America/New_York',
     dateFormat: 'MM/DD/YYYY',
@@ -57,6 +58,7 @@ export default function UserProfile() {
   const handleCancel = () => {
     setFormData({
       name: user.name,
+      companyName: user.companyName || '',
       email: user.email,
       timezone: 'America/New_York',
       dateFormat: 'MM/DD/YYYY',
@@ -356,6 +358,46 @@ function AccountSection({
                 textAlign: 'left'
               }}>
                 {user.name}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label style={{ 
+              display: 'block', 
+              fontSize: '14px', 
+              fontWeight: '500', 
+              color: '#374151',
+              marginBottom: '6px',
+              textAlign: 'left'
+            }}>
+              Company Name
+            </label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.companyName}
+                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  backgroundColor: 'white',
+                  textAlign: 'left'
+                }}
+              />
+            ) : (
+              <div style={{
+                padding: '10px 12px',
+                backgroundColor: '#f9fafb',
+                borderRadius: '6px',
+                fontSize: '14px',
+                color: '#374151',
+                textAlign: 'left'
+              }}>
+                {user.companyName || 'Not set'}
               </div>
             )}
           </div>
