@@ -43,6 +43,7 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
   const [editingMonth, setEditingMonth] = useState<FunnelData | null>(null);
   const [funnelView, setFunnelView] = useState<'funnel' | 'calculator'>('funnel');
   const [loading, setLoading] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
 
   // Load funnel data from database when component mounts or year changes
   useEffect(() => {
@@ -60,8 +61,16 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
         }
     };
 
-    loadFunnelData();
-  }, [user?.id, selectedYear, setFunnelData]);
+    // Don't reload if we just saved data
+    if (!justSaved) {
+      loadFunnelData();
+    }
+  }, [user?.id, selectedYear, justSaved]);
+
+  // Reset justSaved flag when year changes
+  useEffect(() => {
+    setJustSaved(false);
+  }, [selectedYear]);
 
   // Check if user has Pro features (Pro or Trial account)
   const isProAccount = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'trial';
@@ -155,13 +164,18 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
       
       if (success) {
         // Update local state - use year + month combination to find the right record
-        const updatedData = funnelData.map(data => 
-          data.year === editingMonth.year && data.month === editingMonth.month
-            ? dataToSave
-            : data
-        );
+        console.log('Before state update - funnelData:', funnelData);
+        console.log('Looking for record with year:', editingMonth.year, 'month:', editingMonth.month);
         
+        const updatedData = funnelData.map(data => {
+          const isMatch = data.year === editingMonth.year && data.month === editingMonth.month;
+          console.log('Checking record:', { year: data.year, month: data.month, isMatch });
+          return isMatch ? dataToSave : data;
+        });
+        
+        console.log('Updated data:', updatedData);
         setFunnelData(updatedData);
+        setJustSaved(true);
         handleCloseModal();
         console.log('Successfully saved and updated local state');
       } else {
