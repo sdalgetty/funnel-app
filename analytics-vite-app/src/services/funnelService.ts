@@ -25,10 +25,23 @@ export class FunnelService {
 
   static async saveFunnelData(userId: string, funnelData: FunnelData): Promise<boolean> {
     try {
+      console.log('Saving funnel data:', { userId, funnelData });
+      
+      // First, check if a record exists for this user/year/month combination
+      const { data: existingData, error: fetchError } = await supabase
+        .from('funnels')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('year', funnelData.year)
+        .eq('month', funnelData.month)
+        .single();
+
+      const recordId = existingData?.id || undefined;
+
       const { error } = await supabase
         .from('funnels')
         .upsert({
-          id: funnelData.id,
+          id: recordId, // Use existing ID or let database generate new one
           user_id: userId,
           year: funnelData.year,
           month: funnelData.month,
@@ -40,7 +53,7 @@ export class FunnelService {
           cash: funnelData.cash || 0,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'id'
+          onConflict: 'user_id,year,month'
         });
 
       if (error) {
@@ -48,6 +61,7 @@ export class FunnelService {
         return false;
       }
 
+      console.log('Successfully saved funnel data');
       return true;
     } catch (error) {
       console.error('Error saving funnel data:', error);

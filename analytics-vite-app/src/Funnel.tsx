@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit, Lock, Crown, Calculator } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 import CalculatorComponent from "./Calculator";
-import { FunnelService } from "./services/funnelService";
+import { UnifiedDataService } from "./services/unifiedDataService";
 import type { FunnelData, Booking, Payment } from "./types";
 
 interface FunnelProps {
@@ -43,14 +43,14 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
       if (!user?.id) return;
       
       setLoading(true);
-      try {
-        const data = await FunnelService.getFunnelData(user.id, selectedYear);
-        setFunnelData(data);
-      } catch (error) {
-        console.error('Error loading funnel data:', error);
-      } finally {
-        setLoading(false);
-      }
+        try {
+          const data = await UnifiedDataService.getFunnelData(user.id, selectedYear);
+          setFunnelData(data);
+        } catch (error) {
+          console.error('Error loading funnel data:', error);
+        } finally {
+          setLoading(false);
+        }
     };
 
     loadFunnelData();
@@ -129,8 +129,8 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
         }
       : { ...editingMonth, lastUpdated: new Date().toISOString() };
     
-    // Save to database
-    const success = await FunnelService.saveFunnelData(user.id, dataToSave);
+      // Save to database
+      const success = await UnifiedDataService.saveFunnelData(user.id, dataToSave);
     
     if (success) {
       // Update local state

@@ -1,6 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Plus, Trash2, CalendarDays, DollarSign, Download, Edit, X, Edit3, Check } from "lucide-react";
 import type { ServiceType, LeadSource, Booking, Payment } from './types';
+import { SupabaseDataService } from './services/supabaseDataService';
+import { useAuth } from './contexts/AuthContext';
 
 // Empty data for new users - they should start fresh
 const defaultServiceTypes: ServiceType[] = [];
