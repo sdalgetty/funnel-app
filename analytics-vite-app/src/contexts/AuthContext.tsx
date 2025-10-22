@@ -284,6 +284,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const updateProfile = async (updates: Partial<any>) => {
+    console.log('updateProfile called with:', updates);
+    console.log('Current user:', user);
+    
     if (user) {
       // Map frontend field names to database field names
       const dbUpdates: any = {}
@@ -291,17 +294,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (updates.companyName) dbUpdates.company_name = updates.companyName
       if (updates.email) dbUpdates.email = updates.email
 
-      const { error } = await supabase
+      console.log('Database updates:', dbUpdates);
+      console.log('Updating user with ID:', user.id);
+
+      const { data, error } = await supabase
         .from('user_profiles')
         .update(dbUpdates)
         .eq('id', user.id)
+        .select()
 
-      if (error) throw error
+      console.log('Update result:', { data, error });
 
+      if (error) {
+        console.error('Profile update error:', error);
+        throw error;
+      }
+
+      console.log('Profile updated successfully, updating local state');
       setUser({
         ...user,
         ...updates
       })
+    } else {
+      console.error('No user found for profile update');
     }
   }
 
