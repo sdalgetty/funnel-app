@@ -2674,37 +2674,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, payments, onUpda
     bookedRevenue: (booking.bookedRevenue / 100).toString(),
   });
 
-  const [bookingPayments, setBookingPayments] = useState<Omit<Payment, 'id' | 'bookingId'>[]>(
-    payments.map(p => ({
-      amount: p.amount,
-      dueDate: p.dueDate,
-      paidAt: p.paidAt,
-      memo: p.memo || ''
-    }))
-  );
-  const [paymentType, setPaymentType] = useState<'one-time' | 'installments' | 'recurring' | null>(null);
-  const [recurringInterval, setRecurringInterval] = useState<'monthly' | 'bi-monthly'>('monthly');
-  const [recurringStartDate, setRecurringStartDate] = useState('');
-
-  // Payment management functions
-  const addPayment = () => {
-    setBookingPayments(prev => [...prev, {
-      amount: 0,
-      dueDate: '',
-      paidAt: null,
-      memo: ''
-    }]);
-  };
-
-  const removePayment = (index: number) => {
-    setBookingPayments(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const updatePayment = (index: number, field: keyof Omit<Payment, 'id' | 'bookingId'>, value: any) => {
-    setBookingPayments(prev => prev.map((payment, i) => 
-      i === index ? { ...payment, [field]: value } : payment
-    ));
-  };
+  // Simplified - no complex payment system needed
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -2723,11 +2693,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, payments, onUpda
       bookedRevenue: Math.round(parseFloat(formData.bookedRevenue) * 100),
     });
 
-    // Update payments
-    onUpdatePayments(bookingPayments.map(payment => ({
-      ...payment,
-      bookingId: booking.id
-    })));
+    // Simplified - no payment updates needed
   };
 
   return (
@@ -2908,175 +2874,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, payments, onUpda
             />
           </div>
 
-          {/* Payment Schedule Section */}
-          <div style={{ 
-            border: '1px solid #e5e7eb', 
-            borderRadius: '8px', 
-            padding: '20px',
-            backgroundColor: '#f9fafb'
-          }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 16px 0', color: '#1f2937' }}>
-              Payment Schedule
-            </h3>
-            
-            {bookingPayments.length > 0 && (
-              <div style={{
-                backgroundColor: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                padding: '12px',
-                marginBottom: '16px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '14px', fontWeight: '500' }}>
-                    Total Payment Schedule: {toUSD(bookingPayments.reduce((sum, p) => sum + p.amount, 0))}
-                  </span>
-                  <span style={{ 
-                    fontSize: '12px', 
-                    color: bookingPayments.reduce((sum, p) => sum + p.amount, 0) === Math.round(parseFloat(formData.bookedRevenue || '0') * 100) 
-                      ? '#10b981' 
-                      : '#f59e0b' 
-                  }}>
-                    {bookingPayments.reduce((sum, p) => sum + p.amount, 0) === Math.round(parseFloat(formData.bookedRevenue || '0') * 100) 
-                      ? '✓ Matches booking amount' 
-                      : '⚠ Amount mismatch'}
-                  </span>
-                </div>
-              </div>
-            )}
-            
-            {bookingPayments.map((payment, index) => (
-              <div key={index} style={{
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                padding: '16px',
-                marginBottom: '12px',
-                backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: '500' }}>Payment {index + 1}</span>
-                  <button
-                    type="button"
-                    onClick={() => removePayment(index)}
-                    style={{
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '4px 8px',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Remove
-                  </button>
-                </div>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px' }}>
-                      Amount ($)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={payment.amount / 100}
-                      onChange={(e) => updatePayment(index, 'amount', Math.round(parseFloat(e.target.value || '0') * 100))}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px' }}>
-                      Due Date
-                    </label>
-                    <input
-                      type="date"
-                      value={payment.dueDate}
-                      onChange={(e) => updatePayment(index, 'dueDate', e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                  </div>
-                </div>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px' }}>
-                      Paid Date (optional)
-                    </label>
-                    <input
-                      type="date"
-                      value={payment.paidAt || ''}
-                      onChange={(e) => updatePayment(index, 'paidAt', e.target.value || null)}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px' }}>
-                      Memo
-                    </label>
-                    <input
-                      type="text"
-                      value={payment.memo}
-                      onChange={(e) => updatePayment(index, 'memo', e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        boxSizing: 'border-box'
-                      }}
-                      placeholder="e.g., Retainer, Milestone"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            <button
-              type="button"
-              onClick={addPayment}
-              style={{
-                backgroundColor: '#10b981',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '10px 16px',
-                fontSize: '14px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              <span>+</span>
-              Add Payment
-            </button>
-          </div>
+          {/* Simplified - no payment schedule needed */}
 
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
             <button
