@@ -104,23 +104,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     console.log('AuthContext useEffect starting...');
     
-    // TEMPORARY: Set loading to false immediately to get app working
-    console.log('Setting loading to false immediately');
-    setLoading(false);
-    
     // Check if Supabase is properly configured
     const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && 
       import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co'
 
     if (!isSupabaseConfigured) {
       console.error('❌ Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY')
+      setLoading(false)
       return
     }
 
     console.log('Supabase configured, getting session...');
 
+    // Add a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.log('Auth timeout - setting loading to false');
+      setLoading(false);
+    }, 10000); // 10 second timeout
+
     // Get initial session
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      clearTimeout(timeoutId); // Clear timeout since we got a response
       console.log('Session result:', { session: !!session, error });
       
       if (error) {
@@ -144,7 +148,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null)
       }
     }).catch(error => {
+      clearTimeout(timeoutId); // Clear timeout on error
       console.error('Error in session promise:', error);
+      setLoading(false);
     })
 
     // Listen for auth changes
