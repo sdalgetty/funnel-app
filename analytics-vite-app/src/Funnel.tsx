@@ -1018,8 +1018,13 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
                     </label>
                     <input
                       type="number"
+                      step="0.01"
                       value={editingMonth.cash / 100}
-                      onChange={(e) => setEditingMonth({ ...editingMonth, cash: (parseFloat(e.target.value) || 0) * 100 })}
+                      onChange={(e) => {
+                        const newCashValue = parseFloat(e.target.value) || 0;
+                        const cashInCents = Math.round(newCashValue * 100);
+                        setEditingMonth({ ...editingMonth, cash: cashInCents });
+                      }}
                       style={{
                         width: '100%',
                         padding: '8px 12px',
