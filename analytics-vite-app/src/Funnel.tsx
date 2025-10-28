@@ -141,21 +141,14 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
       console.log('Save result:', success);
       
       if (success) {
-        // Update local state immediately
-        const updatedData = funnelData.map(data => {
-          const isMatch = data.year === editingMonth.year && data.month === editingMonth.month;
-          console.log('Checking match:', { dataYear: data.year, editYear: editingMonth.year, dataMonth: data.month, editMonth: editingMonth.month, isMatch });
-          return isMatch ? dataToSave : data;
-        });
-        setFunnelData(updatedData);
-        console.log('Updated funnelData immediately:', JSON.stringify(updatedData, null, 2));
-        
-        // Don't reload immediately - let the immediate update display
-        // The data will reload naturally on next component refresh
-        
         setJustSaved(true);
         handleCloseModal();
-        console.log('Successfully saved and updated local state');
+        console.log('Successfully saved to database');
+        
+        // Reload data from parent to show updated values
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       } else {
         console.error('Save failed - service returned false');
         alert('Failed to save data. Please try again.');
