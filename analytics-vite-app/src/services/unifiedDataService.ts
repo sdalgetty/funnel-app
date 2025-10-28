@@ -156,22 +156,21 @@ export class UnifiedDataService {
       let error;
       
       try {
-        // First, try to delete any existing record with the same name to avoid conflicts
-        const { error: deleteError } = await supabase
-          .from('funnels')
-          .delete()
-          .eq('user_id', userId)
-          .eq('name', upsertData.name);
-        
-        if (deleteError) {
-          console.warn('Warning deleting existing record:', deleteError);
+        if (recordId) {
+          // Update existing record
+          const { error: updateError } = await supabase
+            .from('funnels')
+            .update(upsertData)
+            .eq('id', recordId);
+          error = updateError;
+        } else {
+          // Insert new record (don't include id)
+          const { id, ...insertData } = upsertData;
+          const { error: insertError } = await supabase
+            .from('funnels')
+            .insert(insertData);
+          error = insertError;
         }
-        
-        // Now insert the new record
-        const { error: insertError } = await supabase
-          .from('funnels')
-          .insert(upsertData);
-        error = insertError;
         
       } catch (err) {
         console.error('Unexpected error in funnel save:', err);
