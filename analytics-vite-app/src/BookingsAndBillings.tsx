@@ -2128,18 +2128,18 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
     if (payment.id && dataManager.updatePayment) {
       // Update existing payment
       await dataManager.updatePayment(payment.id, updates);
-    } else if (dataManager.createPayment && (updates.amount !== undefined || updates.expectedDate !== undefined)) {
-      // Create new payment only if we have amount or expectedDate
+    } else if (dataManager.createPayment && (updates.amount !== undefined || (updates.expectedDate !== undefined && updates.expectedDate))) {
+      // Create new payment only if we have amount or a non-empty expectedDate
       const newPayment = await dataManager.createPayment({
         bookingId: booking.id,
         amount: updatedPayment.amount || 0,
         amountCents: updatedPayment.amount || 0,
-        paymentDate: updatedPayment.expectedDate || undefined,
-        dueDate: updatedPayment.expectedDate || undefined,
+        paymentDate: updatedPayment.expectedDate,
+        dueDate: updatedPayment.expectedDate,
         status: 'pending',
         isExpected: true,
         paidAt: null,
-        expectedDate: updatedPayment.expectedDate || undefined,
+        expectedDate: updatedPayment.expectedDate,
         memo: '',
         paymentMethod: ''
       });
