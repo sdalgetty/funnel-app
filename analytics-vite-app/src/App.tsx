@@ -273,15 +273,7 @@ function AppContent() {
       <div style={{ padding: '0' }}>
         {currentPage === 'funnel' && <Funnel 
           funnelData={dataManager.funnelData} 
-          setFunnelData={(data) => {
-            // Update local state immediately for UI responsiveness
-            const index = dataManager.funnelData.findIndex(item => 
-              item.year === data.year && item.month === data.month
-            );
-            if (index !== -1) {
-              dataManager.funnelData[index] = data;
-            }
-          }}
+          dataManager={dataManager}
           salesData={dataManager.bookings.filter(booking => {
             const serviceType = dataManager.serviceTypes.find(st => st.id === booking.serviceTypeId);
             return serviceType?.tracksInFunnel === true;

@@ -7,7 +7,8 @@ import type { FunnelData, Booking, Payment } from "./types";
 
 interface FunnelProps {
   funnelData: FunnelData[];
-  setFunnelData: (data: FunnelData[]) => void;
+  setFunnelData?: (data: FunnelData[]) => void;
+  dataManager?: any;
   salesData?: Booking[];
   paymentsData?: Payment[];
 }
@@ -28,7 +29,7 @@ const calculateConversionRate = (from: number, to: number) => {
   return ((to / from) * 100).toFixed(1);
 };
 
-export default function Funnel({ funnelData, setFunnelData, salesData = [], paymentsData = [] }: FunnelProps) {
+export default function Funnel({ funnelData, setFunnelData, dataManager, salesData = [], paymentsData = [] }: FunnelProps) {
   console.log('Funnel component loaded!', { funnelData, salesData, paymentsData });
   
   const { user, features } = useAuth();
@@ -139,18 +140,26 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
     console.log('Cash:', dataToSave.cash, 'Type:', typeof dataToSave.cash);
     
     try {
-      // Save to database using direct service call
-      const success = await UnifiedDataService.saveFunnelData(user.id, dataToSave);
+      // Use dataManager.saveFunnelData if available, otherwise use UnifiedDataService
+      let success;
+      if (dataManager?.saveFunnelData) {
+        success = await dataManager.saveFunnelData(dataToSave);
+      } else {
+        success = await UnifiedDataService.saveFunnelData(user.id, dataToSave);
+        // If no dataManager, reload after save
+        if (success) {
+          setTimeout(() => {
+            window.location.reload();
+          }, 300);
+        }
+      }
       
       console.log('Save result:', success);
       
       if (success) {
-        // Update the parent's funnelData immediately
-        setFunnelData(dataToSave);
-        
         setJustSaved(true);
         handleCloseModal();
-        console.log('Successfully saved to database and updated UI');
+        console.log('Successfully saved to database and updated UI immediately');
       } else {
         console.error('Save failed - service returned false');
         alert('Failed to save data. Please try again.');
