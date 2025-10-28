@@ -161,6 +161,28 @@ export class MockDataService {
     return [...mockAdSources];
   }
 
+  static async createAdSource(userId: string, adSourceData: Omit<AdSource, 'id' | 'createdAt'>): Promise<AdSource | null> {
+    console.log('Mock create ad source:', adSourceData);
+    const newAdSource: AdSource = {
+      id: `mock_ad_${Date.now()}`,
+      name: adSourceData.name,
+      leadSourceId: adSourceData.leadSourceId,
+      isActive: adSourceData.isActive,
+      createdAt: new Date().toISOString()
+    };
+    return newAdSource;
+  }
+
+  static async updateAdSource(userId: string, id: string, updates: Partial<AdSource>): Promise<boolean> {
+    console.log('Mock update ad source:', id, updates);
+    return true;
+  }
+
+  static async deleteAdSource(userId: string, id: string): Promise<boolean> {
+    console.log('Mock delete ad source:', id);
+    return true;
+  }
+
   // ============================================================================
   // AD CAMPAIGNS
   // ============================================================================
@@ -168,6 +190,33 @@ export class MockDataService {
   static async getAdCampaigns(userId: string): Promise<AdCampaign[]> {
     console.log('Using mock ad campaigns for development');
     return [...mockAdCampaigns];
+  }
+
+  static async createAdCampaign(userId: string, adCampaignData: Omit<AdCampaign, 'id' | 'createdAt'>): Promise<AdCampaign | null> {
+    console.log('Mock create ad campaign:', adCampaignData);
+    const newAdCampaign: AdCampaign = {
+      id: `mock_ac_${Date.now()}`,
+      adSourceId: adCampaignData.adSourceId,
+      year: adCampaignData.year,
+      month: adCampaignData.month,
+      monthYear: adCampaignData.monthYear,
+      adSpendCents: adCampaignData.adSpendCents,
+      spend: adCampaignData.spend,
+      leadsGenerated: adCampaignData.leadsGenerated,
+      createdAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString()
+    };
+    return newAdCampaign;
+  }
+
+  static async updateAdCampaign(userId: string, id: string, updates: Partial<AdCampaign>): Promise<boolean> {
+    console.log('Mock update ad campaign:', id, updates);
+    return true;
+  }
+
+  static async deleteAdCampaign(userId: string, id: string): Promise<boolean> {
+    console.log('Mock delete ad campaign:', id);
+    return true;
   }
 }
 

@@ -291,6 +291,104 @@ export function useDataManager() {
     }
   }, [user?.id]);
 
+  // AdSource operations
+  const createAdSource = useCallback(async (adSourceData: Omit<AdSource, 'id' | 'createdAt'>) => {
+    if (!user?.id) return null;
+    
+    try {
+      const adSource = await UnifiedDataService.createAdSource(user.id, adSourceData);
+      if (adSource) {
+        setAdSources(prev => [...prev, adSource]);
+      }
+      return adSource;
+    } catch (err) {
+      console.error('Error creating ad source:', err);
+      return null;
+    }
+  }, [user?.id]);
+
+  const updateAdSource = useCallback(async (id: string, updates: Partial<AdSource>) => {
+    if (!user?.id) return false;
+    
+    try {
+      const success = await UnifiedDataService.updateAdSource(user.id, id, updates);
+      if (success) {
+        setAdSources(prev => prev.map(adSource => 
+          adSource.id === id ? { ...adSource, ...updates } : adSource
+        ));
+      }
+      return success;
+    } catch (err) {
+      console.error('Error updating ad source:', err);
+      return false;
+    }
+  }, [user?.id]);
+
+  const deleteAdSource = useCallback(async (id: string) => {
+    if (!user?.id) return false;
+    
+    try {
+      const success = await UnifiedDataService.deleteAdSource(user.id, id);
+      if (success) {
+        setAdSources(prev => prev.filter(adSource => adSource.id !== id));
+        // Also remove associated campaigns
+        setAdCampaigns(prev => prev.filter(campaign => campaign.adSourceId !== id));
+      }
+      return success;
+    } catch (err) {
+      console.error('Error deleting ad source:', err);
+      return false;
+    }
+  }, [user?.id]);
+
+  // AdCampaign operations
+  const createAdCampaign = useCallback(async (adCampaignData: Omit<AdCampaign, 'id' | 'createdAt'>) => {
+    if (!user?.id) return null;
+    
+    try {
+      const adCampaign = await UnifiedDataService.createAdCampaign(user.id, adCampaignData);
+      if (adCampaign) {
+        setAdCampaigns(prev => [...prev, adCampaign]);
+      }
+      return adCampaign;
+    } catch (err) {
+      console.error('Error creating ad campaign:', err);
+      return null;
+    }
+  }, [user?.id]);
+
+  const updateAdCampaign = useCallback(async (id: string, updates: Partial<AdCampaign>) => {
+    if (!user?.id) return false;
+    
+    try {
+      const success = await UnifiedDataService.updateAdCampaign(user.id, id, updates);
+      if (success) {
+        setAdCampaigns(prev => prev.map(adCampaign => 
+          adCampaign.id === id ? { ...adCampaign, ...updates } : adCampaign
+        ));
+      }
+      return success;
+    } catch (err) {
+      console.error('Error updating ad campaign:', err);
+      return false;
+    }
+  }, [user?.id]);
+
+  const deleteAdCampaign = useCallback(async (id: string) => {
+    if (!user?.id) return false;
+    
+    try {
+      const success = await UnifiedDataService.deleteAdCampaign(user.id, id);
+      if (success) {
+        setAdCampaigns(prev => prev.filter(adCampaign => adCampaign.id !== id));
+      }
+      return success;
+    } catch (err) {
+      console.error('Error deleting ad campaign:', err);
+      return false;
+    }
+  }, [user?.id]);
+
   return {
     // State
     loading,
@@ -328,5 +426,15 @@ export function useDataManager() {
     createPayment,
     updatePayment,
     deletePayment,
+    
+    // AdSource operations
+    createAdSource,
+    updateAdSource,
+    deleteAdSource,
+    
+    // AdCampaign operations
+    createAdCampaign,
+    updateAdCampaign,
+    deleteAdCampaign,
   };
 }
