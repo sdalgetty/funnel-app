@@ -74,16 +74,24 @@ export function useDataManager() {
   const saveFunnelData = useCallback(async (funnelData: FunnelData) => {
     if (!user?.id) return false;
     
+    console.log('useDataManager.saveFunnelData called with:', funnelData);
+    
     try {
       const success = await UnifiedDataService.saveFunnelData(user.id, funnelData);
+      console.log('Save success:', success);
+      
       if (success) {
         setFunnelData(prev => {
+          console.log('Previous funnelData:', prev);
           const existing = prev.find(f => f.year === funnelData.year && f.month === funnelData.month);
-          if (existing) {
-            return prev.map(f => f.year === funnelData.year && f.month === funnelData.month ? funnelData : f);
-          } else {
-            return [...prev, funnelData];
-          }
+          console.log('Existing found:', existing);
+          
+          const updated = existing
+            ? prev.map(f => f.year === funnelData.year && f.month === funnelData.month ? funnelData : f)
+            : [...prev, funnelData];
+          
+          console.log('Updated funnelData:', updated);
+          return updated;
         });
       }
       return success;
