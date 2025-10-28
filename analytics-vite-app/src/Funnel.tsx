@@ -161,14 +161,8 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
         setFunnelData(updatedData);
         console.log('Updated funnelData immediately:', JSON.stringify(updatedData, null, 2));
         
-        // Also reload from database in background to ensure consistency
-        setTimeout(async () => {
-          const reloadedData = await UnifiedDataService.getFunnelData(user.id, selectedYear);
-          if (reloadedData && reloadedData.length > 0) {
-            setFunnelData(reloadedData);
-            console.log('Reloaded funnelData from database:', reloadedData);
-          }
-        }, 100);
+        // Don't reload immediately - let the immediate update display
+        // The data will reload naturally on next component refresh
         
         setJustSaved(true);
         handleCloseModal();
@@ -185,6 +179,7 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
 
   // Filter data by selected year
   const filteredData = useMemo(() => {
+    console.log('filteredData recalculating with funnelData:', funnelData);
     const yearData = funnelData.filter(data => data.year === selectedYear);
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     
