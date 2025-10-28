@@ -2076,9 +2076,12 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
   // Load existing scheduled payments for this booking
   useEffect(() => {
     if (dataManager?.payments) {
+      console.log('Loading scheduled payments for booking:', booking.id);
+      console.log('All payments in dataManager:', dataManager.payments);
       const bookingPayments = dataManager.payments.filter((p: Payment) => 
         p.bookingId === booking.id
       );
+      console.log('Filtered payments for this booking:', bookingPayments);
       setScheduledPayments(bookingPayments || []);
     }
   }, [booking.id, dataManager?.payments]);
