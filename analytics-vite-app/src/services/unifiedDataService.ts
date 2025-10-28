@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { MockDataService } from './mockDataService';
 import type { 
   FunnelData, 
   ServiceType, 
@@ -10,11 +11,29 @@ import type {
 } from '../types';
 
 export class UnifiedDataService {
+  // Helper function to check if Supabase is configured
+  private static isSupabaseConfigured(): boolean {
+    const isConfigured = import.meta.env.VITE_SUPABASE_URL && 
+      import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co' &&
+      import.meta.env.VITE_SUPABASE_ANON_KEY &&
+      import.meta.env.VITE_SUPABASE_ANON_KEY !== 'your_supabase_anon_key';
+    
+    if (!isConfigured) {
+      console.log('🔧 Supabase not configured, using mock data for development');
+    }
+    
+    return isConfigured;
+  }
+
   // ============================================================================
   // FUNNEL DATA
   // ============================================================================
   
   static async getFunnelData(userId: string, year: number): Promise<FunnelData[]> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.getFunnelData(userId, year);
+    }
+
     try {
       console.log('Loading funnel data for user (v3):', userId, 'year:', year);
       
@@ -63,6 +82,10 @@ export class UnifiedDataService {
   }
 
   static async saveFunnelData(userId: string, funnelData: FunnelData): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.saveFunnelData(userId, funnelData);
+    }
+
     try {
       console.log('Saving funnel data (v2 - manual insert/update):', { userId, funnelData });
       console.log('FunnelData details:', {
@@ -78,7 +101,7 @@ export class UnifiedDataService {
       console.log('Checking for existing record...');
       const { data: existingData, error: fetchError } = await supabase
         .from('funnels')
-        .select('id')
+        .select('id, name')
         .eq('user_id', userId)
         .eq('year', funnelData.year)
         .eq('month', funnelData.month);
@@ -107,7 +130,12 @@ export class UnifiedDataService {
       }
 
       // Add optional fields if they exist in the funnelData
-      if (funnelData.name) upsertData.name = funnelData.name;
+      // Use a unique name for each month to avoid constraint conflicts
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                         'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthName = monthNames[funnelData.month - 1];
+      upsertData.name = `${funnelData.year} ${monthName}`;
+      
       if (funnelData.bookingsGoal) upsertData.bookings_goal = Number(funnelData.bookingsGoal);
       if (funnelData.inquiryToCall) upsertData.inquiry_to_call = Number(funnelData.inquiryToCall);
       if (funnelData.callToBooking) upsertData.call_to_booking = Number(funnelData.callToBooking);
@@ -124,21 +152,30 @@ export class UnifiedDataService {
         calls_taken: typeof upsertData.calls_taken
       });
 
-      // Since unique constraint doesn't exist, use manual insert/update approach
+      // Handle the unique constraint by using a more robust approach
       let error;
-      if (recordId) {
-        // Update existing record
-        const { error: updateError } = await supabase
+      
+      try {
+        // First, try to delete any existing record with the same name to avoid conflicts
+        const { error: deleteError } = await supabase
           .from('funnels')
-          .update(upsertData)
-          .eq('id', recordId);
-        error = updateError;
-      } else {
-        // Insert new record
+          .delete()
+          .eq('user_id', userId)
+          .eq('name', upsertData.name);
+        
+        if (deleteError) {
+          console.warn('Warning deleting existing record:', deleteError);
+        }
+        
+        // Now insert the new record
         const { error: insertError } = await supabase
           .from('funnels')
           .insert(upsertData);
         error = insertError;
+        
+      } catch (err) {
+        console.error('Unexpected error in funnel save:', err);
+        error = err;
       }
 
       if (error) {
@@ -188,6 +225,10 @@ export class UnifiedDataService {
   // ============================================================================
   
   static async getServiceTypes(userId: string): Promise<ServiceType[]> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.getServiceTypes(userId);
+    }
+
     try {
       const { data, error } = await supabase
         .from('service_types')
@@ -213,6 +254,10 @@ export class UnifiedDataService {
   }
 
   static async createServiceType(userId: string, name: string): Promise<ServiceType | null> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.createServiceType(userId, name);
+    }
+
     try {
       const { data, error } = await supabase
         .from('service_types')
@@ -241,6 +286,10 @@ export class UnifiedDataService {
   }
 
   static async updateServiceType(userId: string, id: string, name: string): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.updateServiceType(userId, id, name);
+    }
+
     try {
       const { error } = await supabase
         .from('service_types')
@@ -261,6 +310,10 @@ export class UnifiedDataService {
   }
 
   static async deleteServiceType(userId: string, id: string): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.deleteServiceType(userId, id);
+    }
+
     try {
       const { error } = await supabase
         .from('service_types')
@@ -285,6 +338,10 @@ export class UnifiedDataService {
   // ============================================================================
   
   static async getLeadSources(userId: string): Promise<LeadSource[]> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.getLeadSources(userId);
+    }
+
     try {
       const { data, error } = await supabase
         .from('lead_sources')
@@ -309,6 +366,10 @@ export class UnifiedDataService {
   }
 
   static async createLeadSource(userId: string, name: string): Promise<LeadSource | null> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.createLeadSource(userId, name);
+    }
+
     try {
       const { data, error } = await supabase
         .from('lead_sources')
@@ -336,6 +397,10 @@ export class UnifiedDataService {
   }
 
   static async updateLeadSource(userId: string, id: string, name: string): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.updateLeadSource(userId, id, name);
+    }
+
     try {
       const { error } = await supabase
         .from('lead_sources')
@@ -356,6 +421,10 @@ export class UnifiedDataService {
   }
 
   static async deleteLeadSource(userId: string, id: string): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.deleteLeadSource(userId, id);
+    }
+
     try {
       const { error } = await supabase
         .from('lead_sources')
@@ -380,6 +449,10 @@ export class UnifiedDataService {
   // ============================================================================
   
   static async getBookings(userId: string): Promise<Booking[]> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.getBookings(userId);
+    }
+
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -416,6 +489,10 @@ export class UnifiedDataService {
   }
 
   static async createBooking(userId: string, bookingData: Omit<Booking, 'id' | 'createdAt'>): Promise<Booking | null> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.createBooking(userId, bookingData);
+    }
+
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -450,6 +527,10 @@ export class UnifiedDataService {
   }
 
   static async updateBooking(userId: string, id: string, updates: Partial<Booking>): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.updateBooking(userId, id, updates);
+    }
+
     try {
       const { error } = await supabase
         .from('bookings')
@@ -469,6 +550,37 @@ export class UnifiedDataService {
         return false;
       }
 
+      // Update additional fields if they exist
+      if (updates.dateInquired !== undefined || updates.projectDate !== undefined || updates.bookedRevenue !== undefined) {
+        const additionalUpdates: any = {};
+        
+        if (updates.dateInquired !== undefined) {
+          additionalUpdates.date_inquired = updates.dateInquired || null;
+        }
+        
+        if (updates.projectDate !== undefined) {
+          additionalUpdates.project_date = updates.projectDate || null;
+        }
+        
+        if (updates.bookedRevenue !== undefined) {
+          additionalUpdates.booked_revenue = updates.bookedRevenue;
+        }
+        
+        // Only update if we have additional fields
+        if (Object.keys(additionalUpdates).length > 0) {
+          const { error: additionalError } = await supabase
+            .from('bookings')
+            .update(additionalUpdates)
+            .eq('id', id)
+            .eq('user_id', userId);
+
+          if (additionalError) {
+            console.error('Error updating additional booking fields:', additionalError);
+            // Don't return false here - the main update succeeded
+          }
+        }
+      }
+
       return true;
     } catch (error) {
       console.error('Error updating booking:', error);
@@ -477,6 +589,10 @@ export class UnifiedDataService {
   }
 
   static async deleteBooking(userId: string, id: string): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.deleteBooking(userId, id);
+    }
+
     try {
       const { error } = await supabase
         .from('bookings')
@@ -501,6 +617,10 @@ export class UnifiedDataService {
   // ============================================================================
   
   static async getPayments(userId: string, bookingId?: string): Promise<Payment[]> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.getPayments(userId, bookingId);
+    }
+
     try {
       let query = supabase
         .from('payments')
@@ -534,6 +654,10 @@ export class UnifiedDataService {
   }
 
   static async createPayment(userId: string, paymentData: Omit<Payment, 'id'>): Promise<Payment | null> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.createPayment(userId, paymentData);
+    }
+
     try {
       const { data, error } = await supabase
         .from('payments')
@@ -565,6 +689,10 @@ export class UnifiedDataService {
   }
 
   static async updatePayment(userId: string, id: string, updates: Partial<Payment>): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.updatePayment(userId, id, updates);
+    }
+
     try {
       const { error } = await supabase
         .from('payments')
@@ -592,6 +720,10 @@ export class UnifiedDataService {
   }
 
   static async deletePayment(userId: string, id: string): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.deletePayment(userId, id);
+    }
+
     try {
       const { error } = await supabase
         .from('payments')
@@ -616,6 +748,10 @@ export class UnifiedDataService {
   // ============================================================================
   
   static async getAdSources(userId: string): Promise<AdSource[]> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.getAdSources(userId);
+    }
+
     try {
       const { data, error } = await supabase
         .from('ad_sources')
@@ -640,6 +776,10 @@ export class UnifiedDataService {
   // ============================================================================
   
   static async getAdCampaigns(userId: string): Promise<AdCampaign[]> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.getAdCampaigns(userId);
+    }
+
     try {
       const { data, error } = await supabase
         .from('ad_campaigns')
