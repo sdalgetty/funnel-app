@@ -64,39 +64,42 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
     setEditingCampaign(null);
   };
 
-  const handleSaveCampaign = (updatedData: { spend: number; leadsGenerated: number }) => {
+  const handleSaveCampaign = async (updatedData: { spend: number; leadsGenerated: number }) => {
     if (!editingCampaign) return;
 
     const now = new Date().toISOString();
+    const monthYear = `${editingCampaign.year}-${String(editingCampaign.month).padStart(2, '0')}`;
+    const adSpendCents = updatedData.spend; // spend is already in cents
 
     if (editingCampaign.isNew) {
-      // Create new campaign
-      const newCampaign: AdCampaign = {
-        id: `ac_${Date.now()}`,
-        adSourceId: editingCampaign.adSource.id,
-        year: editingCampaign.year,
-        month: editingCampaign.month,
-        spend: updatedData.spend,
-        leadsGenerated: updatedData.leadsGenerated,
-        createdAt: now,
-        lastUpdated: now
-      };
-      setAdCampaigns(prev => [...prev, newCampaign]);
+      // Create new campaign using dataManager
+      if (dataManager?.createAdCampaign) {
+        await dataManager.createAdCampaign({
+          adSourceId: editingCampaign.adSource.id,
+          year: editingCampaign.year,
+          month: editingCampaign.month,
+          monthYear: monthYear,
+          adSpendCents: adSpendCents,
+          spend: adSpendCents,
+          leadsGenerated: updatedData.leadsGenerated,
+          lastUpdated: now
+        });
+      }
     } else {
-      // Update existing campaign
-      setAdCampaigns(prev => prev.map(campaign => {
-        if (campaign.adSourceId === editingCampaign.adSource.id && 
-            campaign.year === editingCampaign.year && 
-            campaign.month === editingCampaign.month) {
-          return {
-            ...campaign,
-            spend: updatedData.spend,
-            leadsGenerated: updatedData.leadsGenerated,
-            lastUpdated: now
-          };
-        }
-        return campaign;
-      }));
+      // Update existing campaign using dataManager
+      const existingCampaign = adCampaigns.find(campaign => 
+        campaign.adSourceId === editingCampaign.adSource.id && 
+        campaign.year === editingCampaign.year && 
+        campaign.month === editingCampaign.month
+      );
+
+      if (existingCampaign && dataManager?.updateAdCampaign) {
+        await dataManager.updateAdCampaign(existingCampaign.id, {
+          adSpendCents: adSpendCents,
+          spend: adSpendCents,
+          leadsGenerated: updatedData.leadsGenerated
+        });
+      }
     }
 
     handleCloseModal();
@@ -512,18 +515,23 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
           adSources={adSources}
           leadSources={leadSources}
           onClose={() => setShowAdSources(false)}
-          onAddAdSource={(newAdSource) => {
-            setAdSources(prev => [...prev, newAdSource]);
+          onAddAdSource={async (newAdSource) => {
+            if (dataManager?.createAdSource) {
+              await dataManager.createAdSource(newAdSource);
+            }
           }}
-          onUpdateAdSource={(updatedAdSource) => {
-            setAdSources(prev => prev.map(source => 
-              source.id === updatedAdSource.id ? updatedAdSource : source
-            ));
+          onUpdateAdSource={async (updatedAdSource) => {
+            if (dataManager?.updateAdSource && updatedAdSource.id) {
+              await dataManager.updateAdSource(updatedAdSource.id, {
+                name: updatedAdSource.name,
+                leadSourceId: updatedAdSource.leadSourceId
+              });
+            }
           }}
-          onDeleteAdSource={(adSourceId) => {
-            setAdSources(prev => prev.filter(source => source.id !== adSourceId));
-            // Also remove all campaigns associated with this ad source
-            setAdCampaigns(prev => prev.filter(campaign => campaign.adSourceId !== adSourceId));
+          onDeleteAdSource={async (adSourceId) => {
+            if (dataManager?.deleteAdSource) {
+              await dataManager.deleteAdSource(adSourceId);
+            }
           }}
         />
       )}
