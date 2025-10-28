@@ -140,14 +140,20 @@ export default function Funnel({ funnelData, setFunnelData, dataManager, salesDa
     console.log('Cash:', dataToSave.cash, 'Type:', typeof dataToSave.cash);
     
     try {
+      console.log('Attempting to save, dataManager available:', !!dataManager);
+      console.log('dataManager.saveFunnelData available:', !!dataManager?.saveFunnelData);
+      
       // Use dataManager.saveFunnelData if available, otherwise use UnifiedDataService
       let success;
       if (dataManager?.saveFunnelData) {
+        console.log('Using dataManager.saveFunnelData');
         success = await dataManager.saveFunnelData(dataToSave);
       } else {
+        console.log('Using UnifiedDataService.saveFunnelData');
         success = await UnifiedDataService.saveFunnelData(user.id, dataToSave);
         // If no dataManager, reload after save
         if (success) {
+          console.log('Reloading page in 300ms');
           setTimeout(() => {
             window.location.reload();
           }, 300);
