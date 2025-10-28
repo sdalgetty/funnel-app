@@ -115,9 +115,9 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
   }, [isProAccount, salesData, paymentsData, selectedYear]);
 
   // Handler functions for edit modal
-  const handleEditMonth = (month: FunnelData) => {
+  const handleEditMonth = (month: any) => {
     console.log('Opening edit modal for month:', month);
-    setEditingMonth(month);
+    setEditingMonth(month as FunnelData);
     setIsEditModalOpen(true);
     console.log('Modal should be open now');
   };
@@ -157,10 +157,8 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
     console.log('Data to save:', dataToSave);
     
     try {
-      // Save to database using the data manager if available, otherwise fallback to direct service call
-      const success = window.dataManager 
-        ? await window.dataManager.saveFunnelData(dataToSave)
-        : await UnifiedDataService.saveFunnelData(user.id, dataToSave);
+      // Save to database using direct service call
+      const success = await UnifiedDataService.saveFunnelData(user.id, dataToSave);
       
       console.log('Save result:', success);
       
@@ -662,7 +660,7 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
             }}>
               <Crown size={16} color="#0ea5e9" />
               <span>
-                <strong>Pro Account:</strong> Closes, Bookings, and Cash are automatically calculated from your Sales data.
+                <strong>Pro Account:</strong> Closes and Bookings are automatically calculated from your Sales data. Cash can be manually edited.
               </span>
             </div>
           )}
@@ -803,7 +801,7 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
                           alignItems: 'center',
                           gap: '4px'
                         }}
-                        title={isProAccount ? 'Edit Inquiries, Calls Booked, and Calls Taken (Closes, Bookings, and Cash are calculated automatically)' : 'Edit month data'}
+                        title={isProAccount ? 'Edit Inquiries, Calls Booked, Calls Taken, and Cash (Closes and Bookings are calculated automatically)' : 'Edit month data'}
                       >
                         <Edit size={14} />
                         Edit
@@ -1015,21 +1013,19 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#6b7280', marginBottom: '4px' }}>
-                      Cash (Calculated)
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                      Cash ($)
                     </label>
                     <input
-                      type="text"
-                      value={toUSD(editingMonth.cash)}
-                      disabled
+                      type="number"
+                      value={editingMonth.cash / 100}
+                      onChange={(e) => setEditingMonth({ ...editingMonth, cash: (parseFloat(e.target.value) || 0) * 100 })}
                       style={{
                         width: '100%',
                         padding: '8px 12px',
-                        border: '1px solid #e5e7eb',
+                        border: '1px solid #d1d5db',
                         borderRadius: '6px',
-                        fontSize: '14px',
-                        backgroundColor: '#f9fafb',
-                        color: '#6b7280'
+                        fontSize: '14px'
                       }}
                     />
                   </div>

@@ -2112,6 +2112,8 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
 
   // Update payment schedule
   const handleUpdatePayment = async (index: number, updates: Partial<Payment>) => {
+    if (!dataManager) return; // Can't save without dataManager
+    
     const payment = scheduledPayments[index];
     const updatedPayment = { ...payment, ...updates };
     
@@ -2120,12 +2122,12 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
     setScheduledPayments(newPayments);
 
     // Save to database
-    if (payment.id && dataManager?.updatePayment) {
+    if (payment.id && dataManager.updatePayment) {
+      // Update existing payment
       await dataManager.updatePayment(payment.id, updates);
-    } else if (dataManager?.createPayment) {
-      // Create new payment
-      await dataManager.createPayment({
-        ...updatedPayment,
+    } else if (dataManager.createPayment && (updates.amount !== undefined || updates.expectedDate !== undefined)) {
+      // Create new payment only if we have amount or expectedDate
+      const newPayment = await dataManager.createPayment({
         bookingId: booking.id,
         amount: updatedPayment.amount || 0,
         amountCents: updatedPayment.amount || 0,
@@ -2133,8 +2135,17 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
         dueDate: updatedPayment.expectedDate || '',
         status: 'pending',
         isExpected: true,
-        paidAt: null
+        paidAt: null,
+        expectedDate: updatedPayment.expectedDate || '',
+        memo: '',
+        paymentMethod: ''
       });
+      
+      // Update local state with the ID from the created payment
+      if (newPayment) {
+        newPayments[index] = { ...updatedPayment, id: newPayment.id };
+        setScheduledPayments(newPayments);
+      }
     }
   };
 
