@@ -2134,12 +2134,12 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
         bookingId: booking.id,
         amount: updatedPayment.amount || 0,
         amountCents: updatedPayment.amount || 0,
-        paymentDate: updatedPayment.expectedDate || '',
-        dueDate: updatedPayment.expectedDate || '',
+        paymentDate: updatedPayment.expectedDate || undefined,
+        dueDate: updatedPayment.expectedDate || undefined,
         status: 'pending',
         isExpected: true,
         paidAt: null,
-        expectedDate: updatedPayment.expectedDate || '',
+        expectedDate: updatedPayment.expectedDate || undefined,
         memo: '',
         paymentMethod: ''
       });
