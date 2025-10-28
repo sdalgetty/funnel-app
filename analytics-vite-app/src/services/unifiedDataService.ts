@@ -672,10 +672,10 @@ export class UnifiedDataService {
           user_id: userId,
           booking_id: paymentData.bookingId,
           amount_cents: paymentData.amount,
-          payment_date: paymentData.expectedDate || paymentData.dueDate,
-          payment_method: paymentData.paymentMethod,
+          payment_date: (paymentData.expectedDate || paymentData.dueDate || null),
+          payment_method: paymentData.paymentMethod || null,
           status: paymentData.paidAt ? 'completed' : 'pending',
-          notes: paymentData.memo || '',
+          notes: paymentData.memo || null,
           expected_date: paymentData.expectedDate || null,
           is_expected: paymentData.isExpected || false
         })
