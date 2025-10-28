@@ -666,35 +666,42 @@ export class UnifiedDataService {
     }
 
     try {
+      // For scheduled payments (isExpected = true), use expected_date for payment_date
+      // For actual payments, use the provided payment date
+      const actualPaymentDate = paymentData.expectedDate || paymentData.dueDate;
+      
+      const insertData: any = {
+        user_id: userId,
+        booking_id: paymentData.bookingId,
+        amount_cents: paymentData.amount,
+        payment_method: paymentData.paymentMethod || null,
+        status: paymentData.paidAt ? 'completed' : 'pending',
+        notes: paymentData.memo || null,
+        expected_date: paymentData.expectedDate || null,
+        is_expected: paymentData.isExpected || false
+      };
+      
+      // Only include payment_date if we have a date value
+      // The NOT NULL constraint requires a date, so use expected_date for scheduled payments
+      if (actualPaymentDate) {
+        insertData.payment_date = actualPaymentDate;
+      } else if (paymentData.isExpected && paymentData.expectedDate) {
+        // For expected payments, use expected_date if available
+        insertData.payment_date = paymentData.expectedDate;
+      } else {
+        // For non-expected payments without a date, use today's date
+        insertData.payment_date = new Date().toISOString().split('T')[0];
+      }
+      
       const { data, error } = await supabase
         .from('payments')
-        .insert({
-          user_id: userId,
-          booking_id: paymentData.bookingId,
-          amount_cents: paymentData.amount,
-          payment_date: (paymentData.expectedDate || paymentData.dueDate || null),
-          payment_method: paymentData.paymentMethod || null,
-          status: paymentData.paidAt ? 'completed' : 'pending',
-          notes: paymentData.memo || null,
-          expected_date: paymentData.expectedDate || null,
-          is_expected: paymentData.isExpected || false
-        })
+        .insert(insertData)
         .select()
         .single();
 
       if (error) {
         console.error('Error creating payment:', error);
-        console.error('Payment data being inserted:', {
-          user_id: userId,
-          booking_id: paymentData.bookingId,
-          amount_cents: paymentData.amount,
-          payment_date: (paymentData.expectedDate || paymentData.dueDate || null),
-          payment_method: paymentData.paymentMethod || null,
-          status: paymentData.paidAt ? 'completed' : 'pending',
-          notes: paymentData.memo || null,
-          expected_date: paymentData.expectedDate || null,
-          is_expected: paymentData.isExpected || false
-        });
+        console.error('Payment data being inserted:', insertData);
         return null;
       }
 
