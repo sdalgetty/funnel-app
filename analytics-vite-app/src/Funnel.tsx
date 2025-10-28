@@ -126,22 +126,11 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
     
     console.log('Starting save process...', { editingMonth, user: user.id, isProAccount });
     
-    // For Pro accounts, save manual inputs (inquiries, callsBooked, callsTaken, cash) 
-    // and use calculated values for bookings and closes only
-    const dataToSave = isProAccount 
-      ? {
-          ...editingMonth,
-          // Keep user's manual inputs for inquiries, calls, and cash
-          inquiries: editingMonth.inquiries,
-          callsBooked: editingMonth.callsBooked,
-          callsTaken: editingMonth.callsTaken,
-          cash: editingMonth.cash, // Keep manual cash edits
-          // Use calculated values for bookings and closes only
-          bookings: calculateDynamicData[editingMonth.month]?.bookings || editingMonth.bookings || 0,
-          closes: calculateDynamicData[editingMonth.month]?.closes || editingMonth.closes || 0,
-          lastUpdated: new Date().toISOString()
-        }
-      : { ...editingMonth, lastUpdated: new Date().toISOString() };
+    // For all accounts, just save what was edited
+    const dataToSave = {
+      ...editingMonth,
+      lastUpdated: new Date().toISOString()
+    };
     
     console.log('Data to save:', dataToSave);
     
