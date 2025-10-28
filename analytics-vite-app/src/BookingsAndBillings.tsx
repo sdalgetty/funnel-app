@@ -2092,11 +2092,11 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
       bookingId: booking.id,
       amount: 0,
       amountCents: 0,
-      paymentDate: '',
-      dueDate: '',
+      paymentDate: undefined,
+      dueDate: undefined,
       status: 'pending',
       memo: '',
-      expectedDate: '', // Month/Year for when payment is expected
+      expectedDate: undefined, // Month/Year for when payment is expected
       isExpected: true, // This is a scheduled/expected payment
       paidAt: null
     };
