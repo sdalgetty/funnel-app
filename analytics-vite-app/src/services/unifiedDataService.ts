@@ -124,10 +124,7 @@ export class UnifiedDataService {
         updated_at: new Date().toISOString()
       };
 
-      // Only include ID if we have an existing record
-      if (recordId) {
-        upsertData.id = recordId;
-      }
+      // Don't include ID in upsertData - we'll use it separately for the update query
 
       // Add optional fields if they exist in the funnelData
       // Use a unique name for each month to avoid constraint conflicts
@@ -158,18 +155,21 @@ export class UnifiedDataService {
       try {
         if (recordId) {
           // Update existing record
+          console.log('Updating existing record with id:', recordId);
           const { error: updateError } = await supabase
             .from('funnels')
             .update(upsertData)
             .eq('id', recordId);
           error = updateError;
+          console.log('Update result:', { error });
         } else {
-          // Insert new record (don't include id)
-          const { id, ...insertData } = upsertData;
+          // Insert new record
+          console.log('Inserting new record');
           const { error: insertError } = await supabase
             .from('funnels')
-            .insert(insertData);
+            .insert(upsertData);
           error = insertError;
+          console.log('Insert result:', { error });
         }
         
       } catch (err) {
