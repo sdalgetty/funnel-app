@@ -275,11 +275,12 @@ function AppContent() {
           funnelData={dataManager.funnelData} 
           setFunnelData={(data) => {
             // Update local state immediately for UI responsiveness
-            dataManager.funnelData.forEach(item => {
-              if (item.year === data.year && item.month === data.month) {
-                // This will be handled by the data manager's saveFunnelData
-              }
-            });
+            const index = dataManager.funnelData.findIndex(item => 
+              item.year === data.year && item.month === data.month
+            );
+            if (index !== -1) {
+              dataManager.funnelData[index] = data;
+            }
           }}
           salesData={dataManager.bookings.filter(booking => {
             const serviceType = dataManager.serviceTypes.find(st => st.id === booking.serviceTypeId);
