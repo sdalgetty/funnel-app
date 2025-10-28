@@ -132,7 +132,11 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
       lastUpdated: new Date().toISOString()
     };
     
-    console.log('Data to save:', dataToSave);
+    console.log('Data to save:', JSON.stringify(dataToSave, null, 2));
+    console.log('ID:', dataToSave.id);
+    console.log('Year:', dataToSave.year, 'Type:', typeof dataToSave.year);
+    console.log('Month:', dataToSave.month, 'Type:', typeof dataToSave.month);
+    console.log('Cash:', dataToSave.cash, 'Type:', typeof dataToSave.cash);
     
     try {
       // Save to database using direct service call
