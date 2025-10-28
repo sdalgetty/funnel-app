@@ -474,10 +474,10 @@ export class UnifiedDataService {
         projectName: item.client_name, // Map client_name to projectName
         serviceTypeId: item.service_type_id,
         leadSourceId: item.lead_source_id,
-        dateInquired: item.booking_date, // Using booking_date as dateInquired
+        dateInquired: item.date_inquired || item.booking_date, // Use new column or fallback
         dateBooked: item.booking_date,
-        projectDate: item.booking_date, // Using booking_date as projectDate
-        bookedRevenue: 0, // This would need to be calculated from payments
+        projectDate: item.project_date || item.booking_date, // Use new column or fallback
+        bookedRevenue: item.booked_revenue || 0, // Use new column
         status: item.status,
         notes: item.notes || '',
         createdAt: item.created_at
@@ -504,6 +504,9 @@ export class UnifiedDataService {
           service_type_id: bookingData.serviceTypeId,
           lead_source_id: bookingData.leadSourceId,
           booking_date: bookingData.dateBooked,
+          date_inquired: bookingData.dateInquired || null,
+          project_date: bookingData.projectDate || null,
+          booked_revenue: bookingData.bookedRevenue || 0,
           status: bookingData.status || 'confirmed',
           notes: bookingData.notes || ''
         })
