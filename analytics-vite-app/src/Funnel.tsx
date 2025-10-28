@@ -163,18 +163,19 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
       console.log('Save result:', success);
       
       if (success) {
-        // Update local state - use year + month combination to find the right record
-        console.log('Before state update - funnelData:', funnelData);
-        console.log('Looking for record with year:', editingMonth.year, 'month:', editingMonth.month);
+        // Reload data from database to ensure we have the latest saved values
+        const reloadedData = await UnifiedDataService.getFunnelData(user.id, selectedYear);
+        if (reloadedData && reloadedData.length > 0) {
+          setFunnelData(reloadedData);
+        } else {
+          // If reload fails, update local state as fallback
+          const updatedData = funnelData.map(data => {
+            const isMatch = data.year === editingMonth.year && data.month === editingMonth.month;
+            return isMatch ? dataToSave : data;
+          });
+          setFunnelData(updatedData);
+        }
         
-        const updatedData = funnelData.map(data => {
-          const isMatch = data.year === editingMonth.year && data.month === editingMonth.month;
-          console.log('Checking record:', { year: data.year, month: data.month, isMatch });
-          return isMatch ? dataToSave : data;
-        });
-        
-        console.log('Updated data:', updatedData);
-        setFunnelData(updatedData);
         setJustSaved(true);
         handleCloseModal();
         console.log('Successfully saved and updated local state');
