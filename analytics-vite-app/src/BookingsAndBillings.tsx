@@ -719,6 +719,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
           leadSources={leadSources}
           onUpdate={updateBooking}
           onClose={() => setEditingBooking(null)}
+          dataManager={dataManager}
         />
       )}
 
@@ -2051,12 +2052,13 @@ function AddPaymentModal({ bookingId, onAdd, onClose }: {
 }
 
 // Edit Booking Modal - Simplified
-function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClose }: {
+function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClose, dataManager }: {
   booking: Booking;
   serviceTypes: ServiceType[];
   leadSources: LeadSource[];
   onUpdate: (booking: Omit<Booking, 'id' | 'createdAt'>) => void;
   onClose: () => void;
+  dataManager?: any;
 }) {
   const [formData, setFormData] = useState({
     projectName: booking.projectName,
