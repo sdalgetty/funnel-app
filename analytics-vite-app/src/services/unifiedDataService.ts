@@ -684,6 +684,17 @@ export class UnifiedDataService {
 
       if (error) {
         console.error('Error creating payment:', error);
+        console.error('Payment data being inserted:', {
+          user_id: userId,
+          booking_id: paymentData.bookingId,
+          amount_cents: paymentData.amount,
+          payment_date: paymentData.expectedDate || paymentData.dueDate,
+          payment_method: paymentData.paymentMethod,
+          status: paymentData.paidAt ? 'completed' : 'pending',
+          notes: paymentData.memo || '',
+          expected_date: paymentData.expectedDate || null,
+          is_expected: paymentData.isExpected || false
+        });
         return null;
       }
 
