@@ -645,10 +645,15 @@ export class UnifiedDataService {
         id: item.id,
         bookingId: item.booking_id,
         amount: item.amount_cents, // Map amount_cents to amount
+        amountCents: item.amount_cents,
+        paymentDate: item.payment_date,
         dueDate: item.payment_date,
         paidAt: item.status === 'completed' ? item.payment_date : null,
         memo: item.notes || '',
-        paymentMethod: item.payment_method || ''
+        paymentMethod: item.payment_method || '',
+        status: item.status,
+        expectedDate: item.expected_date || undefined,
+        isExpected: item.is_expected || false
       })) || [];
     } catch (error) {
       console.error('Error fetching payments:', error);
@@ -668,10 +673,12 @@ export class UnifiedDataService {
           user_id: userId,
           booking_id: paymentData.bookingId,
           amount_cents: paymentData.amount,
-          payment_date: paymentData.dueDate,
+          payment_date: paymentData.expectedDate || paymentData.dueDate,
           payment_method: paymentData.paymentMethod,
           status: paymentData.paidAt ? 'completed' : 'pending',
-          notes: paymentData.memo || ''
+          notes: paymentData.memo || '',
+          expected_date: paymentData.expectedDate || null,
+          is_expected: paymentData.isExpected || false
         })
         .select()
         .single();
@@ -697,16 +704,21 @@ export class UnifiedDataService {
     }
 
     try {
+      const updateData: any = {};
+      if (updates.bookingId !== undefined) updateData.booking_id = updates.bookingId;
+      if (updates.amount !== undefined) updateData.amount_cents = updates.amount;
+      if (updates.dueDate !== undefined || updates.expectedDate !== undefined) {
+        updateData.payment_date = updates.expectedDate || updates.dueDate;
+      }
+      if (updates.paymentMethod !== undefined) updateData.payment_method = updates.paymentMethod;
+      if (updates.paidAt !== undefined) updateData.status = updates.paidAt ? 'completed' : 'pending';
+      if (updates.memo !== undefined) updateData.notes = updates.memo;
+      if (updates.expectedDate !== undefined) updateData.expected_date = updates.expectedDate || null;
+      if (updates.isExpected !== undefined) updateData.is_expected = updates.isExpected;
+
       const { error } = await supabase
         .from('payments')
-        .update({
-          booking_id: updates.bookingId,
-          amount_cents: updates.amount,
-          payment_date: updates.dueDate,
-          payment_method: updates.paymentMethod,
-          status: updates.paidAt ? 'completed' : 'pending',
-          notes: updates.memo
-        })
+        .update(updateData)
         .eq('id', id)
         .eq('user_id', userId);
 
