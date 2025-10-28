@@ -212,7 +212,7 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
           callsTaken: existingData?.callsTaken || 0, // Keep manual calls
           closes: dynamicData.closes, // Calculated from sales
           bookings: dynamicData.bookings, // Calculated from sales
-          cash: existingData?.cash || dynamicData.cash, // Use manual cash if exists, otherwise calculated
+          cash: existingData?.cash !== undefined ? existingData.cash : dynamicData.cash, // Use manual cash if it exists (even if 0), otherwise calculated
           lastUpdated: new Date().toISOString()
         };
       } else {
