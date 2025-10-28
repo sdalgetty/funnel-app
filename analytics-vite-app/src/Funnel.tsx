@@ -137,19 +137,19 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
     
     console.log('Starting save process...', { editingMonth, user: user.id, isProAccount });
     
-    // For Pro accounts, save manual inputs (inquiries, callsBooked, callsTaken) 
-    // and use calculated values for bookings, closes, cash only if they exist
+    // For Pro accounts, save manual inputs (inquiries, callsBooked, callsTaken, cash) 
+    // and use calculated values for bookings and closes only
     const dataToSave = isProAccount 
       ? {
           ...editingMonth,
-          // Keep user's manual inputs
+          // Keep user's manual inputs for inquiries, calls, and cash
           inquiries: editingMonth.inquiries,
           callsBooked: editingMonth.callsBooked,
           callsTaken: editingMonth.callsTaken,
-          // Use calculated values only if they exist, otherwise keep existing values
+          cash: editingMonth.cash, // Keep manual cash edits
+          // Use calculated values for bookings and closes only
           bookings: calculateDynamicData[editingMonth.month]?.bookings || editingMonth.bookings || 0,
           closes: calculateDynamicData[editingMonth.month]?.closes || editingMonth.closes || 0,
-          cash: calculateDynamicData[editingMonth.month]?.cash || editingMonth.cash || 0,
           lastUpdated: new Date().toISOString()
         }
       : { ...editingMonth, lastUpdated: new Date().toISOString() };
@@ -206,12 +206,12 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
           id: `${selectedYear}_${month.toLowerCase()}`,
           month: monthNumber,
           year: selectedYear,
-          inquiries: existingData?.inquiries || 0, // Keep manual inquiries for now
-          callsBooked: existingData?.callsBooked || 0, // Keep manual calls for now
-          callsTaken: existingData?.callsTaken || 0, // Keep manual calls for now
-          closes: dynamicData.closes,
-          bookings: dynamicData.bookings,
-          cash: dynamicData.cash,
+          inquiries: existingData?.inquiries || 0, // Keep manual inquiries
+          callsBooked: existingData?.callsBooked || 0, // Keep manual calls
+          callsTaken: existingData?.callsTaken || 0, // Keep manual calls
+          closes: dynamicData.closes, // Calculated from sales
+          bookings: dynamicData.bookings, // Calculated from sales
+          cash: existingData?.cash || dynamicData.cash, // Use manual cash if exists, otherwise calculated
           lastUpdated: new Date().toISOString()
         };
       } else {
