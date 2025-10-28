@@ -145,14 +145,12 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
       console.log('Save result:', success);
       
       if (success) {
+        // Update the parent's funnelData immediately
+        setFunnelData(dataToSave);
+        
         setJustSaved(true);
         handleCloseModal();
-        console.log('Successfully saved to database');
-        
-        // Reload data from parent to show updated values
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
+        console.log('Successfully saved to database and updated UI');
       } else {
         console.error('Save failed - service returned false');
         alert('Failed to save data. Please try again.');
