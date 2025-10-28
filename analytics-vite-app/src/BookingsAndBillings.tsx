@@ -20,6 +20,15 @@ const mockPayments: Payment[] = [];
 const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 
+// Helper to format dates without timezone issues
+const formatDate = (dateString: string) => {
+  if (!dateString) return '—';
+  // Parse the date string as local date to avoid timezone conversion issues
+  const [year, month, day] = dateString.split('-');
+  const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  return localDate.toLocaleDateString();
+};
+
 interface BookingsAndBillingsProps {
   dataManager?: any;
 }
@@ -807,14 +816,11 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
                         </span>
                       )}
                     </Td>
-                    <Td>{booking.dateInquired ? new Date(booking.dateInquired).toLocaleDateString() : '—'}</Td>
-                    <Td>{booking.dateBooked ? new Date(booking.dateBooked).toLocaleDateString() : '—'}</Td>
-                    <Td>{booking.projectDate ? new Date(booking.projectDate).toLocaleDateString() : '—'}</Td>
+                    <Td>{formatDate(booking.dateInquired)}</Td>
+                    <Td>{formatDate(booking.dateBooked)}</Td>
+                    <Td>{formatDate(booking.projectDate)}</Td>
                     <Td align="right">
                       <div style={{ fontWeight: '500' }}>{toUSD(booking.bookedRevenue)}</div>
-                      <div style={{ fontSize: '12px', color: '#666' }}>
-                        Collected: {toUSD(collected)} | Outstanding: {toUSD(outstanding)}
-                      </div>
                     </Td>
                     <Td>
                       <button
