@@ -163,18 +163,22 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
       console.log('Save result:', success);
       
       if (success) {
-        // Reload data from database to ensure we have the latest saved values
-        const reloadedData = await UnifiedDataService.getFunnelData(user.id, selectedYear);
-        if (reloadedData && reloadedData.length > 0) {
-          setFunnelData(reloadedData);
-        } else {
-          // If reload fails, update local state as fallback
-          const updatedData = funnelData.map(data => {
-            const isMatch = data.year === editingMonth.year && data.month === editingMonth.month;
-            return isMatch ? dataToSave : data;
-          });
-          setFunnelData(updatedData);
-        }
+        // Update local state immediately
+        const updatedData = funnelData.map(data => {
+          const isMatch = data.year === editingMonth.year && data.month === editingMonth.month;
+          return isMatch ? dataToSave : data;
+        });
+        setFunnelData(updatedData);
+        console.log('Updated funnelData immediately:', updatedData);
+        
+        // Also reload from database in background to ensure consistency
+        setTimeout(async () => {
+          const reloadedData = await UnifiedDataService.getFunnelData(user.id, selectedYear);
+          if (reloadedData && reloadedData.length > 0) {
+            setFunnelData(reloadedData);
+            console.log('Reloaded funnelData from database:', reloadedData);
+          }
+        }, 100);
         
         setJustSaved(true);
         handleCloseModal();
