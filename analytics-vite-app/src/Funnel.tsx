@@ -185,6 +185,7 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
 
   // Filter data by selected year
   const filteredData = useMemo(() => {
+    console.log('filteredData recalculating with funnelData:', funnelData);
     const yearData = funnelData.filter(data => data.year === selectedYear);
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     
