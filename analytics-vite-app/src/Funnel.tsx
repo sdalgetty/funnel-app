@@ -660,7 +660,7 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
             }}>
               <Crown size={16} color="#0ea5e9" />
               <span>
-                <strong>Pro Account:</strong> Closes and Bookings are automatically calculated from your Sales data. Cash can be manually edited.
+                <strong>Pro Account:</strong> Closes and Bookings are automatically calculated from your Sales data.
               </span>
             </div>
           )}
@@ -899,7 +899,7 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
                 fontSize: '14px',
                 color: '#0c4a6e'
               }}>
-                <strong>Pro Account:</strong> Closes, Bookings, and Cash are calculated automatically from your Sales data.
+                <strong>Pro Account:</strong> Closes and Bookings are calculated automatically from your Sales data.
               </div>
             )}
 
