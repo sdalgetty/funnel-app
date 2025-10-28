@@ -166,10 +166,11 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
         // Update local state immediately
         const updatedData = funnelData.map(data => {
           const isMatch = data.year === editingMonth.year && data.month === editingMonth.month;
+          console.log('Checking match:', { dataYear: data.year, editYear: editingMonth.year, dataMonth: data.month, editMonth: editingMonth.month, isMatch });
           return isMatch ? dataToSave : data;
         });
         setFunnelData(updatedData);
-        console.log('Updated funnelData immediately:', updatedData);
+        console.log('Updated funnelData immediately:', JSON.stringify(updatedData, null, 2));
         
         // Also reload from database in background to ensure consistency
         setTimeout(async () => {
