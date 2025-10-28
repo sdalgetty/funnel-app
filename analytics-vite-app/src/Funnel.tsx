@@ -79,11 +79,11 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
   const calculateDynamicData = useMemo(() => {
     if (!isProAccount) return {};
 
-    const monthlyData: { [key: string]: { bookings: number; closes: number; cash: number } } = {};
+    const monthlyData: { [key: string]: { bookings: number; closes: number } } = {};
 
     // Initialize all months with zeros
     for (let month = 1; month <= 12; month++) {
-      monthlyData[month] = { bookings: 0, closes: 0, cash: 0 };
+      monthlyData[month] = { bookings: 0, closes: 0 };
     }
 
     // Calculate bookings and closes from sales data
@@ -99,18 +99,7 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
       }
     });
 
-    // Calculate cash from payments data
-    paymentsData.forEach((payment: any) => {
-      if (payment.paidAt) {
-        const paidDate = new Date(payment.paidAt);
-        const month = paidDate.getMonth() + 1;
-        
-        if (paidDate.getFullYear() === selectedYear) {
-          monthlyData[month].cash += payment.amount || 0;
-        }
-      }
-    });
-
+    // Cash is now manually entered in Funnel, not calculated
     return monthlyData;
   }, [isProAccount, salesData, paymentsData, selectedYear]);
 
@@ -166,10 +155,11 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
         // Update local state immediately
         const updatedData = funnelData.map(data => {
           const isMatch = data.year === editingMonth.year && data.month === editingMonth.month;
+          console.log('Checking match:', { dataYear: data.year, editYear: editingMonth.year, dataMonth: data.month, editMonth: editingMonth.month, isMatch });
           return isMatch ? dataToSave : data;
         });
         setFunnelData(updatedData);
-        console.log('Updated funnelData immediately:', updatedData);
+        console.log('Updated funnelData immediately:', JSON.stringify(updatedData, null, 2));
         
         // Also reload from database in background to ensure consistency
         setTimeout(async () => {
@@ -205,7 +195,7 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
       
       if (isProAccount) {
         // For Pro accounts, use dynamic data from sales/payments
-        const dynamicData = calculateDynamicData[monthNumber] || { bookings: 0, closes: 0, cash: 0 };
+        const dynamicData = calculateDynamicData[monthNumber] || { bookings: 0, closes: 0 };
         
         return {
           id: `${selectedYear}_${month.toLowerCase()}`,
@@ -216,7 +206,7 @@ export default function Funnel({ funnelData, setFunnelData, salesData = [], paym
           callsTaken: existingData?.callsTaken || 0, // Keep manual calls
           closes: dynamicData.closes, // Calculated from sales
           bookings: dynamicData.bookings, // Calculated from sales
-          cash: existingData?.cash !== undefined ? existingData.cash : dynamicData.cash, // Use manual cash if it exists (even if 0), otherwise calculated
+          cash: existingData?.cash !== undefined ? existingData.cash : 0, // Cash is manually entered, default to 0
           lastUpdated: new Date().toISOString()
         };
       } else {
