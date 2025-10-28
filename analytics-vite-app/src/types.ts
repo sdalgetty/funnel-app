@@ -107,6 +107,8 @@ export interface Payment {
   dueDate: string;
   paidAt?: string | null;
   memo?: string;
+  expectedDate?: string; // For scheduled payments
+  isExpected?: boolean; // True if payment is scheduled/expected, false if paid
 }
 
 // ============================================================================

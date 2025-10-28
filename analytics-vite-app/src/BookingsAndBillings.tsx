@@ -719,6 +719,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
           leadSources={leadSources}
           onUpdate={updateBooking}
           onClose={() => setEditingBooking(null)}
+          dataManager={dataManager}
         />
       )}
 
@@ -2051,12 +2052,13 @@ function AddPaymentModal({ bookingId, onAdd, onClose }: {
 }
 
 // Edit Booking Modal - Simplified
-function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClose }: {
+function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClose, dataManager }: {
   booking: Booking;
   serviceTypes: ServiceType[];
   leadSources: LeadSource[];
   onUpdate: (booking: Omit<Booking, 'id' | 'createdAt'>) => void;
   onClose: () => void;
+  dataManager?: any;
 }) {
   const [formData, setFormData] = useState({
     projectName: booking.projectName,
@@ -2068,7 +2070,73 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
     bookedRevenue: (booking.bookedRevenue / 100).toString(),
   });
 
-  // Simplified - no complex payment system needed
+  const [scheduledPayments, setScheduledPayments] = useState<Payment[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+
+  // Load existing scheduled payments for this booking
+  useEffect(() => {
+    if (dataManager?.payments) {
+      const bookingPayments = dataManager.payments.filter((p: Payment) => 
+        p.bookingId === booking.id
+      );
+      setScheduledPayments(bookingPayments || []);
+    }
+  }, [booking.id, dataManager?.payments]);
+
+  // Add new payment schedule
+  const handleAddPayment = async () => {
+    const newPayment: Omit<Payment, 'id'> = {
+      bookingId: booking.id,
+      amount: 0,
+      amountCents: 0,
+      paymentDate: '',
+      dueDate: '',
+      status: 'pending',
+      memo: '',
+      expectedDate: '', // Month/Year for when payment is expected
+      isExpected: true, // This is a scheduled/expected payment
+      paidAt: null
+    };
+    setScheduledPayments([...scheduledPayments, newPayment as Payment]);
+  };
+
+  // Remove payment schedule
+  const handleRemovePayment = async (index: number) => {
+    const payment = scheduledPayments[index];
+    if (payment.id && dataManager?.deletePayment) {
+      // If it has an ID, delete from database
+      await dataManager.deletePayment(payment.id);
+    }
+    setScheduledPayments(scheduledPayments.filter((_, i) => i !== index));
+  };
+
+  // Update payment schedule
+  const handleUpdatePayment = async (index: number, updates: Partial<Payment>) => {
+    const payment = scheduledPayments[index];
+    const updatedPayment = { ...payment, ...updates };
+    
+    const newPayments = [...scheduledPayments];
+    newPayments[index] = updatedPayment;
+    setScheduledPayments(newPayments);
+
+    // Save to database
+    if (payment.id && dataManager?.updatePayment) {
+      await dataManager.updatePayment(payment.id, updates);
+    } else if (dataManager?.createPayment) {
+      // Create new payment
+      await dataManager.createPayment({
+        ...updatedPayment,
+        bookingId: booking.id,
+        amount: updatedPayment.amount || 0,
+        amountCents: updatedPayment.amount || 0,
+        paymentDate: updatedPayment.expectedDate || '',
+        dueDate: updatedPayment.expectedDate || '',
+        status: 'pending',
+        isExpected: true,
+        paidAt: null
+      });
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -2268,7 +2336,97 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
             />
           </div>
 
-          {/* Simplified - no payment schedule needed */}
+          {/* Payment Schedule */}
+          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', margin: 0 }}>
+                Payment Schedule (for Forecast)
+              </label>
+              <button
+                type="button"
+                onClick={handleAddPayment}
+                style={{
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <Plus size={14} />
+                Add Payment
+              </button>
+            </div>
+            <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px', marginTop: 0 }}>
+              Add expected payments for forecasting future cash. Dates are Month/Year only.
+            </p>
+
+            {scheduledPayments.map((payment, index) => (
+              <div key={index} style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '2fr 1fr 80px',
+                gap: '8px',
+                marginBottom: '8px',
+                padding: '8px',
+                backgroundColor: '#f9fafb',
+                borderRadius: '6px'
+              }}>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Amount ($)"
+                  value={payment.amount ? (payment.amount / 100).toString() : ''}
+                  onChange={(e) => {
+                    const cents = Math.round(parseFloat(e.target.value || '0') * 100);
+                    handleUpdatePayment(index, { amount: cents, amountCents: cents });
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+                <input
+                  type="month"
+                  placeholder="Month/Year"
+                  value={payment.expectedDate || ''}
+                  onChange={(e) => handleUpdatePayment(index, { expectedDate: e.target.value })}
+                  style={{
+                    padding: '6px 10px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemovePayment(index)}
+                  style={{
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    padding: '6px'
+                  }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+
+            {scheduledPayments.length === 0 && (
+              <p style={{ fontSize: '13px', color: '#9ca3af', textAlign: 'center', padding: '20px' }}>
+                No payments scheduled. Click "Add Payment" to add expected payments.
+              </p>
+            )}
+          </div>
 
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
             <button
