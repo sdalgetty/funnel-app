@@ -114,12 +114,14 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
   }, [bookings, payments]);
 
   // Add new booking
-  const addBooking = async (bookingData: Omit<Booking, 'id' | 'createdAt'>) => {
+  const addBooking = async (bookingData: Omit<Booking, 'id' | 'createdAt'>): Promise<Booking | null> => {
     if (dataManager) {
       const newBooking = await dataManager.createBooking(bookingData);
       if (newBooking) {
         setShowAddBooking(false);
+        return newBooking;
       }
+      return null;
     } else if (user?.id) {
       try {
         console.log('Creating booking:', bookingData);
@@ -128,13 +130,17 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
         if (newBooking) {
           console.log('Booking created successfully:', newBooking);
           setShowAddBooking(false);
+          return newBooking;
         } else {
           console.error('Failed to create booking');
+          return null;
         }
       } catch (error) {
         console.error('Error creating booking:', error);
+        return null;
       }
     }
+    return null;
   };
 
   // Add new payment
@@ -744,6 +750,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
           leadSources={leadSources}
           onAdd={addBooking}
           onClose={() => setShowAddBooking(false)}
+          dataManager={dataManager}
         />
       )}
 
@@ -1199,11 +1206,12 @@ function Td({ children, align = 'left' }: { children: React.ReactNode; align?: '
 }
 
 // Add Booking Modal - Completely Clean (v3)
-function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose }: {
+function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManager }: {
   serviceTypes: ServiceType[];
   leadSources: LeadSource[];
-  onAdd: (booking: Omit<Booking, 'id' | 'createdAt'>) => void;
+  onAdd: (booking: Omit<Booking, 'id' | 'createdAt'>) => Promise<Booking | null> | void;
   onClose: () => void;
+  dataManager?: any;
 }) {
   const [formData, setFormData] = useState({
     projectName: '',
@@ -1214,8 +1222,40 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose }: {
     projectDate: '',
     bookedRevenue: '',
   });
+  const [scheduledPayments, setScheduledPayments] = useState<Omit<Payment, 'id'>[]>([]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Add new payment schedule
+  const handleAddPayment = () => {
+    const newPayment: Omit<Payment, 'id'> = {
+      bookingId: '', // Will be set after booking is created
+      amount: 0,
+      amountCents: 0,
+      paymentDate: undefined,
+      dueDate: undefined,
+      status: 'pending',
+      memo: '',
+      expectedDate: undefined,
+      isExpected: true,
+      paidAt: null
+    };
+    setScheduledPayments([...scheduledPayments, newPayment]);
+  };
+
+  // Remove payment schedule
+  const handleRemovePayment = (index: number) => {
+    setScheduledPayments(scheduledPayments.filter((_, i) => i !== index));
+  };
+
+  // Update payment schedule
+  const handleUpdatePayment = (index: number, updates: Partial<Payment>) => {
+    const payment = scheduledPayments[index];
+    const updatedPayment = { ...payment, ...updates };
+    const newPayments = [...scheduledPayments];
+    newPayments[index] = updatedPayment;
+    setScheduledPayments(newPayments);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.projectName || !formData.serviceTypeId || !formData.leadSourceId || !formData.bookedRevenue) {
       alert('Please fill in all required fields');
@@ -1232,7 +1272,30 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose }: {
       bookedRevenue: Math.round(parseFloat(formData.bookedRevenue) * 100),
     };
 
-    onAdd(newBooking);
+    // Create the booking
+    const createdBooking = await onAdd(newBooking);
+    
+    // If booking was created and we have payments, create them
+    if (createdBooking && createdBooking.id && scheduledPayments.length > 0 && dataManager?.createPayment) {
+      for (const payment of scheduledPayments) {
+        // Only create payments with amount or expectedDate
+        if (payment.amount > 0 || payment.expectedDate) {
+          await dataManager.createPayment({
+            bookingId: createdBooking.id,
+            amount: payment.amount || 0,
+            amountCents: payment.amount || 0,
+            paymentDate: payment.expectedDate,
+            dueDate: payment.expectedDate,
+            status: 'pending',
+            isExpected: true,
+            paidAt: null,
+            expectedDate: payment.expectedDate,
+            memo: '',
+            paymentMethod: ''
+          });
+        }
+      }
+    }
   };
 
   return (
@@ -1417,6 +1480,95 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose }: {
               }}
               placeholder="0.00"
             />
+          </div>
+
+          {/* Payment Schedule */}
+          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', margin: 0 }}>
+                Payment Schedule (for Forecast)
+              </label>
+              <button
+                type="button"
+                onClick={handleAddPayment}
+                style={{
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <Plus size={14} />
+                Add Payment
+              </button>
+            </div>
+            <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px', marginTop: 0 }}>
+              Add expected payments for forecasting future cash. Dates are Month/Year only.
+            </p>
+
+            {scheduledPayments.map((payment, index) => (
+              <div key={index} style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '2fr 1fr 80px',
+                gap: '8px',
+                marginBottom: '8px',
+                padding: '8px',
+                backgroundColor: '#f9fafb',
+                borderRadius: '6px'
+              }}>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Amount ($)"
+                  value={payment.amount ? (payment.amount / 100).toString() : ''}
+                  onChange={(e) => {
+                    const cents = Math.round(parseFloat(e.target.value || '0') * 100);
+                    handleUpdatePayment(index, { amount: cents, amountCents: cents });
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+                <input
+                  type="month"
+                  placeholder="Month/Year"
+                  value={payment.expectedDate || ''}
+                  onChange={(e) => handleUpdatePayment(index, { expectedDate: e.target.value })}
+                  style={{
+                    padding: '6px 10px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemovePayment(index)}
+                  style={{
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
           </div>
 
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
