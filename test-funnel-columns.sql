@@ -4,3 +4,5 @@ FROM information_schema.columns
 WHERE table_name = 'funnels' 
 ORDER BY ordinal_position;
 
+
+

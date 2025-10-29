@@ -178,3 +178,5 @@ SELECT 'Ad Sources', COUNT(*) FROM ad_sources WHERE user_id = '00000000-0000-000
 UNION ALL
 SELECT 'Ad Campaigns', COUNT(*) FROM ad_campaigns WHERE user_id = '00000000-0000-0000-0000-000000000001';
 
+
+
