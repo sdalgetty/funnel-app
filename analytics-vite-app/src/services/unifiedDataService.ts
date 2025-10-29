@@ -863,8 +863,7 @@ export class UnifiedDataService {
         .from('ad_campaigns')
         .select('*')
         .eq('user_id', userId)
-        .order('year', { ascending: false })
-        .order('month', { ascending: true });
+        .order('month_year', { ascending: false });
 
       if (error) {
         console.error('Error fetching ad campaigns:', error);
