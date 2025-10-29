@@ -252,10 +252,16 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
   };
 
   // Toggle funnel tracking for service type
-  const toggleFunnelTracking = (id: string) => {
-    setServiceTypes(prev => prev.map(st => 
-      st.id === id ? { ...st, tracksInFunnel: !st.tracksInFunnel } : st
-    ));
+  const toggleFunnelTracking = async (id: string) => {
+    if (dataManager?.toggleServiceTypeFunnelTracking) {
+      // Use data manager if available to persist the change
+      await dataManager.toggleServiceTypeFunnelTracking(id);
+    } else {
+      // Fallback to local state update if no data manager
+      setServiceTypes(prev => prev.map(st => 
+        st.id === id ? { ...st, tracksInFunnel: !st.tracksInFunnel } : st
+      ));
+    }
   };
 
   // Add lead source

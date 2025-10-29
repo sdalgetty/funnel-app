@@ -276,7 +276,7 @@ export class UnifiedDataService {
         id: item.id,
         name: item.name,
         isCustom: true, // All database items are considered custom
-        tracksInFunnel: true // Default to true
+        tracksInFunnel: item.tracks_in_funnel ?? false // Read from database, default to false if null
       })) || [];
     } catch (error) {
       console.error('Error fetching service types:', error);
@@ -294,7 +294,8 @@ export class UnifiedDataService {
         .from('service_types')
         .insert({
           user_id: userId,
-          name: name
+          name: name,
+          tracks_in_funnel: false // Default to false (unchecked) for new service types
         })
         .select()
         .single();
@@ -308,7 +309,7 @@ export class UnifiedDataService {
         id: data.id,
         name: data.name,
         isCustom: true,
-        tracksInFunnel: true
+        tracksInFunnel: data.tracks_in_funnel ?? false
       };
     } catch (error) {
       console.error('Error creating service type:', error);
@@ -336,6 +337,30 @@ export class UnifiedDataService {
       return true;
     } catch (error) {
       console.error('Error updating service type:', error);
+      return false;
+    }
+  }
+
+  static async updateServiceTypeFunnelTracking(userId: string, id: string, tracksInFunnel: boolean): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.updateServiceType(userId, id, ''); // Mock service doesn't support this yet
+    }
+
+    try {
+      const { error } = await supabase
+        .from('service_types')
+        .update({ tracks_in_funnel: tracksInFunnel })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error updating service type funnel tracking:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error updating service type funnel tracking:', error);
       return false;
     }
   }

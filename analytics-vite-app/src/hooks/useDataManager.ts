@@ -132,6 +132,29 @@ export function useDataManager() {
     }
   }, [user?.id]);
 
+  const toggleServiceTypeFunnelTracking = useCallback(async (id: string) => {
+    if (!user?.id) return false;
+    
+    // Find the current service type to get its current tracksInFunnel value
+    const serviceType = serviceTypes.find(st => st.id === id);
+    if (!serviceType) return false;
+    
+    const newValue = !serviceType.tracksInFunnel;
+    
+    try {
+      const success = await UnifiedDataService.updateServiceTypeFunnelTracking(user.id, id, newValue);
+      if (success) {
+        setServiceTypes(prev => prev.map(st => 
+          st.id === id ? { ...st, tracksInFunnel: newValue } : st
+        ));
+      }
+      return success;
+    } catch (err) {
+      console.error('Error toggling service type funnel tracking:', err);
+      return false;
+    }
+  }, [user?.id, serviceTypes]);
+
   const deleteServiceType = useCallback(async (id: string) => {
     if (!user?.id) return false;
     
@@ -418,6 +441,7 @@ export function useDataManager() {
     // Service type operations
     createServiceType,
     updateServiceType,
+    toggleServiceTypeFunnelTracking,
     deleteServiceType,
     
     // Lead source operations

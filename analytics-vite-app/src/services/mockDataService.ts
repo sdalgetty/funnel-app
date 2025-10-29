@@ -48,7 +48,7 @@ export class MockDataService {
       id: `mock_${Date.now()}`,
       name,
       isCustom: true,
-      tracksInFunnel: true
+      tracksInFunnel: false
     };
     return newServiceType;
   }
