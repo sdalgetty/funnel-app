@@ -1284,6 +1284,13 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
       return;
     }
 
+    // Check if the selected service type tracks in funnel
+    const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceTypeId);
+    if (selectedServiceType?.tracksInFunnel && !formData.dateBooked) {
+      alert('Date Booked is required for service types that are tracked in the Funnel. Please enter a booking date or uncheck "Track in Funnel" for this service type.');
+      return;
+    }
+
     const newBooking = {
       projectName: formData.projectName,
       serviceTypeId: formData.serviceTypeId,
@@ -1443,8 +1450,22 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
 
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
-                Date Booked
+                Date Booked{(() => {
+                  const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceTypeId);
+                  return selectedServiceType?.tracksInFunnel ? ' *' : '';
+                })()}
               </label>
+              {(() => {
+                const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceTypeId);
+                if (selectedServiceType?.tracksInFunnel) {
+                  return (
+                    <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '0', marginBottom: '4px' }}>
+                      Required when service type tracks in Funnel
+                    </p>
+                  );
+                }
+                return null;
+              })()}
               <input
                 type="date"
                 value={formData.dateBooked}
@@ -2528,6 +2549,13 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
       return;
     }
 
+    // Check if the selected service type tracks in funnel
+    const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceTypeId);
+    if (selectedServiceType?.tracksInFunnel && !formData.dateBooked) {
+      alert('Date Booked is required for service types that are tracked in the Funnel. Please enter a booking date or uncheck "Track in Funnel" for this service type.');
+      return;
+    }
+
     onUpdate({
       projectName: formData.projectName,
       serviceTypeId: formData.serviceTypeId,
@@ -2661,8 +2689,22 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
 
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
-                Date Booked
+                Date Booked{(() => {
+                  const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceTypeId);
+                  return selectedServiceType?.tracksInFunnel ? ' *' : '';
+                })()}
               </label>
+              {(() => {
+                const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceTypeId);
+                if (selectedServiceType?.tracksInFunnel) {
+                  return (
+                    <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '0', marginBottom: '4px' }}>
+                      Required when service type tracks in Funnel
+                    </p>
+                  );
+                }
+                return null;
+              })()}
               <input
                 type="date"
                 value={formData.dateBooked}

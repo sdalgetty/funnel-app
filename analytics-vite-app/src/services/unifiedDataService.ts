@@ -559,7 +559,7 @@ export class UnifiedDataService {
           client_phone: '', // Not in Booking type
           service_type_id: bookingData.serviceTypeId,
           lead_source_id: bookingData.leadSourceId,
-          booking_date: bookingData.dateBooked,
+          booking_date: bookingData.dateBooked || null,
           date_inquired: bookingData.dateInquired || null,
           project_date: bookingData.projectDate || null,
           booked_revenue: bookingData.bookedRevenue || 0,
@@ -597,7 +597,7 @@ export class UnifiedDataService {
           client_name: updates.projectName,
           service_type_id: updates.serviceTypeId,
           lead_source_id: updates.leadSourceId,
-          booking_date: updates.dateBooked,
+          booking_date: updates.dateBooked !== undefined ? (updates.dateBooked || null) : undefined,
           status: updates.status,
           notes: updates.notes
         })
