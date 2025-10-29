@@ -51,6 +51,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
   const [showServiceTypeDropdown, setShowServiceTypeDropdown] = useState(false);
   const [deleteServiceTypeConfirmation, setDeleteServiceTypeConfirmation] = useState<{ id: string; name: string; bookingCount: number } | null>(null);
   const [deleteLeadSourceConfirmation, setDeleteLeadSourceConfirmation] = useState<{ id: string; name: string; bookingCount: number } | null>(null);
+  const [deleteBookingConfirmation, setDeleteBookingConfirmation] = useState<{ id: string; name: string } | null>(null);
   
   // Filtering and sorting state
   const [filters, setFilters] = useState({
@@ -359,6 +360,41 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
         console.error('Error updating booking:', error);
       }
     }
+  };
+
+  // Delete booking
+  const deleteBooking = (id: string) => {
+    const booking = bookings.find(b => b.id === id);
+    if (!booking) return;
+    
+    setDeleteBookingConfirmation({
+      id,
+      name: booking.projectName
+    });
+  };
+
+  const confirmDeleteBooking = async () => {
+    if (!deleteBookingConfirmation) return;
+    
+    const { id } = deleteBookingConfirmation;
+    
+    if (dataManager) {
+      await dataManager.deleteBooking(id);
+    } else if (user?.id) {
+      try {
+        console.log('Deleting booking:', id);
+        const success = await UnifiedDataService.deleteBooking(user.id, id);
+        if (success) {
+          console.log('Booking deleted successfully');
+        } else {
+          console.error('Failed to delete booking');
+        }
+      } catch (error) {
+        console.error('Error deleting booking:', error);
+      }
+    }
+    
+    setDeleteBookingConfirmation(null);
   };
 
   // Toggle service type filter
@@ -824,24 +860,44 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
                       <div style={{ fontWeight: '500' }}>{toUSD(booking.bookedRevenue)}</div>
                     </Td>
                     <Td>
-                      <button
-                        style={{
-                          backgroundColor: '#3b82f6',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          padding: '6px 12px',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                        onClick={() => setEditingBooking(booking)}
-                      >
-                        <Edit size={12} />
-                        Edit
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          style={{
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          onClick={() => setEditingBooking(booking)}
+                        >
+                          <Edit size={12} />
+                          Edit
+                        </button>
+                        <button
+                          style={{
+                            backgroundColor: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          onClick={() => deleteBooking(booking.id)}
+                        >
+                          <Trash2 size={12} />
+                          Delete
+                        </button>
+                      </div>
                     </Td>
                   </tr>
                 );
@@ -1027,6 +1083,89 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
                 }}
               >
                 Delete Lead Source
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Booking Confirmation Modal */}
+      {deleteBookingConfirmation && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '450px',
+            width: '90%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: '#fee2e2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Trash2 size={24} color="#dc2626" />
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937', textAlign: 'left' }}>
+                Delete Booking
+              </h3>
+            </div>
+            
+            <p style={{ color: '#374151', margin: '0 0 8px 0', fontSize: '14px', textAlign: 'left', lineHeight: '1.5' }}>
+              Are you sure you want to delete the booking for <strong>{deleteBookingConfirmation.name}</strong>?
+            </p>
+            
+            <p style={{ color: '#dc2626', margin: '0 0 20px 0', fontSize: '13px', textAlign: 'left', lineHeight: '1.5', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '6px' }}>
+              <strong>Warning:</strong> This will permanently delete the booking and all associated payment schedules. This action cannot be undone.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeleteBookingConfirmation(null)}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteBooking}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: '#dc2626',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Delete Booking
               </button>
             </div>
           </div>
