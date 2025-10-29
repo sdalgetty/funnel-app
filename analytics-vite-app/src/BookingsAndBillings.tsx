@@ -1255,6 +1255,22 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
     setScheduledPayments(newPayments);
   };
 
+  // Helper to parse month/year from YYYY-MM format
+  const parseMonthYear = (monthYear: string | undefined) => {
+    if (!monthYear || monthYear.length === 0) return { month: '', year: '' };
+    const parts = monthYear.split('-');
+    if (parts.length === 2) {
+      return { month: parts[1], year: parts[0] };
+    }
+    return { month: '', year: '' };
+  };
+
+  // Helper to combine month and year into YYYY-MM format
+  const combineMonthYear = (month: string, year: string) => {
+    if (!month || !year) return undefined;
+    return `${year}-${month.padStart(2, '0')}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.projectName || !formData.serviceTypeId || !formData.leadSourceId || !formData.bookedRevenue) {
@@ -1512,63 +1528,103 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
               Add expected payments for forecasting future cash. Dates are Month/Year only.
             </p>
 
-            {scheduledPayments.map((payment, index) => (
-              <div key={index} style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '2fr 1fr 80px',
-                gap: '8px',
-                marginBottom: '8px',
-                padding: '8px',
-                backgroundColor: '#f9fafb',
-                borderRadius: '6px'
-              }}>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Amount ($)"
-                  value={payment.amount ? (payment.amount / 100).toString() : ''}
-                  onChange={(e) => {
-                    const cents = Math.round(parseFloat(e.target.value || '0') * 100);
-                    handleUpdatePayment(index, { amount: cents, amountCents: cents });
-                  }}
-                  style={{
-                    padding: '6px 10px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
-                <input
-                  type="month"
-                  placeholder="Month/Year"
-                  value={payment.expectedDate || ''}
-                  onChange={(e) => handleUpdatePayment(index, { expectedDate: e.target.value })}
-                  style={{
-                    padding: '6px 10px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleRemovePayment(index)}
-                  style={{
-                    backgroundColor: '#ef4444',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '6px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
+            {scheduledPayments.map((payment, index) => {
+              const { month, year } = parseMonthYear(payment.expectedDate);
+              const currentYear = new Date().getFullYear();
+              // Show years from 2 years ago to 8 years in the future (10 year range)
+              const years = Array.from({ length: 11 }, (_, i) => currentYear - 2 + i);
+              
+              return (
+                <div key={index} style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: '2fr 1fr 1fr 80px',
+                  gap: '8px',
+                  marginBottom: '8px',
+                  padding: '8px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '6px'
+                }}>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Amount ($)"
+                    value={payment.amount ? (payment.amount / 100).toString() : ''}
+                    onChange={(e) => {
+                      const cents = Math.round(parseFloat(e.target.value || '0') * 100);
+                      handleUpdatePayment(index, { amount: cents, amountCents: cents });
+                    }}
+                    style={{
+                      padding: '6px 10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <select
+                    value={month}
+                    onChange={(e) => {
+                      const newDate = combineMonthYear(e.target.value, year || currentYear.toString());
+                      handleUpdatePayment(index, { expectedDate: newDate });
+                    }}
+                    style={{
+                      padding: '6px 10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="">Month</option>
+                    <option value="01">January</option>
+                    <option value="02">February</option>
+                    <option value="03">March</option>
+                    <option value="04">April</option>
+                    <option value="05">May</option>
+                    <option value="06">June</option>
+                    <option value="07">July</option>
+                    <option value="08">August</option>
+                    <option value="09">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                  </select>
+                  <select
+                    value={year}
+                    onChange={(e) => {
+                      const newDate = combineMonthYear(month || '01', e.target.value);
+                      handleUpdatePayment(index, { expectedDate: newDate });
+                    }}
+                    style={{
+                      padding: '6px 10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="">Year</option>
+                    {years.map(y => (
+                      <option key={y} value={y.toString()}>{y}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePayment(index)}
+                    style={{
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
 
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
@@ -2404,6 +2460,22 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
     setScheduledPayments(scheduledPayments.filter((_, i) => i !== index));
   };
 
+  // Helper to parse month/year from YYYY-MM format
+  const parseMonthYear = (monthYear: string | undefined) => {
+    if (!monthYear || monthYear.length === 0) return { month: '', year: '' };
+    const parts = monthYear.split('-');
+    if (parts.length === 2) {
+      return { month: parts[1], year: parts[0] };
+    }
+    return { month: '', year: '' };
+  };
+
+  // Helper to combine month and year into YYYY-MM format
+  const combineMonthYear = (month: string, year: string) => {
+    if (!month || !year) return undefined;
+    return `${year}-${month.padStart(2, '0')}`;
+  };
+
   // Update payment schedule
   const handleUpdatePayment = async (index: number, updates: Partial<Payment>) => {
     if (!dataManager) return; // Can't save without dataManager
@@ -2671,60 +2743,103 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
               Add expected payments for forecasting future cash. Dates are Month/Year only.
             </p>
 
-            {scheduledPayments.map((payment, index) => (
-              <div key={index} style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '2fr 1fr 80px',
-                gap: '8px',
-                marginBottom: '8px',
-                padding: '8px',
-                backgroundColor: '#f9fafb',
-                borderRadius: '6px'
-              }}>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Amount ($)"
-                  value={payment.amount ? (payment.amount / 100).toString() : ''}
-                  onChange={(e) => {
-                    const cents = Math.round(parseFloat(e.target.value || '0') * 100);
-                    handleUpdatePayment(index, { amount: cents, amountCents: cents });
-                  }}
-                  style={{
-                    padding: '6px 10px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
-                <input
-                  type="month"
-                  placeholder="Month/Year"
-                  value={payment.expectedDate || ''}
-                  onChange={(e) => handleUpdatePayment(index, { expectedDate: e.target.value })}
-                  style={{
-                    padding: '6px 10px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleRemovePayment(index)}
-                  style={{
-                    backgroundColor: '#ef4444',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    padding: '6px'
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
+            {scheduledPayments.map((payment, index) => {
+              const { month, year } = parseMonthYear(payment.expectedDate);
+              const currentYear = new Date().getFullYear();
+              // Show years from 2 years ago to 8 years in the future (10 year range)
+              const years = Array.from({ length: 11 }, (_, i) => currentYear - 2 + i);
+              
+              return (
+                <div key={index} style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: '2fr 1fr 1fr 80px',
+                  gap: '8px',
+                  marginBottom: '8px',
+                  padding: '8px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '6px'
+                }}>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Amount ($)"
+                    value={payment.amount ? (payment.amount / 100).toString() : ''}
+                    onChange={(e) => {
+                      const cents = Math.round(parseFloat(e.target.value || '0') * 100);
+                      handleUpdatePayment(index, { amount: cents, amountCents: cents });
+                    }}
+                    style={{
+                      padding: '6px 10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <select
+                    value={month}
+                    onChange={(e) => {
+                      const newDate = combineMonthYear(e.target.value, year || currentYear.toString());
+                      handleUpdatePayment(index, { expectedDate: newDate });
+                    }}
+                    style={{
+                      padding: '6px 10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="">Month</option>
+                    <option value="01">January</option>
+                    <option value="02">February</option>
+                    <option value="03">March</option>
+                    <option value="04">April</option>
+                    <option value="05">May</option>
+                    <option value="06">June</option>
+                    <option value="07">July</option>
+                    <option value="08">August</option>
+                    <option value="09">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                  </select>
+                  <select
+                    value={year}
+                    onChange={(e) => {
+                      const newDate = combineMonthYear(month || '01', e.target.value);
+                      handleUpdatePayment(index, { expectedDate: newDate });
+                    }}
+                    style={{
+                      padding: '6px 10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="">Year</option>
+                    {years.map(y => (
+                      <option key={y} value={y.toString()}>{y}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePayment(index)}
+                    style={{
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      padding: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              );
+            })}
 
             {scheduledPayments.length === 0 && (
               <p style={{ fontSize: '13px', color: '#9ca3af', textAlign: 'center', padding: '20px' }}>
