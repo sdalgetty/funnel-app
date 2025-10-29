@@ -46,32 +46,8 @@ export default function Funnel({ funnelData, setFunnelData, dataManager, salesDa
   const [loading, setLoading] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
 
-  // Load funnel data from database when component mounts or year changes
-  useEffect(() => {
-    const loadFunnelData = async () => {
-      if (!user?.id) return;
-      
-      setLoading(true);
-        try {
-          const data = await UnifiedDataService.getFunnelData(user.id, selectedYear);
-          setFunnelData(data);
-        } catch (error) {
-          console.error('Error loading funnel data:', error);
-        } finally {
-          setLoading(false);
-        }
-    };
-
-    // Don't reload if we just saved data
-    if (!justSaved) {
-      loadFunnelData();
-    }
-  }, [user?.id, selectedYear, justSaved]);
-
-  // Reset justSaved flag when year changes
-  useEffect(() => {
-    setJustSaved(false);
-  }, [selectedYear]);
+  // Funnel data is provided via props from dataManager, so we don't need to reload it
+  // The dataManager handles all data loading centrally
 
   // Check if user has Pro features (Pro or Trial account)
   const isProAccount = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'trial';
