@@ -7,7 +7,6 @@ import type { FunnelData, Booking, Payment } from "./types";
 
 interface FunnelProps {
   funnelData: FunnelData[];
-  setFunnelData?: (data: FunnelData[]) => void;
   dataManager?: any;
   salesData?: Booking[];
   paymentsData?: Payment[];
@@ -29,7 +28,7 @@ const calculateConversionRate = (from: number, to: number) => {
   return ((to / from) * 100).toFixed(1);
 };
 
-export default function Funnel({ funnelData, setFunnelData, dataManager, salesData = [], paymentsData = [] }: FunnelProps) {
+export default function Funnel({ funnelData, dataManager, salesData = [], paymentsData = [] }: FunnelProps) {
   console.log('Funnel component loaded!', { funnelData, salesData, paymentsData });
   
   const { user, features } = useAuth();
