@@ -25,6 +25,38 @@ export class UnifiedDataService {
     return isConfigured;
   }
 
+  // Helper function to convert month/year format (YYYY-MM) to full date (YYYY-MM-01)
+  private static convertMonthYearToDate(monthYear: string | undefined): string | null {
+    if (!monthYear || monthYear.length === 0) {
+      return null;
+    }
+    // If already in YYYY-MM-DD format, return as-is
+    if (monthYear.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return monthYear;
+    }
+    // If in YYYY-MM format, append -01
+    if (monthYear.match(/^\d{4}-\d{2}$/)) {
+      return `${monthYear}-01`;
+    }
+    return null;
+  }
+
+  // Helper function to convert full date (YYYY-MM-DD) back to month/year format (YYYY-MM)
+  private static convertDateToMonthYear(date: string | null | undefined): string | undefined {
+    if (!date || date.length === 0) {
+      return undefined;
+    }
+    // If in YYYY-MM-DD format, extract YYYY-MM
+    if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return date.substring(0, 7); // Extract YYYY-MM
+    }
+    // If already in YYYY-MM format, return as-is
+    if (date.match(/^\d{4}-\d{2}$/)) {
+      return date;
+    }
+    return undefined;
+  }
+
   // ============================================================================
   // FUNNEL DATA
   // ============================================================================
@@ -651,7 +683,7 @@ export class UnifiedDataService {
         memo: item.notes || '',
         paymentMethod: item.payment_method || '',
         status: item.status,
-        expectedDate: item.expected_date || undefined,
+        expectedDate: this.convertDateToMonthYear(item.expected_date),
         isExpected: item.is_expected || false
       })) || [];
     } catch (error) {
@@ -677,17 +709,19 @@ export class UnifiedDataService {
         payment_method: paymentData.paymentMethod || null,
         status: paymentData.paidAt ? 'completed' : 'pending',
         notes: paymentData.memo || null,
-        expected_date: paymentData.expectedDate || null,
+        expected_date: this.convertMonthYearToDate(paymentData.expectedDate),
         is_expected: paymentData.isExpected || false
       };
       
       // Only include payment_date if we have a date value
       // The NOT NULL constraint requires a date, so use expected_date for scheduled payments
-      if (actualPaymentDate) {
-        insertData.payment_date = actualPaymentDate;
+      const convertedActualDate = this.convertMonthYearToDate(actualPaymentDate);
+      if (convertedActualDate) {
+        insertData.payment_date = convertedActualDate;
       } else if (paymentData.isExpected && paymentData.expectedDate) {
         // For expected payments, use expected_date if available
-        insertData.payment_date = paymentData.expectedDate;
+        const convertedExpectedDate = this.convertMonthYearToDate(paymentData.expectedDate);
+        insertData.payment_date = convertedExpectedDate || new Date().toISOString().split('T')[0];
       } else {
         // For non-expected payments without a date, use today's date
         insertData.payment_date = new Date().toISOString().split('T')[0];
@@ -725,12 +759,18 @@ export class UnifiedDataService {
       if (updates.bookingId !== undefined) updateData.booking_id = updates.bookingId;
       if (updates.amount !== undefined) updateData.amount_cents = updates.amount;
       if (updates.dueDate !== undefined || updates.expectedDate !== undefined) {
-        updateData.payment_date = updates.expectedDate || updates.dueDate;
+        const dateToUse = updates.expectedDate || updates.dueDate;
+        const convertedDate = this.convertMonthYearToDate(dateToUse);
+        if (convertedDate) {
+          updateData.payment_date = convertedDate;
+        }
       }
       if (updates.paymentMethod !== undefined) updateData.payment_method = updates.paymentMethod;
       if (updates.paidAt !== undefined) updateData.status = updates.paidAt ? 'completed' : 'pending';
       if (updates.memo !== undefined) updateData.notes = updates.memo;
-      if (updates.expectedDate !== undefined) updateData.expected_date = updates.expectedDate || null;
+      if (updates.expectedDate !== undefined) {
+        updateData.expected_date = this.convertMonthYearToDate(updates.expectedDate);
+      }
       if (updates.isExpected !== undefined) updateData.is_expected = updates.isExpected;
 
       const { error } = await supabase
