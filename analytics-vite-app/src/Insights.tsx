@@ -20,11 +20,28 @@ export default function Insights({ dataManager }: { dataManager: any }) {
 
   const yearData = useMemo(() => funnelData.filter(m => m.year === selectedYear), [funnelData, selectedYear])
 
+  // Dynamic totals (closes and bookings) derived from Sales records that are tracked in the Funnel
+  const dynamicSalesTotals = useMemo(() => {
+    const trackableServiceIds = new Set(serviceTypes.filter(st => st.tracksInFunnel).map(st => st.id))
+    let closes = 0
+    let bookingsCents = 0
+    bookings.forEach(b => {
+      if (!b?.dateBooked) return
+      const [y] = b.dateBooked.split('-')
+      if (parseInt(y, 10) === selectedYear && trackableServiceIds.has(b.serviceTypeId)) {
+        closes += 1
+        bookingsCents += b.bookedRevenue || 0
+      }
+    })
+    return { closes, bookingsCents }
+  }, [bookings, serviceTypes, selectedYear])
+
   // Sales metrics from funnel data (year totals)
   const salesTotals = useMemo(() => {
     const totalInquiries = yearData.reduce((s, m) => s + (m.inquiries || 0), 0)
-    const totalCloses = yearData.reduce((s, m) => s + (m.closes || 0), 0)
-    const totalBookings = yearData.reduce((s, m) => s + (m.bookings || 0), 0)
+    // Use dynamic totals for closes and bookings to avoid timezone/calculation issues from stored funnel rows
+    const totalCloses = dynamicSalesTotals.closes
+    const totalBookings = dynamicSalesTotals.bookingsCents
     const totalCash = yearData.reduce((s, m) => s + (m.cash || 0), 0)
     const monthsWithData = yearData.filter(m => (m.inquiries||0) > 0 || (m.callsBooked||0) > 0 || (m.callsTaken||0) > 0 || (m.closes||0) > 0 || (m.bookings||0) > 0).length
     const avgInquiries = monthsWithData > 0 ? Math.round(totalInquiries / monthsWithData) : 0
@@ -33,14 +50,15 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     const avgCash = monthsWithData > 0 ? Math.round(totalCash / monthsWithData) : 0
     const inquiryToClose = totalInquiries > 0 ? ((totalCloses / totalInquiries) * 100).toFixed(1) : '0.0'
     return { totalInquiries, totalCloses, totalBookings, totalCash, inquiryToClose, monthsWithData, avgInquiries, avgCloses, avgBookings, avgCash }
-  }, [yearData])
+  }, [yearData, dynamicSalesTotals])
 
   // Calls metrics
   const callTotals = useMemo(() => {
     const totalInquiries = yearData.reduce((s, m) => s + (m.inquiries || 0), 0)
     const totalCallsBooked = yearData.reduce((s, m) => s + (m.callsBooked || 0), 0)
     const totalCallsTaken = yearData.reduce((s, m) => s + (m.callsTaken || 0), 0)
-    const totalCloses = yearData.reduce((s, m) => s + (m.closes || 0), 0)
+    // Use dynamic closes for accuracy
+    const totalCloses = dynamicSalesTotals.closes
     const monthsWithData = yearData.filter(m => (m.inquiries||0) > 0 || (m.callsBooked||0) > 0 || (m.callsTaken||0) > 0 || (m.closes||0) > 0 || (m.bookings||0) > 0).length
     const avgCallsBooked = monthsWithData > 0 ? Math.round(totalCallsBooked / monthsWithData) : 0
     const avgCallsTaken = monthsWithData > 0 ? Math.round(totalCallsTaken / monthsWithData) : 0
@@ -49,10 +67,10 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     const showUpRate = totalCallsBooked > 0 ? ((totalCallsTaken / totalCallsBooked) * 100).toFixed(1) : '0.0'
     const takenToClose = totalCallsTaken > 0 ? ((totalCloses / totalCallsTaken) * 100).toFixed(1) : '0.0'
     // Revenue per call taken uses bookings dollars from funnel divided by callsTaken
-    const totalBookings = yearData.reduce((s, m) => s + (m.bookings || 0), 0)
+    const totalBookings = dynamicSalesTotals.bookingsCents
     const revenuePerCallTaken = totalCallsTaken > 0 ? Math.round(totalBookings / totalCallsTaken) : 0
     return { totalCallsBooked, totalCallsTaken, inquiryToBooked, inquiryToTaken, showUpRate, takenToClose, revenuePerCallTaken, avgCallsBooked, avgCallsTaken }
-  }, [yearData])
+  }, [yearData, dynamicSalesTotals])
 
   // Lead Sources (bookings filtered to service types that track in funnel)
   const leadSourceBreakdown = useMemo(() => {
