@@ -98,7 +98,10 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       const pctRevenue = totalRevenue > 0 ? Math.round((revenue / totalRevenue) * 100) : 0
       return { id: lsId, name, count, revenue, pctCount, pctRevenue }
     })
-    return { items, totalCount, totalRevenue }
+    // Sorted views
+    const byCountDesc = [...items].sort((a, b) => b.count - a.count)
+    const byRevenueDesc = [...items].sort((a, b) => b.revenue - a.revenue)
+    return { items, totalCount, totalRevenue, byCountDesc, byRevenueDesc }
   }, [bookings, leadSources, selectedYear, serviceTypes])
 
   // Advertising totals (current selected year)
@@ -207,15 +210,21 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             {leadSourceBreakdown.items.length === 0 ? (
               <EmptyState />
             ) : (
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                {leadSourceBreakdown.items.map(item => (
-                  <li key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <div style={{ width: 12, height: 12, borderRadius: 2, background: '#3b82f6' }} />
-                    <div style={{ flex: 1, color: '#374151' }}>{item.name}</div>
-                    <div style={{ color: '#6b7280', fontSize: 12 }}>{formatNumber(item.count)} ({item.pctCount}%)</div>
-                  </li>
+              <div>
+                {leadSourceBreakdown.byCountDesc.map(item => (
+                  <div key={item.id} style={{ marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <div style={{ width: 12, height: 12, borderRadius: 2, background: '#3b82f6' }} />
+                      <div style={{ flex: 1, color: '#374151' }}>{item.name}</div>
+                      <div style={{ color: '#6b7280', fontSize: 12 }}>{formatNumber(item.count)} ({item.pctCount}%)</div>
+                    </div>
+                    {/* Bar */}
+                    <div style={{ height: 6, background: '#eef2ff', borderRadius: 4 }}>
+                      <div style={{ width: `${item.pctCount}%`, height: '100%', background: '#3b82f6', borderRadius: 4 }} />
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
@@ -223,15 +232,21 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             {leadSourceBreakdown.items.length === 0 ? (
               <EmptyState />
             ) : (
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                {leadSourceBreakdown.items.map(item => (
-                  <li key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <div style={{ width: 12, height: 12, borderRadius: 2, background: '#10b981' }} />
-                    <div style={{ flex: 1, color: '#374151' }}>{item.name}</div>
-                    <div style={{ color: '#6b7280', fontSize: 12 }}>{toUSD(item.revenue)} ({item.pctRevenue}%)</div>
-                  </li>
+              <div>
+                {leadSourceBreakdown.byRevenueDesc.map(item => (
+                  <div key={item.id} style={{ marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <div style={{ width: 12, height: 12, borderRadius: 2, background: '#10b981' }} />
+                      <div style={{ flex: 1, color: '#374151' }}>{item.name}</div>
+                      <div style={{ color: '#6b7280', fontSize: 12 }}>{toUSD(item.revenue)} ({item.pctRevenue}%)</div>
+                    </div>
+                    {/* Bar */}
+                    <div style={{ height: 6, background: '#ecfdf5', borderRadius: 4 }}>
+                      <div style={{ width: `${item.pctRevenue}%`, height: '100%', background: '#10b981', borderRadius: 4 }} />
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         </div>
