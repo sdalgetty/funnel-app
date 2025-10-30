@@ -263,10 +263,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
       // Use data manager if available to persist the change
       await dataManager.toggleServiceTypeFunnelTracking(id);
     } else {
-      // Fallback to local state update if no data manager
-      setServiceTypes(prev => prev.map(st => 
-        st.id === id ? { ...st, tracksInFunnel: !st.tracksInFunnel } : st
-      ));
+      console.warn('toggleFunnelTracking called without dataManager; skipping local update');
     }
   };
 
