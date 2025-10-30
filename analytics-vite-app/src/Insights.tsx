@@ -214,7 +214,6 @@ export default function Insights({ dataManager }: { dataManager: any }) {
                 {leadSourceBreakdown.byCountDesc.map(item => (
                   <div key={item.id} style={{ marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <div style={{ width: 12, height: 12, borderRadius: 2, background: '#3b82f6' }} />
                       <div style={{ flex: 1, color: '#374151' }}>{item.name}</div>
                       <div style={{ color: '#6b7280', fontSize: 12 }}>{formatNumber(item.count)} ({item.pctCount}%)</div>
                     </div>
@@ -236,7 +235,6 @@ export default function Insights({ dataManager }: { dataManager: any }) {
                 {leadSourceBreakdown.byRevenueDesc.map(item => (
                   <div key={item.id} style={{ marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <div style={{ width: 12, height: 12, borderRadius: 2, background: '#10b981' }} />
                       <div style={{ flex: 1, color: '#374151' }}>{item.name}</div>
                       <div style={{ color: '#6b7280', fontSize: 12 }}>{toUSD(item.revenue)} ({item.pctRevenue}%)</div>
                     </div>
