@@ -3,3 +3,4 @@
 alter table bookings 
   alter column booking_date drop not null;
 
+

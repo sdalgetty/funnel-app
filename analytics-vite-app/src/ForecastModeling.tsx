@@ -7,13 +7,17 @@ interface ForecastModelingProps {
   setServiceTypes: (types: ServiceType[]) => void;
   bookings: Booking[];
   payments: Payment[];
+  showTrackerOnly?: boolean;
+  hideTracker?: boolean;
 }
 
 const ForecastModeling: React.FC<ForecastModelingProps> = ({ 
   serviceTypes, 
   setServiceTypes, 
   bookings, 
-  payments 
+  payments,
+  showTrackerOnly = false,
+  hideTracker = false
 }) => {
   const [models, setModels] = useState<ForecastModel[]>([]);
   const [activeModel, setActiveModel] = useState<ForecastModel | null>(null);
@@ -177,6 +181,169 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   const removeServiceType = (id: string) => {
     setServiceTypes(prev => prev.filter(st => st.id !== id));
   };
+
+  // Tracker-only mode: render just the performance tracker block
+  if (showTrackerOnly) {
+    return (
+      <div style={{ padding: '0', maxWidth: '100%', margin: '0' }}>
+        {activeModel && (
+          <div style={{ 
+            backgroundColor: 'white', 
+            borderRadius: '12px', 
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)', 
+            overflow: 'hidden'
+          }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ 
+                    fontSize: '18px', 
+                    fontWeight: '600', 
+                    margin: '0 0 4px 0', 
+                    color: '#1f2937' 
+                  }}>
+                    Forecast Tracker
+                  </h2>
+                  <p style={{ 
+                    fontSize: '14px', 
+                    color: '#6b7280', 
+                    margin: 0 
+                  }}>
+                    Active model tracking
+                  </p>
+                </div>
+                <div style={{
+                  backgroundColor: '#f3f4f6',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  textAlign: 'left'
+                }}>
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: '#6b7280', 
+                    marginBottom: '2px' 
+                  }}>
+                    Year Progress
+                  </div>
+                  <div style={{ 
+                    fontSize: '18px', 
+                    fontWeight: '600', 
+                    color: '#1f2937' 
+                  }}>
+                    {yearProgress}%
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', fontSize: '14px' }}>
+                <thead style={{ backgroundColor: '#f5f5f5' }}>
+                  <tr>
+                    <Th>Service Type</Th>
+                    <Th align="right">Forecast Goal</Th>
+                    <Th align="right">Actual $</Th>
+                    <Th align="right">Remaining</Th>
+                    <Th align="right">% of Plan</Th>
+                    <Th align="right">Pacing Delta</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {performanceMetrics.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ 
+                        textAlign: 'left', 
+                        padding: '40px 20px',
+                        color: '#6b7280',
+                        fontStyle: 'italic'
+                      }}>
+                        <div style={{ marginBottom: '8px', fontSize: '16px' }}>📊</div>
+                        <div>No service types in this model</div>
+                        <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                          Edit the model on the Forecast page to add service types and goals
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    performanceMetrics.map((metric, index) => (
+                    <tr 
+                      key={metric.serviceTypeId}
+                      style={{ 
+                        borderBottom: '1px solid #eee',
+                        backgroundColor: index % 2 === 0 ? '#fafafa' : '#f5f5f5'
+                      }}
+                    >
+                      <Td style={{ fontWeight: '500' }}>{metric.serviceTypeName}</Td>
+                      <Td align="right">{toUSD(metric.forecastGoal)}</Td>
+                      <Td align="right">{toUSD(metric.actualRevenue)}</Td>
+                      <Td align="right" style={{ 
+                        color: metric.remaining < 0 ? '#ef4444' : '#10b981',
+                        fontWeight: '500'
+                      }}>
+                        {toUSD(metric.remaining)}
+                      </Td>
+                      <Td align="right" style={{ 
+                        color: metric.percentOfPlan >= 100 ? '#10b981' : 
+                              metric.percentOfPlan < 80 ? '#ef4444' : '#f59e0b',
+                        fontWeight: '600'
+                      }}>
+                        {metric.percentOfPlan}%
+                      </Td>
+                      <Td align="right" style={{ 
+                        color: metric.pacingDelta >= 0 ? '#10b981' : '#ef4444',
+                        fontWeight: '500'
+                      }}>
+                        {metric.pacingDelta >= 0 ? '+' : ''}{metric.pacingDelta}%
+                      </Td>
+                    </tr>
+                    ))
+                  )}
+                  {performanceMetrics.length > 0 && (
+                  <tr style={{ 
+                    backgroundColor: '#e5e7eb',
+                    borderTop: '2px solid #9ca3af',
+                    fontWeight: '600'
+                  }}>
+                    <Td style={{ fontWeight: '700', fontSize: '14px' }}>Total</Td>
+                    <Td align="right" style={{ fontWeight: '700', fontSize: '14px' }}>
+                      {toUSD(performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0))}
+                    </Td>
+                    <Td align="right" style={{ fontWeight: '700', fontSize: '14px' }}>
+                      {toUSD(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0))}
+                    </Td>
+                    <Td align="right" style={{ 
+                      fontWeight: '700', 
+                      fontSize: '14px',
+                      color: performanceMetrics.reduce((sum, m) => sum + m.remaining, 0) < 0 ? '#ef4444' : '#10b981'
+                    }}>
+                      {toUSD(performanceMetrics.reduce((sum, m) => sum + m.remaining, 0))}
+                    </Td>
+                    <Td align="right" style={{ 
+                      fontWeight: '700', 
+                      fontSize: '14px',
+                      color: Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100) >= 100 ? '#10b981' : 
+                            Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100) < 80 ? '#ef4444' : '#f59e0b'
+                    }}>
+                      {Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100)}%
+                    </Td>
+                    <Td align="right" style={{ 
+                      fontWeight: '700', 
+                      fontSize: '14px',
+                      color: Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100) - yearProgress >= 0 ? '#10b981' : '#ef4444'
+                    }}>
+                      {Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100) - yearProgress >= 0 ? '+' : ''}
+                      {Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100) - yearProgress}%
+                    </Td>
+                  </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
@@ -353,7 +520,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       )}
 
       {/* Performance Tracker */}
-      {activeModel && (
+      {!hideTracker && activeModel && (
         <div style={{ 
           backgroundColor: 'white', 
           borderRadius: '12px', 

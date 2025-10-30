@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
-import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit, Lock, Crown, Calculator } from "lucide-react";
+import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit, Lock, Crown } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
-import CalculatorComponent from "./Calculator";
+// Calculator moved to its own top-level page
 import { UnifiedDataService } from "./services/unifiedDataService";
 import type { FunnelData, Booking, Payment } from "./types";
 
@@ -41,7 +41,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMonth, setEditingMonth] = useState<FunnelData | null>(null);
-  const [funnelView, setFunnelView] = useState<'funnel' | 'calculator'>('funnel');
+  // Calculator removed from Funnel page; single view only
   const [loading, setLoading] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
 
@@ -84,13 +84,31 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
     };
 
     // Calculate bookings and closes from sales data
-    salesData.forEach((booking: any) => {
-      const parsed = parseYearMonth(booking?.dateBooked);
-      if (parsed && parsed.year === selectedYear) {
-        monthlyData[parsed.month].bookings += booking.bookedRevenue || 0;
-        monthlyData[parsed.month].closes += 1; // Each booking is a close
-      }
-    });
+    try {
+      const debugCounts: Record<number, number> = {};
+      console.groupCollapsed(
+        `Funnel closes calc: year=${selectedYear}, salesData=${Array.isArray(salesData) ? salesData.length : 0}`
+      );
+      salesData.forEach((booking: any) => {
+        const parsed = parseYearMonth(booking?.dateBooked);
+        const serviceTypeId = booking?.serviceTypeId;
+        if (parsed && parsed.year === selectedYear) {
+          monthlyData[parsed.month].bookings += booking.bookedRevenue || 0;
+          monthlyData[parsed.month].closes += 1; // Each booking is a close
+          debugCounts[parsed.month] = (debugCounts[parsed.month] || 0) + 1;
+          console.log(
+            `counted`,
+            { id: booking?.id, projectName: booking?.projectName, dateBooked: booking?.dateBooked, month: parsed.month, year: parsed.year, serviceTypeId }
+          );
+        } else {
+          console.log(`skipped`, { id: booking?.id, projectName: booking?.projectName, dateBooked: booking?.dateBooked, parsed });
+        }
+      });
+      console.log(`monthly close counts`, debugCounts);
+      console.groupEnd();
+    } catch (e) {
+      console.warn('Funnel closes debug logging failed:', e);
+    }
 
     // Cash is now manually entered in Funnel, not calculated
     return monthlyData;
@@ -378,241 +396,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
         </select>
       </div>
 
-      {/* Analytics Cards */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: '20px', 
-        marginBottom: '32px' 
-      }}>
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <Users size={20} color="#3b82f6" />
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Inquiries</span>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
-            {formatNumber(analyticsMetrics.totalInquiries)}
-          </div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            Avg: {formatNumber(analyticsMetrics.avgInquiries)}/month
-          </div>
-        </div>
-
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <Phone size={20} color="#10b981" />
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Calls Booked</span>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
-            {formatNumber(analyticsMetrics.totalCallsBooked)}
-          </div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            Avg: {formatNumber(analyticsMetrics.avgCallsBooked)}/month
-          </div>
-        </div>
-
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <Phone size={20} color="#f59e0b" />
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Calls Taken</span>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
-            {formatNumber(analyticsMetrics.totalCallsTaken)}
-          </div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            Avg: {formatNumber(analyticsMetrics.avgCallsTaken)}/month
-          </div>
-        </div>
-
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <CheckCircle size={20} color="#ef4444" />
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Closes</span>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
-            {formatNumber(analyticsMetrics.totalCloses)}
-          </div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            Avg: {formatNumber(analyticsMetrics.avgCloses)}/month
-          </div>
-        </div>
-
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <DollarSign size={20} color="#8b5cf6" />
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Bookings</span>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
-            {toUSD(analyticsMetrics.totalBookings)}
-          </div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            Avg: {toUSD(analyticsMetrics.avgBookings)}/month
-          </div>
-        </div>
-
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <DollarSign size={20} color="#10b981" />
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Cash</span>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
-            {toUSD(analyticsMetrics.totalCash)}
-          </div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            Avg: {toUSD(analyticsMetrics.avgCash)}/month
-          </div>
-        </div>
-
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <TrendingUp size={20} color="#06b6d4" />
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Inquiry to Close %</span>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
-            {analyticsMetrics.inquiryToCloseRate}%
-          </div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            Overall conversion
-          </div>
-        </div>
-
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <Phone size={20} color="#10b981" />
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Call Booked to Close %</span>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
-            {analyticsMetrics.callBookedToCloseRate}%
-          </div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            Call conversion
-          </div>
-        </div>
-
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <Phone size={20} color="#f59e0b" />
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Call Taken to Close %</span>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
-            {analyticsMetrics.callTakenToCloseRate}%
-          </div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            Call completion
-          </div>
-        </div>
-
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <Users size={20} color="#3b82f6" />
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Inquiry to Call Booked %</span>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
-            {analyticsMetrics.inquiryToCallBookedRate}%
-          </div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            Inquiry conversion
-          </div>
-        </div>
-
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <Phone size={20} color="#10b981" />
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Call Show Up Rate</span>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
-            {analyticsMetrics.callShowUpRate}%
-          </div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            Call attendance
-          </div>
-        </div>
-
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <DollarSign size={20} color="#8b5cf6" />
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Revenue Per Call Taken</span>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
-            {toUSD(analyticsMetrics.revenuePerCallTaken)}
-          </div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            Per call value
-          </div>
-        </div>
-      </div>
+      
 
       {/* Monthly Data Table */}
       <div style={{
@@ -647,80 +431,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
           )}
         </div>
 
-        {/* Sub-navigation */}
-        <div style={{ padding: '20px 20px 20px 20px' }}>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button
-              onClick={() => setFunnelView('funnel')}
-              style={{
-                padding: '10px 18px',
-                borderRadius: '8px',
-                border: funnelView === 'funnel' ? '2px solid #3b82f6' : '2px solid #e5e7eb',
-                backgroundColor: funnelView === 'funnel' ? '#3b82f6' : 'white',
-                color: funnelView === 'funnel' ? 'white' : '#374151',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s',
-                boxShadow: funnelView === 'funnel' ? '0 1px 3px rgba(59, 130, 246, 0.3)' : '0 1px 2px rgba(0, 0, 0, 0.05)'
-              }}
-              onMouseEnter={(e) => {
-                if (funnelView !== 'funnel') {
-                  e.currentTarget.style.borderColor = '#9ca3af';
-                  e.currentTarget.style.backgroundColor = '#f9fafb';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (funnelView !== 'funnel') {
-                  e.currentTarget.style.borderColor = '#e5e7eb';
-                  e.currentTarget.style.backgroundColor = 'white';
-                }
-              }}
-            >
-              <TrendingUp size={16} />
-              Sales Funnel
-            </button>
-            <button
-              onClick={() => setFunnelView('calculator')}
-              style={{
-                padding: '10px 18px',
-                borderRadius: '8px',
-                border: funnelView === 'calculator' ? '2px solid #3b82f6' : '2px solid #e5e7eb',
-                backgroundColor: funnelView === 'calculator' ? '#3b82f6' : 'white',
-                color: funnelView === 'calculator' ? 'white' : '#374151',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s',
-                boxShadow: funnelView === 'calculator' ? '0 1px 3px rgba(59, 130, 246, 0.3)' : '0 1px 2px rgba(0, 0, 0, 0.05)'
-              }}
-              onMouseEnter={(e) => {
-                if (funnelView !== 'calculator') {
-                  e.currentTarget.style.borderColor = '#9ca3af';
-                  e.currentTarget.style.backgroundColor = '#f9fafb';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (funnelView !== 'calculator') {
-                  e.currentTarget.style.borderColor = '#e5e7eb';
-                  e.currentTarget.style.backgroundColor = 'white';
-                }
-              }}
-            >
-              <Calculator size={16} />
-              Funnel Calculator
-            </button>
-          </div>
-        </div>
-        
-        {/* Conditional Content Based on View */}
-        {funnelView === 'funnel' ? (
+        {/* Sales Funnel Table */}
           <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', fontSize: '14px' }}>
             <thead>
@@ -822,9 +533,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
             </tbody>
           </table>
         </div>
-        ) : (
-          <CalculatorComponent funnelData={funnelData} />
-        )}
+        
       </div>
 
       {/* Edit Modal */}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import BookingsAndBillingsPOC from './BookingsAndBillings'
+import Insights from './Insights'
 import Funnel from './Funnel'
 import Calculator from './Calculator'
 import Forecast from './Forecast'
@@ -34,7 +35,7 @@ function AppContent() {
     features 
   });
   
-  const [currentPage, setCurrentPage] = useState<Page>('funnel')
+  const [currentPage, setCurrentPage] = useState<Page>('insights')
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
@@ -114,6 +115,22 @@ function AppContent() {
         
         <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
           <button
+            onClick={() => setCurrentPage('insights')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: currentPage === 'insights' ? '#3b82f6' : '#f3f4f6',
+              color: currentPage === 'insights' ? 'white' : '#374151',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Insights
+          </button>
+          <button
             onClick={() => setCurrentPage('funnel')}
             style={{
               padding: '8px 16px',
@@ -128,6 +145,22 @@ function AppContent() {
             }}
           >
             Funnel
+          </button>
+          <button
+            onClick={() => setCurrentPage('calculator')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: currentPage === 'calculator' ? '#3b82f6' : '#f3f4f6',
+              color: currentPage === 'calculator' ? 'white' : '#374151',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Calculator
           </button>
           {features.advertising && (
             <button
@@ -271,6 +304,11 @@ function AppContent() {
 
       {/* Page Content */}
       <div style={{ padding: '0' }}>
+        {currentPage === 'insights' && (
+          <Insights 
+            dataManager={dataManager}
+          />
+        )}
         {currentPage === 'funnel' && <Funnel 
           funnelData={dataManager.funnelData} 
           dataManager={dataManager}
@@ -280,6 +318,11 @@ function AppContent() {
           })} 
           paymentsData={dataManager.payments} 
         />}
+        {currentPage === 'calculator' && (
+          <FeatureGate feature="sales">
+            <Calculator />
+          </FeatureGate>
+        )}
         {currentPage === 'advertising' && (
           <FeatureGate feature="advertising">
             <Advertising 
@@ -297,7 +340,8 @@ function AppContent() {
               serviceTypes={dataManager.serviceTypes} 
               setServiceTypes={() => {}} // Handled by data manager
               bookings={dataManager.bookings} 
-              payments={dataManager.payments} 
+              payments={dataManager.payments}
+              showModelingOnly
             />
           </FeatureGate>
         )}
