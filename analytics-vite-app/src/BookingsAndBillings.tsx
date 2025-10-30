@@ -646,7 +646,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
           
           
           {/* Lead Source Filter - to the right of Service Type */}
-          <div style={{ position: 'relative', minWidth: '200px' }} data-dropdown>
+          <div style={{ position: 'relative', minWidth: '200px', order: 2 }} data-dropdown>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
               Filter by Lead Source
             </label>
@@ -741,7 +741,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
             )}
           </div>
           
-          <div style={{ position: 'relative', minWidth: '200px' }} data-dropdown>
+          <div style={{ position: 'relative', minWidth: '200px', order: 3 }} data-dropdown>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
               Filter by Service Type
             </label>
