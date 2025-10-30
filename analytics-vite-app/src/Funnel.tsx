@@ -62,16 +62,33 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
       monthlyData[month] = { bookings: 0, closes: 0 };
     }
 
+    // Helper to safely extract year and month from YYYY-MM-DD without timezone shifts
+    const parseYearMonth = (dateString: string | undefined | null): { year: number; month: number } | null => {
+      if (!dateString) return null;
+      // Prefer strict split to avoid JS Date timezone issues with YYYY-MM-DD strings
+      const parts = dateString.split('-');
+      if (parts.length >= 2) {
+        const yearNum = parseInt(parts[0], 10);
+        const monthNum = parseInt(parts[1], 10);
+        if (Number.isFinite(yearNum) && Number.isFinite(monthNum) && monthNum >= 1 && monthNum <= 12) {
+          return { year: yearNum, month: monthNum };
+        }
+      }
+      // Fallback to Date only if needed
+      try {
+        const d = new Date(dateString);
+        return { year: d.getFullYear(), month: d.getMonth() + 1 };
+      } catch {
+        return null;
+      }
+    };
+
     // Calculate bookings and closes from sales data
     salesData.forEach((booking: any) => {
-      if (booking.dateBooked) {
-        const bookedDate = new Date(booking.dateBooked);
-        const month = bookedDate.getMonth() + 1; // getMonth() returns 0-11, we want 1-12
-        
-        if (bookedDate.getFullYear() === selectedYear) {
-          monthlyData[month].bookings += booking.bookedRevenue || 0;
-          monthlyData[month].closes += 1; // Each booking is a close
-        }
+      const parsed = parseYearMonth(booking?.dateBooked);
+      if (parsed && parsed.year === selectedYear) {
+        monthlyData[parsed.month].bookings += booking.bookedRevenue || 0;
+        monthlyData[parsed.month].closes += 1; // Each booking is a close
       }
     });
 
