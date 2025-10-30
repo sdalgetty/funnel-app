@@ -645,103 +645,8 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
           {/* Lead Source Filter */}
           
           
-          {/* Lead Source Filter - to the right of Service Type */}
-          <div style={{ position: 'relative', minWidth: '200px', order: 2 }} data-dropdown>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
-              Filter by Lead Source
-            </label>
-            <button
-              onClick={() => setShowLeadSourceDropdown(!showLeadSourceDropdown)}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: '14px',
-                backgroundColor: 'white',
-                cursor: 'pointer',
-                textAlign: 'left',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                boxSizing: 'border-box'
-              }}
-            >
-              <span>{getLeadSourceFilterText()}</span>
-              <span style={{ transform: showLeadSourceDropdown ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                ▼
-              </span>
-            </button>
-            {showLeadSourceDropdown && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                backgroundColor: 'white',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                zIndex: 20,
-                marginTop: '4px',
-                maxHeight: '200px',
-                overflowY: 'auto'
-              }}>
-                <div style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>
-                  <button
-                    onClick={selectAllLeadSources}
-                    style={{
-                      width: '100%',
-                      padding: '4px 8px',
-                      fontSize: '12px',
-                      color: '#3b82f6',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'left'
-                    }}
-                  >
-                    Select All
-                  </button>
-                  <button
-                    onClick={clearAllLeadSources}
-                    style={{
-                      width: '100%',
-                      padding: '4px 8px',
-                      fontSize: '12px',
-                      color: '#ef4444',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'left'
-                    }}
-                  >
-                    Clear All
-                  </button>
-                </div>
-                {leadSources.map(ls => (
-                  <label key={ls.id} style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px', 
-                    padding: '8px 12px',
-                    cursor: 'pointer',
-                    borderBottom: '1px solid #f3f4f6'
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={filters.leadSources.includes(ls.id)}
-                      onChange={() => toggleLeadSourceFilter(ls.id)}
-                      style={{ margin: 0 }}
-                    />
-                    <span style={{ fontSize: '14px' }}>{ls.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          <div style={{ position: 'relative', minWidth: '200px', order: 3 }} data-dropdown>
+          {/* Service Type Filter (first) */}
+          <div style={{ position: 'relative', minWidth: '200px' }} data-dropdown>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
               Filter by Service Type
             </label>
@@ -837,6 +742,102 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
             )}
           </div>
           
+          {/* Lead Source Filter (second) */}
+          <div style={{ position: 'relative', minWidth: '200px' }} data-dropdown>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
+              Filter by Lead Source
+            </label>
+            <button
+              onClick={() => setShowLeadSourceDropdown(!showLeadSourceDropdown)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px',
+                backgroundColor: 'white',
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                boxSizing: 'border-box'
+              }}
+            >
+              <span>{getLeadSourceFilterText()}</span>
+              <span style={{ transform: showLeadSourceDropdown ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                ▼
+              </span>
+            </button>
+            {showLeadSourceDropdown && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                backgroundColor: 'white',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                zIndex: 20,
+                marginTop: '4px',
+                maxHeight: '200px',
+                overflowY: 'auto'
+              }}>
+                <div style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>
+                  <button
+                    onClick={selectAllLeadSources}
+                    style={{
+                      width: '100%',
+                      padding: '4px 8px',
+                      fontSize: '12px',
+                      color: '#3b82f6',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                  >
+                    Select All
+                  </button>
+                  <button
+                    onClick={clearAllLeadSources}
+                    style={{
+                      width: '100%',
+                      padding: '4px 8px',
+                      fontSize: '12px',
+                      color: '#ef4444',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                  >
+                    Clear All
+                  </button>
+                </div>
+                {leadSources.map(ls => (
+                  <label key={ls.id} style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #f3f4f6'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={filters.leadSources.includes(ls.id)}
+                      onChange={() => toggleLeadSourceFilter(ls.id)}
+                      style={{ margin: 0 }}
+                    />
+                    <span style={{ fontSize: '14px' }}>{ls.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div style={{ minWidth: '200px' }}>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
               Sort by
