@@ -45,6 +45,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
   const [showAddBooking, setShowAddBooking] = useState(false);
   const [showServiceTypes, setShowServiceTypes] = useState(false);
   const [showLeadSources, setShowLeadSources] = useState(false);
+  const [showLeadSourceDropdown, setShowLeadSourceDropdown] = useState(false);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
@@ -56,6 +57,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
   // Filtering and sorting state
   const [filters, setFilters] = useState({
     serviceTypes: [], // Start with no filters when no service types exist
+    leadSources: [],
     search: ''
   });
   const [sortBy, setSortBy] = useState<keyof Booking>('createdAt');
@@ -71,12 +73,16 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
         (serviceTypes.length > 0 && filters.serviceTypes.length === serviceTypes.length) || 
         filters.serviceTypes.includes(booking.serviceTypeId) ||
         (!booking.serviceTypeId && filters.serviceTypes.includes('')); // Handle deleted service types
+      const matchesLeadSource = filters.leadSources.length === 0 ||
+        (leadSources.length > 0 && filters.leadSources.length === leadSources.length) ||
+        filters.leadSources.includes(booking.leadSourceId) ||
+        (!booking.leadSourceId && filters.leadSources.includes(''));
       const matchesSearch = !filters.search || 
         booking.projectName.toLowerCase().includes(filters.search.toLowerCase()) ||
         (serviceType?.name.toLowerCase().includes(filters.search.toLowerCase()) ?? false) ||
         (!serviceType && 'deleted service type'.includes(filters.search.toLowerCase()));
       
-      return matchesServiceType && matchesSearch;
+      return matchesServiceType && matchesLeadSource && matchesSearch;
     });
 
     // Sort bookings
@@ -446,6 +452,35 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
       return selected?.name || "1 service type";
     }
     return `${filters.serviceTypes.length} service types`;
+  };
+
+  // Lead source filter helpers
+  const toggleLeadSourceFilter = (leadSourceId: string) => {
+    setFilters(prev => ({
+      ...prev,
+      leadSources: prev.leadSources.includes(leadSourceId)
+        ? prev.leadSources.filter(id => id !== leadSourceId)
+        : [...prev.leadSources, leadSourceId]
+    }));
+  };
+
+  const selectAllLeadSources = () => {
+    setFilters(prev => ({ ...prev, leadSources: leadSources.map(ls => ls.id) }));
+  };
+
+  const clearAllLeadSources = () => {
+    setFilters(prev => ({ ...prev, leadSources: [] }));
+  };
+
+  const getLeadSourceFilterText = () => {
+    if (leadSources.length === 0) return "No lead sources created";
+    if (filters.leadSources.length === 0) return "No lead sources selected";
+    if (filters.leadSources.length === leadSources.length) return "All lead sources";
+    if (filters.leadSources.length === 1) {
+      const selected = leadSources.find(ls => ls.id === filters.leadSources[0]);
+      return selected?.name || "1 lead source";
+    }
+    return `${filters.leadSources.length} lead sources`;
   };
 
   // Close dropdown when clicking outside
@@ -1501,6 +1536,101 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
                 }}
               />
             </div>
+          </div>
+
+          <div style={{ position: 'relative', minWidth: '200px' }} data-dropdown>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
+              Filter by Lead Source
+            </label>
+            <button
+              onClick={() => setShowLeadSourceDropdown(!showLeadSourceDropdown)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px',
+                backgroundColor: 'white',
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                boxSizing: 'border-box'
+              }}
+            >
+              <span>{getLeadSourceFilterText()}</span>
+              <span style={{ transform: showLeadSourceDropdown ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                ▼
+              </span>
+            </button>
+            {showLeadSourceDropdown && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                backgroundColor: 'white',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                zIndex: 20,
+                marginTop: '4px',
+                maxHeight: '200px',
+                overflowY: 'auto'
+              }}>
+                <div style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>
+                  <button
+                    onClick={selectAllLeadSources}
+                    style={{
+                      width: '100%',
+                      padding: '4px 8px',
+                      fontSize: '12px',
+                      color: '#3b82f6',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                  >
+                    Select All
+                  </button>
+                  <button
+                    onClick={clearAllLeadSources}
+                    style={{
+                      width: '100%',
+                      padding: '4px 8px',
+                      fontSize: '12px',
+                      color: '#ef4444',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                  >
+                    Clear All
+                  </button>
+                </div>
+                {leadSources.map(ls => (
+                  <label key={ls.id} style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #f3f4f6'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={filters.leadSources.includes(ls.id)}
+                      onChange={() => toggleLeadSourceFilter(ls.id)}
+                      style={{ margin: 0 }}
+                    />
+                    <span style={{ fontSize: '14px' }}>{ls.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>

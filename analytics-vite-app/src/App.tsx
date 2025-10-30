@@ -109,8 +109,8 @@ function AppContent() {
         alignItems: 'center',
         marginTop: isMobile ? '48px' : '0'
       }}>
-        <h1 style={{ fontSize: '20px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
-          Analytics Dashboard
+        <h1 style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '0.04em', margin: 0, color: '#1f2937' }}>
+          FNNL
         </h1>
         
         <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>

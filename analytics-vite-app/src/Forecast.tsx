@@ -105,7 +105,7 @@ const Forecast: React.FC<ForecastProps> = ({
   const formatNumber = (num: number) => num.toLocaleString();
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       {/* View Mode Toggle */}
       {!showTrendsOnly && !showModelingOnly && (
         <div style={{ marginBottom: '32px' }}>
