@@ -334,38 +334,6 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
         <p style={{ color: '#6b7280', margin: 0, fontSize: '16px' }}>
           Track and analyze your sales funnel performance
         </p>
-        
-        {/* Data Integration Notice */}
-        {user && (
-          <div style={{
-            marginTop: '12px',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            backgroundColor: features.canSyncFunnelWithSales ? '#f0f9ff' : '#fef3c7',
-            border: `1px solid ${features.canSyncFunnelWithSales ? '#bfdbfe' : '#fbbf24'}`,
-            fontSize: '12px',
-            color: features.canSyncFunnelWithSales ? '#1e40af' : '#92400e',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
-            {features.canSyncFunnelWithSales ? (
-              <>
-                <div style={{ fontSize: '14px' }}>🔄</div>
-                <div>
-                  <strong>Auto-sync enabled:</strong> Data syncs with Sales tab
-                </div>
-              </>
-            ) : (
-              <>
-                <Lock size={14} />
-                <div>
-                  <strong>Manual entry:</strong> Upgrade to Pro for auto-sync
-                </div>
-              </>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Year Selector */}

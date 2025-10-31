@@ -1052,10 +1052,6 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
         </div>
       </section>
 
-      <footer style={{ fontSize: '12px', color: '#666', marginTop: '32px' }}>
-        <p>POC-only. Replace with real data access (Supabase) and integrate auth. All amounts are shown in USD.</p>
-      </footer>
-
       {/* Delete Service Type Confirmation Modal */}
       {deleteServiceTypeConfirmation && (
         <div style={{
