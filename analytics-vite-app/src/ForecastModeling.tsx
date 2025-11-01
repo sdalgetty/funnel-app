@@ -536,9 +536,12 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
           fontSize: '28px', 
           fontWeight: '700', 
           margin: '0 0 8px 0', 
-          color: '#1f2937' 
+          color: '#1f2937',
+          backgroundColor: '#ff0000',
+          padding: '20px',
+          border: '5px solid yellow'
         }}>
-          Forecast Modeling
+          🔴 FORECAST MODELING - DEBUG MODE ACTIVE 🔴
         </h1>
         <p style={{ 
           color: '#6b7280', 

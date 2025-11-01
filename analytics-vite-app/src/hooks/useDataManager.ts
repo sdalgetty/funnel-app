@@ -498,3 +498,4 @@ export function useDataManager() {
     saveForecastModel,
     deleteForecastModel,
   };
+}
