@@ -104,23 +104,34 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   // Calculate actual revenue by service type for current year
   const actualRevenueByServiceType = useMemo(() => {
     const currentYear = new Date().getFullYear();
-    const currentYearBookings = bookings.filter(booking => {
-      const bookingYear = new Date(booking.dateBooked || booking.createdAt).getFullYear();
-      return bookingYear === currentYear;
-    });
-
     const revenueByServiceType: { [key: string]: number } = {};
 
-    currentYearBookings.forEach(booking => {
-      const bookingPayments = payments.filter(payment => payment.bookingId === booking.id);
-      const totalPaid = bookingPayments
-        .filter(payment => payment.paidAt)
-        .reduce((sum, payment) => sum + payment.amount, 0);
+    // Filter payments for the current year that are completed/paid
+    const currentYearPayments = payments.filter(payment => {
+      // Check if payment is paid (either has paidAt date or status is completed)
+      const isPaid = payment.paidAt || payment.status === 'completed';
+      if (!isPaid) return false;
+
+      // Get payment year from paymentDate or paidAt
+      const paymentDateStr = payment.paidAt || payment.paymentDate || payment.dueDate;
+      if (!paymentDateStr) return false;
+      
+      const paymentYear = new Date(paymentDateStr).getFullYear();
+      return paymentYear === currentYear;
+    });
+
+    // Group payments by service type via their booking
+    currentYearPayments.forEach(payment => {
+      const booking = bookings.find(b => b.id === payment.bookingId);
+      if (!booking || !booking.serviceTypeId) return;
+
+      // Use amount or amountCents (both in cents)
+      const paymentAmount = payment.amount || payment.amountCents || 0;
       
       if (!revenueByServiceType[booking.serviceTypeId]) {
         revenueByServiceType[booking.serviceTypeId] = 0;
       }
-      revenueByServiceType[booking.serviceTypeId] += totalPaid;
+      revenueByServiceType[booking.serviceTypeId] += paymentAmount;
     });
 
     return revenueByServiceType;
