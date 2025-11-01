@@ -488,7 +488,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', color: '#333', padding: '24px' }} onClick={handleClickOutside}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', color: '#333', padding: '24px', maxWidth: '1200px', margin: '0 auto' }} onClick={handleClickOutside}>
       <style>
         {`
           input[type="date"]::-webkit-calendar-picker-indicator {
