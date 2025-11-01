@@ -192,13 +192,16 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   const updateModel = async (modelData: ForecastModel) => {
     if (!user?.id) {
       console.error('updateModel: No user ID');
+      alert('Error: No user ID. Cannot save model.');
       return;
     }
     
     console.log('updateModel called with:', modelData);
+    console.log('Model ID:', modelData.id, 'Starts with model_:', modelData.id?.startsWith('model_'));
     const updatedModel = { ...modelData, updatedAt: new Date().toISOString() };
     
     // Save to database
+    console.log('Calling saveForecastModel...');
     const savedModel = await UnifiedDataService.saveForecastModel(user.id, updatedModel);
     console.log('saveForecastModel returned:', savedModel);
     
@@ -210,9 +213,12 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       if (activeModel?.id === modelData.id) {
         setActiveModel(savedModel);
       }
+      console.log('Model saved successfully to database!');
     } else {
-      console.error('Failed to save forecast model, using local state');
-      // Fallback to local update if save fails
+      const errorMsg = `Failed to save forecast model to database. Model ID: ${modelData.id}`;
+      console.error(errorMsg);
+      alert(errorMsg + '\n\nCheck console for details.');
+      // Still update local state so user sees their changes
       setModels(prev => prev.map(model => 
         model.id === modelData.id ? updatedModel : model
       ));
@@ -1444,10 +1450,14 @@ function ModelModal({
               Cancel
             </button>
             <button
-              type="submit"
-              onClick={(e) => {
-                console.log('Submit button clicked!');
-                // Let the form handle submission
+              type="button"
+              onClick={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Submit button clicked! e:', e);
+                console.log('formData:', formData);
+                console.log('model:', model);
+                await handleSubmit(e as any);
               }}
               style={{
                 backgroundColor: '#3b82f6',
