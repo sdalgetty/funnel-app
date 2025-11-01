@@ -28,6 +28,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   const [showModelModal, setShowModelModal] = useState(false);
   const [editingModel, setEditingModel] = useState<ForecastModel | null>(null);
   const [loadingModels, setLoadingModels] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   // Debug function to directly query Supabase
   const debugQueryDatabase = async () => {
@@ -70,6 +71,13 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
           .eq('user_id', user.id);
         
         console.log('Direct Supabase query result:', { data: directData, error: directError });
+        
+        // Set debug info visible on page
+        if (directError) {
+          setDebugInfo(`DB Error: ${directError.message}`);
+        } else {
+          setDebugInfo(`DB Query: Found ${directData?.length || 0} models`);
+        }
         
         const loadedModels = await UnifiedDataService.getForecastModels(user.id);
         console.log('UnifiedDataService result:', loadedModels);
@@ -490,25 +498,38 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Debug button - remove after fixing */}
-      <button
-        onClick={debugQueryDatabase}
-        style={{
-          position: 'fixed',
-          top: '80px',
-          right: '20px',
-          zIndex: 1000,
-          backgroundColor: '#ef4444',
-          color: 'white',
-          border: 'none',
-          borderRadius: '6px',
-          padding: '8px 12px',
-          fontSize: '12px',
-          cursor: 'pointer'
-        }}
-      >
-        🔍 Debug DB Query
-      </button>
+      {/* Debug info box - always visible */}
+      <div style={{
+        position: 'fixed',
+        top: '80px',
+        right: '20px',
+        zIndex: 1000,
+        backgroundColor: '#1f2937',
+        color: 'white',
+        padding: '12px 16px',
+        borderRadius: '6px',
+        fontSize: '12px',
+        maxWidth: '300px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+      }}>
+        <div style={{ fontWeight: '600', marginBottom: '8px' }}>🔍 Debug Info</div>
+        {debugInfo && <div style={{ marginBottom: '8px' }}>{debugInfo}</div>}
+        <button
+          onClick={debugQueryDatabase}
+          style={{
+            backgroundColor: '#ef4444',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            padding: '6px 12px',
+            fontSize: '11px',
+            cursor: 'pointer',
+            width: '100%'
+          }}
+        >
+          Query Database
+        </button>
+      </div>
       
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ 
