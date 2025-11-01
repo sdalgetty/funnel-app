@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Edit, Trash2, Target, TrendingUp, DollarSign, Calendar, CheckCircle, X } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { UnifiedDataService } from './services/unifiedDataService';
-import { supabase } from './lib/supabase';
 import type { ServiceType, Booking, Payment, ForecastModel } from './types';
 
 interface ForecastModelingProps {
@@ -28,31 +27,6 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   const [showModelModal, setShowModelModal] = useState(false);
   const [editingModel, setEditingModel] = useState<ForecastModel | null>(null);
   const [loadingModels, setLoadingModels] = useState(true);
-  const [debugInfo, setDebugInfo] = useState<string>('');
-
-  // Debug function to directly query Supabase
-  const debugQueryDatabase = async () => {
-    if (!user?.id) {
-      alert('No user ID');
-      return;
-    }
-    
-    try {
-      const { data, error } = await supabase
-        .from('forecast_models')
-        .select('*')
-        .eq('user_id', user.id);
-      
-      if (error) {
-        alert(`Database query error: ${error.message}\n\nCode: ${error.code}\n\nDetails: ${JSON.stringify(error)}`);
-        return;
-      }
-      
-      alert(`Direct database query results:\n\nFound ${data?.length || 0} models\n\nData: ${JSON.stringify(data, null, 2)}`);
-    } catch (err: any) {
-      alert(`Error querying database: ${err?.message || 'Unknown error'}`);
-    }
-  };
 
   // Load models from database on mount
   useEffect(() => {
@@ -64,23 +38,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
 
       try {
         setLoadingModels(true);
-        // First, directly query the database to see what's actually there
-        const { data: directData, error: directError } = await supabase
-          .from('forecast_models')
-          .select('*')
-          .eq('user_id', user.id);
-        
-        console.log('Direct Supabase query result:', { data: directData, error: directError });
-        
-        // Set debug info visible on page
-        if (directError) {
-          setDebugInfo(`DB Error: ${directError.message}`);
-        } else {
-          setDebugInfo(`DB Query: Found ${directData?.length || 0} models`);
-        }
-        
         const loadedModels = await UnifiedDataService.getForecastModels(user.id);
-        console.log('UnifiedDataService result:', loadedModels);
         
         if (loadedModels.length > 0) {
           setModels(loadedModels);
@@ -229,41 +187,22 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   };
 
   const updateModel = async (modelData: ForecastModel) => {
-    // Show alert immediately so we know this function is being called
-    alert(`updateModel called! Model ID: ${modelData.id}\n\nCheck console for save results.`);
-    
-    if (!user?.id) {
-      alert('Error: No user ID. Cannot save model.');
-      return;
-    }
+    if (!user?.id) return;
     
     const updatedModel = { ...modelData, updatedAt: new Date().toISOString() };
     
     // Save to database
-    try {
-      const savedModel = await UnifiedDataService.saveForecastModel(user.id, updatedModel);
-      
-      if (savedModel) {
-        alert(`Model saved successfully! ID: ${savedModel.id}`);
-        setModels(prev => prev.map(model => 
-          model.id === modelData.id ? savedModel : model
-        ));
-        if (activeModel?.id === modelData.id) {
-          setActiveModel(savedModel);
-        }
-      } else {
-        alert(`Failed to save model to database.\n\nModel ID: ${modelData.id}\nUser ID: ${user.id}\n\nData was updated locally only.`);
-        // Still update local state so user sees their changes
-        setModels(prev => prev.map(model => 
-          model.id === modelData.id ? updatedModel : model
-        ));
-        if (activeModel?.id === modelData.id) {
-          setActiveModel(updatedModel);
-        }
+    const savedModel = await UnifiedDataService.saveForecastModel(user.id, updatedModel);
+    
+    if (savedModel) {
+      setModels(prev => prev.map(model => 
+        model.id === modelData.id ? savedModel : model
+      ));
+      if (activeModel?.id === modelData.id) {
+        setActiveModel(savedModel);
       }
-    } catch (error: any) {
-      alert(`Error saving model: ${error?.message || 'Unknown error'}\n\nCheck console for details.`);
-      // Still update local state
+    } else {
+      // Fallback to local update if save fails
       setModels(prev => prev.map(model => 
         model.id === modelData.id ? updatedModel : model
       ));
@@ -498,50 +437,14 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Debug info box - always visible */}
-      <div style={{
-        position: 'fixed',
-        top: '80px',
-        right: '20px',
-        zIndex: 1000,
-        backgroundColor: '#1f2937',
-        color: 'white',
-        padding: '12px 16px',
-        borderRadius: '6px',
-        fontSize: '12px',
-        maxWidth: '300px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
-      }}>
-        <div style={{ fontWeight: '600', marginBottom: '8px' }}>🔍 Debug Info</div>
-        {debugInfo && <div style={{ marginBottom: '8px' }}>{debugInfo}</div>}
-        <button
-          onClick={debugQueryDatabase}
-          style={{
-            backgroundColor: '#ef4444',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            padding: '6px 12px',
-            fontSize: '11px',
-            cursor: 'pointer',
-            width: '100%'
-          }}
-        >
-          Query Database
-        </button>
-      </div>
-      
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ 
           fontSize: '28px', 
           fontWeight: '700', 
           margin: '0 0 8px 0', 
-          color: '#1f2937',
-          backgroundColor: '#ff0000',
-          padding: '20px',
-          border: '5px solid yellow'
+          color: '#1f2937'
         }}>
-          🔴 FORECAST MODELING - DEBUG MODE ACTIVE 🔴
+          Forecast Modeling
         </h1>
         <p style={{ 
           color: '#6b7280', 
@@ -1156,10 +1059,6 @@ function ModelModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('handleSubmit called! Check console for details.');
-    console.log('handleSubmit called, formData:', formData);
-    console.log('model prop:', model);
-    
     if (!formData.name) {
       alert('Please enter a model name');
       return;
@@ -1171,8 +1070,6 @@ function ModelModal({
       totalForecast: st.quantity * st.avgBooking
     }));
 
-    console.log('serviceTypesWithTotals:', serviceTypesWithTotals);
-
     const modelToSave = {
       ...formData,
       serviceTypes: serviceTypesWithTotals,
@@ -1182,23 +1079,17 @@ function ModelModal({
     };
 
     if (model) {
-      // Update existing model
-      console.log('Updating model, model.id:', model.id);
-      // Ensure we preserve the real database ID, not a temporary one
+      // Update existing model - ensure we preserve the real database ID
       const realModelId = model.id?.startsWith('model_') ? null : model.id;
       if (!realModelId) {
         alert('Error: Cannot update model - model has temporary ID. Please refresh and try again.');
-        console.error('Model has temporary ID, cannot update:', model.id);
         return;
       }
       const modelToUpdate = { ...model, ...modelToSave, id: realModelId };
-      console.log('Calling onUpdate with:', modelToUpdate);
       await onUpdate(modelToUpdate);
     } else {
       // Create new model
-      console.log('Creating new model');
       const newModelData = { ...modelToSave, year: modelToSave.year || new Date().getFullYear() };
-      console.log('Calling onCreate with:', newModelData);
       await onCreate(newModelData);
     }
     onClose();
