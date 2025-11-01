@@ -18,6 +18,12 @@ export default function Insights({ dataManager }: { dataManager: any }) {
   const adCampaigns: AdCampaign[] = dataManager?.adCampaigns || []
   const leadSources: LeadSource[] = dataManager?.leadSources || []
 
+  // Debug logging
+  console.log('Insights component - dataManager:', dataManager);
+  console.log('Insights component - bookings:', bookings.length, bookings);
+  console.log('Insights component - payments:', payments.length, payments);
+  console.log('Insights component - dataManager.loading:', dataManager?.loading);
+
   const yearData = useMemo(() => funnelData.filter(m => m.year === selectedYear), [funnelData, selectedYear])
 
   // Dynamic totals (closes and bookings) derived from Sales records that are tracked in the Funnel
