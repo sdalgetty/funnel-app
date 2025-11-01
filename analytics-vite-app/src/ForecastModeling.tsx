@@ -159,7 +159,11 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
 
   // Model management functions
   const createModel = async (modelData: Omit<ForecastModel, 'id' | 'createdAt' | 'updatedAt'>) => {
-    if (!user?.id) return;
+    console.log('createModel called with:', modelData);
+    if (!user?.id) {
+      console.error('createModel: No user ID');
+      return;
+    }
     
     const newModel: ForecastModel = {
       ...modelData,
@@ -168,14 +172,18 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       updatedAt: new Date().toISOString(),
     };
     
+    console.log('createModel: Saving new model:', newModel);
     // Save to database and get the saved model with real ID
     const savedModel = await UnifiedDataService.saveForecastModel(user.id, newModel);
+    console.log('createModel: Save result:', savedModel);
+    
     if (savedModel) {
       setModels(prev => [...prev, savedModel]);
       if (savedModel.isActive) {
         setActiveModel(savedModel);
       }
     } else {
+      console.error('createModel: Save failed, using local state');
       // Fallback to local state if save fails
       setModels(prev => [...prev, newModel]);
     }
@@ -1061,6 +1069,9 @@ function ModelModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('handleSubmit called, formData:', formData);
+    console.log('model prop:', model);
+    
     if (!formData.name) {
       alert('Please enter a model name');
       return;
@@ -1072,6 +1083,8 @@ function ModelModal({
       totalForecast: st.quantity * st.avgBooking
     }));
 
+    console.log('serviceTypesWithTotals:', serviceTypesWithTotals);
+
     const modelToSave = {
       ...formData,
       serviceTypes: serviceTypesWithTotals,
@@ -1082,10 +1095,16 @@ function ModelModal({
 
     if (model) {
       // Update existing model
-      await onUpdate({ ...model, ...modelToSave, id: model.id });
+      console.log('Updating model, model.id:', model.id);
+      const modelToUpdate = { ...model, ...modelToSave, id: model.id };
+      console.log('Calling onUpdate with:', modelToUpdate);
+      await onUpdate(modelToUpdate);
     } else {
       // Create new model
-      await onCreate({ ...modelToSave, year: modelToSave.year || new Date().getFullYear() });
+      console.log('Creating new model');
+      const newModelData = { ...modelToSave, year: modelToSave.year || new Date().getFullYear() };
+      console.log('Calling onCreate with:', newModelData);
+      await onCreate(newModelData);
     }
     onClose();
   };
