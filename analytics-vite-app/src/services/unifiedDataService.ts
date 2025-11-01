@@ -1185,6 +1185,9 @@ export class UnifiedDataService {
         if (error) {
           console.error('Error updating forecast model:', error);
           console.error('Error details:', JSON.stringify(error, null, 2));
+          console.error('Model ID used:', model.id);
+          console.error('User ID used:', userId);
+          alert(`Error updating forecast model: ${error.message}\n\nCheck console for details.`);
           return null;
         }
 
@@ -1218,6 +1221,8 @@ export class UnifiedDataService {
         if (error) {
           console.error('Error creating forecast model:', error);
           console.error('Error details:', JSON.stringify(error, null, 2));
+          console.error('User ID used:', userId);
+          alert(`Error creating forecast model: ${error.message}\n\nCheck console for details.`);
           return null;
         }
         

@@ -1103,7 +1103,14 @@ function ModelModal({
     if (model) {
       // Update existing model
       console.log('Updating model, model.id:', model.id);
-      const modelToUpdate = { ...model, ...modelToSave, id: model.id };
+      // Ensure we preserve the real database ID, not a temporary one
+      const realModelId = model.id?.startsWith('model_') ? null : model.id;
+      if (!realModelId) {
+        alert('Error: Cannot update model - model has temporary ID. Please refresh and try again.');
+        console.error('Model has temporary ID, cannot update:', model.id);
+        return;
+      }
+      const modelToUpdate = { ...model, ...modelToSave, id: realModelId };
       console.log('Calling onUpdate with:', modelToUpdate);
       await onUpdate(modelToUpdate);
     } else {
