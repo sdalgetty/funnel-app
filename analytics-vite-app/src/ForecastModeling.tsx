@@ -27,35 +27,14 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   // Initialize with default models if none exist
   useEffect(() => {
     if (models.length === 0) {
+      const currentYear = new Date().getFullYear();
       const defaultModels: ForecastModel[] = [
         {
-          id: 'model_2025',
-          name: '2025 Model',
-          year: 2025,
+          id: `model_${currentYear}`,
+          name: `${currentYear} Model`,
+          year: currentYear,
           isActive: true,
-          serviceTypes: [
-            { serviceTypeId: 'st_1', quantity: 26, avgBooking: 819200, totalForecast: 21299200 },
-            { serviceTypeId: 'st_2', quantity: 8, avgBooking: 400000, totalForecast: 3200000 },
-            { serviceTypeId: 'st_4', quantity: 12, avgBooking: 120000, totalForecast: 1440000 },
-            { serviceTypeId: 'st_5', quantity: 15, avgBooking: 80000, totalForecast: 1200000 },
-            { serviceTypeId: 'st_6', quantity: 20, avgBooking: 50000, totalForecast: 1000000 },
-            { serviceTypeId: 'st_7', quantity: 25, avgBooking: 30000, totalForecast: 750000 },
-            { serviceTypeId: 'st_3', quantity: 10, avgBooking: 80000, totalForecast: 800000 },
-          ],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'model_2026',
-          name: '2026 Model',
-          year: 2026,
-          isActive: false,
-          serviceTypes: [
-            { serviceTypeId: 'st_1', quantity: 25, avgBooking: 850000, totalForecast: 21250000 },
-            { serviceTypeId: 'st_2', quantity: 6, avgBooking: 400000, totalForecast: 2400000 },
-            { serviceTypeId: 'st_5', quantity: 12, avgBooking: 80000, totalForecast: 960000 },
-            { serviceTypeId: 'st_3', quantity: 5, avgBooking: 80000, totalForecast: 400000 },
-          ],
+          serviceTypes: [], // Start with empty array - users will add service types via UI
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
