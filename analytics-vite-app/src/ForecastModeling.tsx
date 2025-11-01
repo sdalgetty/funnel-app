@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Edit, Trash2, Target, TrendingUp, DollarSign, Calendar, CheckCircle, X } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { UnifiedDataService } from './services/unifiedDataService';
+import { supabase } from './lib/supabase';
 import type { ServiceType, Booking, Payment, ForecastModel } from './types';
 
 interface ForecastModelingProps {
@@ -28,6 +29,30 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   const [editingModel, setEditingModel] = useState<ForecastModel | null>(null);
   const [loadingModels, setLoadingModels] = useState(true);
 
+  // Debug function to directly query Supabase
+  const debugQueryDatabase = async () => {
+    if (!user?.id) {
+      alert('No user ID');
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('forecast_models')
+        .select('*')
+        .eq('user_id', user.id);
+      
+      if (error) {
+        alert(`Database query error: ${error.message}\n\nCode: ${error.code}\n\nDetails: ${JSON.stringify(error)}`);
+        return;
+      }
+      
+      alert(`Direct database query results:\n\nFound ${data?.length || 0} models\n\nData: ${JSON.stringify(data, null, 2)}`);
+    } catch (err: any) {
+      alert(`Error querying database: ${err?.message || 'Unknown error'}`);
+    }
+  };
+
   // Load models from database on mount
   useEffect(() => {
     const loadModels = async () => {
@@ -38,14 +63,20 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
 
       try {
         setLoadingModels(true);
-        console.log('Loading forecast models for user:', user.id);
+        // First, directly query the database to see what's actually there
+        const { data: directData, error: directError } = await supabase
+          .from('forecast_models')
+          .select('*')
+          .eq('user_id', user.id);
+        
+        console.log('Direct Supabase query result:', { data: directData, error: directError });
+        
         const loadedModels = await UnifiedDataService.getForecastModels(user.id);
-        console.log('Loaded forecast models:', loadedModels);
+        console.log('UnifiedDataService result:', loadedModels);
         
         if (loadedModels.length > 0) {
           setModels(loadedModels);
           const active = loadedModels.find(m => m.isActive) || loadedModels[0];
-          console.log('Setting active model:', active);
           setActiveModel(active);
         } else {
           // Create default model if none exist
@@ -459,6 +490,26 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+      {/* Debug button - remove after fixing */}
+      <button
+        onClick={debugQueryDatabase}
+        style={{
+          position: 'fixed',
+          top: '80px',
+          right: '20px',
+          zIndex: 1000,
+          backgroundColor: '#ef4444',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          padding: '8px 12px',
+          fontSize: '12px',
+          cursor: 'pointer'
+        }}
+      >
+        🔍 Debug DB Query
+      </button>
+      
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ 
           fontSize: '28px', 
