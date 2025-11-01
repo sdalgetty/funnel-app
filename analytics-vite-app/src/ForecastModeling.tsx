@@ -22,6 +22,14 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   hideTracker = false
 }) => {
   const { user } = useAuth();
+  
+  // Debug: Log props received
+  console.log('ForecastModeling props:', { 
+    bookingsCount: bookings?.length || 0, 
+    paymentsCount: payments?.length || 0,
+    serviceTypesCount: serviceTypes?.length || 0,
+    showTrackerOnly 
+  });
   const [models, setModels] = useState<ForecastModel[]>([]);
   const [activeModel, setActiveModel] = useState<ForecastModel | null>(null);
   const [showModelModal, setShowModelModal] = useState(false);
