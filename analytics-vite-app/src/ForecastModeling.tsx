@@ -1069,6 +1069,7 @@ function ModelModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    alert('handleSubmit called! Check console for details.');
     console.log('handleSubmit called, formData:', formData);
     console.log('model prop:', model);
     
