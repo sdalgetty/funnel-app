@@ -1148,7 +1148,10 @@ function ModelModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <form onSubmit={(e) => {
+          console.log('Form onSubmit triggered!');
+          handleSubmit(e);
+        }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
@@ -1442,6 +1445,10 @@ function ModelModal({
             </button>
             <button
               type="submit"
+              onClick={(e) => {
+                console.log('Submit button clicked!');
+                // Let the form handle submission
+              }}
               style={{
                 backgroundColor: '#3b82f6',
                 color: 'white',
