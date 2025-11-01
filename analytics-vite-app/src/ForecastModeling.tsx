@@ -106,6 +106,13 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     const currentYear = new Date().getFullYear();
     const revenueByServiceType: { [key: string]: number } = {};
 
+    console.log('Forecast Tracker - Calculating actual revenue:');
+    console.log('Current year:', currentYear);
+    console.log('Total payments:', payments.length);
+    console.log('Total bookings:', bookings.length);
+    console.log('Sample payment:', payments[0]);
+    console.log('Sample booking:', bookings[0]);
+
     // Filter payments for the current year that are completed/paid
     const currentYearPayments = payments.filter(payment => {
       // Check if payment is paid (either has paidAt date or status is completed)
@@ -120,10 +127,16 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       return paymentYear === currentYear;
     });
 
+    console.log('Current year payments (after filter):', currentYearPayments.length);
+    console.log('Current year payments:', currentYearPayments);
+
     // Group payments by service type via their booking
     currentYearPayments.forEach(payment => {
       const booking = bookings.find(b => b.id === payment.bookingId);
-      if (!booking || !booking.serviceTypeId) return;
+      if (!booking || !booking.serviceTypeId) {
+        console.log('Payment missing booking or serviceTypeId:', { paymentId: payment.id, bookingId: payment.bookingId, booking, serviceTypeId: booking?.serviceTypeId });
+        return;
+      }
 
       // Use amount or amountCents (both in cents)
       const paymentAmount = payment.amount || payment.amountCents || 0;
@@ -132,8 +145,10 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
         revenueByServiceType[booking.serviceTypeId] = 0;
       }
       revenueByServiceType[booking.serviceTypeId] += paymentAmount;
+      console.log(`Added ${paymentAmount} cents to serviceType ${booking.serviceTypeId}, total now: ${revenueByServiceType[booking.serviceTypeId]}`);
     });
 
+    console.log('Final revenueByServiceType:', revenueByServiceType);
     return revenueByServiceType;
   }, [bookings, payments]);
 
