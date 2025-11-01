@@ -1148,10 +1148,13 @@ export class UnifiedDataService {
 
   static async saveForecastModel(userId: string, model: ForecastModel): Promise<ForecastModel | null> {
     if (!this.isSupabaseConfigured()) {
+      console.log('saveForecastModel: Supabase not configured');
       return null;
     }
 
     try {
+      console.log('saveForecastModel: Saving model:', { id: model.id, name: model.name, serviceTypesCount: model.serviceTypes?.length });
+      
       const modelData: any = {
         user_id: userId,
         name: model.name,
@@ -1165,8 +1168,11 @@ export class UnifiedDataService {
         updated_at: new Date().toISOString()
       };
 
+      console.log('saveForecastModel: Model data to save:', modelData);
+
       // If model has an ID, update; otherwise create
       if (model.id && !model.id.startsWith('model_')) {
+        console.log('saveForecastModel: Updating existing model with ID:', model.id);
         // It's a real database ID, update
         const { data, error } = await supabase
           .from('forecast_models')
@@ -1178,12 +1184,14 @@ export class UnifiedDataService {
 
         if (error) {
           console.error('Error updating forecast model:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
           return null;
         }
 
+        console.log('saveForecastModel: Update successful, data:', data);
         // Convert back to ForecastModel format
         const params = data.parameters || {};
-        return {
+        const savedModel = {
           id: data.id,
           name: data.name,
           description: data.description || '',
@@ -1195,8 +1203,11 @@ export class UnifiedDataService {
           createdAt: data.created_at || new Date().toISOString(),
           updatedAt: data.updated_at || new Date().toISOString()
         };
+        console.log('saveForecastModel: Returning saved model:', savedModel);
+        return savedModel;
       } else {
         // It's a new model or temporary ID, create
+        console.log('saveForecastModel: Creating new model');
         modelData.created_at = model.createdAt || new Date().toISOString();
         const { data, error } = await supabase
           .from('forecast_models')
@@ -1206,12 +1217,14 @@ export class UnifiedDataService {
 
         if (error) {
           console.error('Error creating forecast model:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
           return null;
         }
         
+        console.log('saveForecastModel: Create successful, data:', data);
         // Convert back to ForecastModel format
         const params = data.parameters || {};
-        return {
+        const savedModel = {
           id: data.id,
           name: data.name,
           description: data.description || '',
@@ -1223,6 +1236,8 @@ export class UnifiedDataService {
           createdAt: data.created_at || new Date().toISOString(),
           updatedAt: data.updated_at || new Date().toISOString()
         };
+        console.log('saveForecastModel: Returning saved model:', savedModel);
+        return savedModel;
       }
     } catch (error) {
       console.error('Error saving forecast model:', error);

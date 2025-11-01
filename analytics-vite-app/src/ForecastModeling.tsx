@@ -38,11 +38,14 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
 
       try {
         setLoadingModels(true);
+        console.log('Loading forecast models for user:', user.id);
         const loadedModels = await UnifiedDataService.getForecastModels(user.id);
+        console.log('Loaded forecast models:', loadedModels);
         
         if (loadedModels.length > 0) {
           setModels(loadedModels);
           const active = loadedModels.find(m => m.isActive) || loadedModels[0];
+          console.log('Setting active model:', active);
           setActiveModel(active);
         } else {
           // Create default model if none exist
@@ -59,8 +62,12 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
           };
           setModels([defaultModel]);
           setActiveModel(defaultModel);
-          // Save the default model
-          await UnifiedDataService.saveForecastModel(user.id, defaultModel);
+          // Save the default model and update with real ID
+          const savedDefaultModel = await UnifiedDataService.saveForecastModel(user.id, defaultModel);
+          if (savedDefaultModel) {
+            setModels([savedDefaultModel]);
+            setActiveModel(savedDefaultModel);
+          }
         }
       } catch (error) {
         console.error('Error loading forecast models:', error);
@@ -85,6 +92,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
 
     loadModels();
   }, [user?.id]);
+
 
   // Calculate year progress
   const yearProgress = useMemo(() => {
@@ -174,13 +182,20 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   };
 
   const updateModel = async (modelData: ForecastModel) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.error('updateModel: No user ID');
+      return;
+    }
     
+    console.log('updateModel called with:', modelData);
     const updatedModel = { ...modelData, updatedAt: new Date().toISOString() };
     
     // Save to database
     const savedModel = await UnifiedDataService.saveForecastModel(user.id, updatedModel);
+    console.log('saveForecastModel returned:', savedModel);
+    
     if (savedModel) {
+      console.log('Updating local state with saved model:', savedModel);
       setModels(prev => prev.map(model => 
         model.id === modelData.id ? savedModel : model
       ));
@@ -188,6 +203,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
         setActiveModel(savedModel);
       }
     } else {
+      console.error('Failed to save forecast model, using local state');
       // Fallback to local update if save fails
       setModels(prev => prev.map(model => 
         model.id === modelData.id ? updatedModel : model
@@ -1043,17 +1059,33 @@ function ModelModal({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name) {
       alert('Please enter a model name');
       return;
     }
 
+    // Recalculate totalForecast for all service types before saving
+    const serviceTypesWithTotals = formData.serviceTypes.map(st => ({
+      ...st,
+      totalForecast: st.quantity * st.avgBooking
+    }));
+
+    const modelToSave = {
+      ...formData,
+      serviceTypes: serviceTypesWithTotals,
+      modelType: model?.modelType || 'forecast',
+      createdAt: model?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
     if (model) {
-      onUpdate({ ...model, ...formData });
+      // Update existing model
+      await onUpdate({ ...model, ...modelToSave, id: model.id });
     } else {
-      onCreate({ ...formData, year: new Date().getFullYear() });
+      // Create new model
+      await onCreate({ ...modelToSave, year: modelToSave.year || new Date().getFullYear() });
     }
     onClose();
   };
