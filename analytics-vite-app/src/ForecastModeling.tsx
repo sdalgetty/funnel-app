@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Edit, Trash2, Target, TrendingUp, DollarSign, Calendar, CheckCircle, X } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
+import { UnifiedDataService } from './services/unifiedDataService';
 import type { ServiceType, Booking, Payment, ForecastModel } from './types';
 
 interface ForecastModelingProps {
@@ -19,30 +21,70 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   showTrackerOnly = false,
   hideTracker = false
 }) => {
+  const { user } = useAuth();
   const [models, setModels] = useState<ForecastModel[]>([]);
   const [activeModel, setActiveModel] = useState<ForecastModel | null>(null);
   const [showModelModal, setShowModelModal] = useState(false);
   const [editingModel, setEditingModel] = useState<ForecastModel | null>(null);
+  const [loadingModels, setLoadingModels] = useState(true);
 
-  // Initialize with default models if none exist
+  // Load models from database on mount
   useEffect(() => {
-    if (models.length === 0) {
-      const currentYear = new Date().getFullYear();
-      const defaultModels: ForecastModel[] = [
-        {
-          id: `model_${currentYear}`,
+    const loadModels = async () => {
+      if (!user?.id) {
+        setLoadingModels(false);
+        return;
+      }
+
+      try {
+        setLoadingModels(true);
+        const loadedModels = await UnifiedDataService.getForecastModels(user.id);
+        
+        if (loadedModels.length > 0) {
+          setModels(loadedModels);
+          const active = loadedModels.find(m => m.isActive) || loadedModels[0];
+          setActiveModel(active);
+        } else {
+          // Create default model if none exist
+          const currentYear = new Date().getFullYear();
+          const defaultModel: ForecastModel = {
+            id: `model_${Date.now()}`,
+            name: `${currentYear} Model`,
+            year: currentYear,
+            isActive: true,
+            modelType: 'forecast',
+            serviceTypes: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          setModels([defaultModel]);
+          setActiveModel(defaultModel);
+          // Save the default model
+          await UnifiedDataService.saveForecastModel(user.id, defaultModel);
+        }
+      } catch (error) {
+        console.error('Error loading forecast models:', error);
+        // Fallback to default model
+        const currentYear = new Date().getFullYear();
+        const defaultModel: ForecastModel = {
+          id: `model_${Date.now()}`,
           name: `${currentYear} Model`,
           year: currentYear,
           isActive: true,
-          serviceTypes: [], // Start with empty array - users will add service types via UI
+          modelType: 'forecast',
+          serviceTypes: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-        },
-      ];
-      setModels(defaultModels);
-      setActiveModel(defaultModels[0]);
-    }
-  }, [models.length]);
+        };
+        setModels([defaultModel]);
+        setActiveModel(defaultModel);
+      } finally {
+        setLoadingModels(false);
+      }
+    };
+
+    loadModels();
+  }, [user?.id]);
 
   // Calculate year progress
   const yearProgress = useMemo(() => {
@@ -108,28 +150,62 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   const formatNumber = (num: number) => num.toLocaleString();
 
   // Model management functions
-  const createModel = (modelData: Omit<ForecastModel, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const createModel = async (modelData: Omit<ForecastModel, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!user?.id) return;
+    
     const newModel: ForecastModel = {
       ...modelData,
       id: `model_${Date.now()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setModels(prev => [...prev, newModel]);
-  };
-
-  const updateModel = (modelData: ForecastModel) => {
-    setModels(prev => prev.map(model => 
-      model.id === modelData.id 
-        ? { ...modelData, updatedAt: new Date().toISOString() }
-        : model
-    ));
-    if (activeModel?.id === modelData.id) {
-      setActiveModel({ ...modelData, updatedAt: new Date().toISOString() });
+    
+    // Save to database and get the saved model with real ID
+    const savedModel = await UnifiedDataService.saveForecastModel(user.id, newModel);
+    if (savedModel) {
+      setModels(prev => [...prev, savedModel]);
+      if (savedModel.isActive) {
+        setActiveModel(savedModel);
+      }
+    } else {
+      // Fallback to local state if save fails
+      setModels(prev => [...prev, newModel]);
     }
   };
 
-  const deleteModel = (modelId: string) => {
+  const updateModel = async (modelData: ForecastModel) => {
+    if (!user?.id) return;
+    
+    const updatedModel = { ...modelData, updatedAt: new Date().toISOString() };
+    
+    // Save to database
+    const savedModel = await UnifiedDataService.saveForecastModel(user.id, updatedModel);
+    if (savedModel) {
+      setModels(prev => prev.map(model => 
+        model.id === modelData.id ? savedModel : model
+      ));
+      if (activeModel?.id === modelData.id) {
+        setActiveModel(savedModel);
+      }
+    } else {
+      // Fallback to local update if save fails
+      setModels(prev => prev.map(model => 
+        model.id === modelData.id ? updatedModel : model
+      ));
+      if (activeModel?.id === modelData.id) {
+        setActiveModel(updatedModel);
+      }
+    }
+  };
+
+  const deleteModel = async (modelId: string) => {
+    if (!user?.id) return;
+    
+    // Delete from database first
+    if (!modelId.startsWith('model_')) {
+      await UnifiedDataService.deleteForecastModel(user.id, modelId);
+    }
+    
     setModels(prev => prev.filter(model => model.id !== modelId));
     if (activeModel?.id === modelId) {
       const remainingModels = models.filter(model => model.id !== modelId);
@@ -137,14 +213,35 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     }
   };
 
-  const activateModel = (modelId: string) => {
-    setModels(prev => prev.map(model => ({
+  const activateModel = async (modelId: string) => {
+    if (!user?.id) return;
+    
+    const updatedModels = models.map(model => ({
       ...model,
-      isActive: model.id === modelId
-    })));
-    const model = models.find(m => m.id === modelId);
-    if (model) {
-      setActiveModel(model);
+      isActive: model.id === modelId,
+      updatedAt: new Date().toISOString()
+    }));
+    
+    // Save all models to update isActive flags
+    const savedModels = await Promise.all(
+      updatedModels.map(m => UnifiedDataService.saveForecastModel(user.id, m))
+    );
+    
+    // Update state with saved models (filter out nulls)
+    const validModels = savedModels.filter((m): m is ForecastModel => m !== null);
+    if (validModels.length > 0) {
+      setModels(validModels);
+      const activeModelData = validModels.find(m => m.id === modelId);
+      if (activeModelData) {
+        setActiveModel(activeModelData);
+      }
+    } else {
+      // Fallback to local state if save fails
+      setModels(updatedModels);
+      const model = updatedModels.find(m => m.id === modelId);
+      if (model) {
+        setActiveModel(model);
+      }
     }
   };
 
