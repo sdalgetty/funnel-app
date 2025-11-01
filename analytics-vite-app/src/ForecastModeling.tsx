@@ -190,35 +190,41 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   };
 
   const updateModel = async (modelData: ForecastModel) => {
+    // Show alert immediately so we know this function is being called
+    alert(`updateModel called! Model ID: ${modelData.id}\n\nCheck console for save results.`);
+    
     if (!user?.id) {
-      console.error('updateModel: No user ID');
       alert('Error: No user ID. Cannot save model.');
       return;
     }
     
-    console.log('updateModel called with:', modelData);
-    console.log('Model ID:', modelData.id, 'Starts with model_:', modelData.id?.startsWith('model_'));
     const updatedModel = { ...modelData, updatedAt: new Date().toISOString() };
     
     // Save to database
-    console.log('Calling saveForecastModel...');
-    const savedModel = await UnifiedDataService.saveForecastModel(user.id, updatedModel);
-    console.log('saveForecastModel returned:', savedModel);
-    
-    if (savedModel) {
-      console.log('Updating local state with saved model:', savedModel);
-      setModels(prev => prev.map(model => 
-        model.id === modelData.id ? savedModel : model
-      ));
-      if (activeModel?.id === modelData.id) {
-        setActiveModel(savedModel);
+    try {
+      const savedModel = await UnifiedDataService.saveForecastModel(user.id, updatedModel);
+      
+      if (savedModel) {
+        alert(`Model saved successfully! ID: ${savedModel.id}`);
+        setModels(prev => prev.map(model => 
+          model.id === modelData.id ? savedModel : model
+        ));
+        if (activeModel?.id === modelData.id) {
+          setActiveModel(savedModel);
+        }
+      } else {
+        alert(`Failed to save model to database.\n\nModel ID: ${modelData.id}\nUser ID: ${user.id}\n\nData was updated locally only.`);
+        // Still update local state so user sees their changes
+        setModels(prev => prev.map(model => 
+          model.id === modelData.id ? updatedModel : model
+        ));
+        if (activeModel?.id === modelData.id) {
+          setActiveModel(updatedModel);
+        }
       }
-      console.log('Model saved successfully to database!');
-    } else {
-      const errorMsg = `Failed to save forecast model to database. Model ID: ${modelData.id}`;
-      console.error(errorMsg);
-      alert(errorMsg + '\n\nCheck console for details.');
-      // Still update local state so user sees their changes
+    } catch (error: any) {
+      alert(`Error saving model: ${error?.message || 'Unknown error'}\n\nCheck console for details.`);
+      // Still update local state
       setModels(prev => prev.map(model => 
         model.id === modelData.id ? updatedModel : model
       ));

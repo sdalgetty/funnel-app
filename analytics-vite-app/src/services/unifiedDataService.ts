@@ -1148,7 +1148,9 @@ export class UnifiedDataService {
 
   static async saveForecastModel(userId: string, model: ForecastModel): Promise<ForecastModel | null> {
     if (!this.isSupabaseConfigured()) {
-      console.log('saveForecastModel: Supabase not configured');
+      const msg = 'saveForecastModel: Supabase not configured - cannot save to database';
+      console.log(msg);
+      alert(msg);
       return null;
     }
 
