@@ -80,14 +80,21 @@ const convertToAdCampaign = (row: any): AdCampaign => ({
   lastUpdated: new Date(row.last_updated)
 })
 
-const convertToForecastModel = (row: any): ForecastModel => ({
-  id: row.id,
-  name: row.name,
-  description: row.description || '',
-  modelType: row.model_type,
-  parameters: row.parameters || {},
-  isActive: row.is_active
-})
+const convertToForecastModel = (row: any): ForecastModel => {
+  const params = row.parameters || {};
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description || '',
+    modelType: row.model_type || 'forecast',
+    parameters: params,
+    year: params.year || new Date().getFullYear(),
+    isActive: row.is_active || false,
+    serviceTypes: params.serviceTypes || [],
+    createdAt: row.created_at || new Date().toISOString(),
+    updatedAt: row.updated_at || new Date().toISOString()
+  };
+};
 
 export class SupabaseDataService {
   // Funnel Service

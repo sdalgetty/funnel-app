@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { UnifiedDataService } from '../services/unifiedDataService';
-import type { FunnelData, Booking, Payment, ServiceType, LeadSource, AdSource, AdCampaign } from '../types';
+import type { FunnelData, Booking, Payment, ServiceType, LeadSource, AdSource, AdCampaign, ForecastModel } from '../types';
 
 export function useDataManager() {
   const { user } = useAuth();
@@ -420,6 +420,31 @@ export function useDataManager() {
     }
   }, [user?.id]);
 
+  // Forecast Model operations
+  const saveForecastModel = useCallback(async (model: ForecastModel) => {
+    if (!user?.id) return false;
+    
+    try {
+      const success = await UnifiedDataService.saveForecastModel(user.id, model);
+      return success;
+    } catch (err) {
+      console.error('Error saving forecast model:', err);
+      return false;
+    }
+  }, [user?.id]);
+
+  const deleteForecastModel = useCallback(async (id: string) => {
+    if (!user?.id) return false;
+    
+    try {
+      const success = await UnifiedDataService.deleteForecastModel(user.id, id);
+      return success;
+    } catch (err) {
+      console.error('Error deleting forecast model:', err);
+      return false;
+    }
+  }, [user?.id]);
+
   return {
     // State
     loading,
@@ -468,5 +493,8 @@ export function useDataManager() {
     createAdCampaign,
     updateAdCampaign,
     deleteAdCampaign,
+    
+    // Forecast Model operations
+    saveForecastModel,
+    deleteForecastModel,
   };
-}

@@ -7,7 +7,8 @@ import type {
   Booking, 
   Payment,
   AdSource,
-  AdCampaign
+  AdCampaign,
+  ForecastModel
 } from '../types';
 
 export class UnifiedDataService {
@@ -559,7 +560,7 @@ export class UnifiedDataService {
           client_phone: '', // Not in Booking type
           service_type_id: bookingData.serviceTypeId,
           lead_source_id: bookingData.leadSourceId,
-          booking_date: bookingData.dateBooked,
+          booking_date: bookingData.dateBooked || null,
           date_inquired: bookingData.dateInquired || null,
           project_date: bookingData.projectDate || null,
           booked_revenue: bookingData.bookedRevenue || 0,
@@ -597,7 +598,7 @@ export class UnifiedDataService {
           client_name: updates.projectName,
           service_type_id: updates.serviceTypeId,
           lead_source_id: updates.leadSourceId,
-          booking_date: updates.dateBooked,
+          booking_date: updates.dateBooked !== undefined ? (updates.dateBooked || null) : undefined,
           status: updates.status,
           notes: updates.notes
         })
@@ -1101,6 +1102,176 @@ export class UnifiedDataService {
       return true;
     } catch (error) {
       console.error('Error deleting ad campaign:', error);
+      return false;
+    }
+  }
+
+  // Forecast Model operations
+  static async getForecastModels(userId: string): Promise<ForecastModel[]> {
+    if (!this.isSupabaseConfigured()) {
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('forecast_models')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading forecast models:', error);
+        return [];
+      }
+
+      // Convert database rows to ForecastModel format
+      return (data || []).map((row: any) => {
+        const params = row.parameters || {};
+        return {
+          id: row.id,
+          name: row.name,
+          description: row.description || '',
+          modelType: row.model_type || 'forecast',
+          parameters: params,
+          year: params.year || new Date().getFullYear(),
+          isActive: row.is_active || false,
+          serviceTypes: params.serviceTypes || [],
+          createdAt: row.created_at || new Date().toISOString(),
+          updatedAt: row.updated_at || new Date().toISOString()
+        };
+      });
+    } catch (error) {
+      console.error('Error loading forecast models:', error);
+      return [];
+    }
+  }
+
+  static async saveForecastModel(userId: string, model: ForecastModel): Promise<ForecastModel | null> {
+    if (!this.isSupabaseConfigured()) {
+      const msg = 'saveForecastModel: Supabase not configured - cannot save to database';
+      console.log(msg);
+      alert(msg);
+      return null;
+    }
+
+    try {
+      console.log('saveForecastModel: Saving model:', { id: model.id, name: model.name, serviceTypesCount: model.serviceTypes?.length });
+      
+      const modelData: any = {
+        user_id: userId,
+        name: model.name,
+        description: model.description || '',
+        model_type: model.modelType || 'forecast',
+        is_active: model.isActive || false,
+        parameters: {
+          year: model.year,
+          serviceTypes: model.serviceTypes || []
+        },
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('saveForecastModel: Model data to save:', modelData);
+
+      // If model has an ID, update; otherwise create
+      if (model.id && !model.id.startsWith('model_')) {
+        console.log('saveForecastModel: Updating existing model with ID:', model.id);
+        // It's a real database ID, update
+        const { data, error } = await supabase
+          .from('forecast_models')
+          .update(modelData)
+          .eq('id', model.id)
+          .eq('user_id', userId)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error updating forecast model:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
+          console.error('Model ID used:', model.id);
+          console.error('User ID used:', userId);
+          alert(`Error updating forecast model: ${error.message}\n\nCheck console for details.`);
+          return null;
+        }
+
+        console.log('saveForecastModel: Update successful, data:', data);
+        // Convert back to ForecastModel format
+        const params = data.parameters || {};
+        const savedModel = {
+          id: data.id,
+          name: data.name,
+          description: data.description || '',
+          modelType: data.model_type || 'forecast',
+          parameters: params,
+          year: params.year || new Date().getFullYear(),
+          isActive: data.is_active || false,
+          serviceTypes: params.serviceTypes || [],
+          createdAt: data.created_at || new Date().toISOString(),
+          updatedAt: data.updated_at || new Date().toISOString()
+        };
+        console.log('saveForecastModel: Returning saved model:', savedModel);
+        return savedModel;
+      } else {
+        // It's a new model or temporary ID, create
+        console.log('saveForecastModel: Creating new model');
+        modelData.created_at = model.createdAt || new Date().toISOString();
+        const { data, error } = await supabase
+          .from('forecast_models')
+          .insert(modelData)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error creating forecast model:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
+          console.error('User ID used:', userId);
+          alert(`Error creating forecast model: ${error.message}\n\nCheck console for details.`);
+          return null;
+        }
+        
+        console.log('saveForecastModel: Create successful, data:', data);
+        // Convert back to ForecastModel format
+        const params = data.parameters || {};
+        const savedModel = {
+          id: data.id,
+          name: data.name,
+          description: data.description || '',
+          modelType: data.model_type || 'forecast',
+          parameters: params,
+          year: params.year || new Date().getFullYear(),
+          isActive: data.is_active || false,
+          serviceTypes: params.serviceTypes || [],
+          createdAt: data.created_at || new Date().toISOString(),
+          updatedAt: data.updated_at || new Date().toISOString()
+        };
+        console.log('saveForecastModel: Returning saved model:', savedModel);
+        return savedModel;
+      }
+    } catch (error) {
+      console.error('Error saving forecast model:', error);
+      return null;
+    }
+  }
+
+  static async deleteForecastModel(userId: string, id: string): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('forecast_models')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error deleting forecast model:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting forecast model:', error);
       return false;
     }
   }

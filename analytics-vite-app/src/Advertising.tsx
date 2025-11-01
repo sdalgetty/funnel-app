@@ -233,48 +233,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
         </p>
       </div>
 
-      {/* Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '32px' }}>
-        <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <DollarSign size={20} color="#3b82f6" />
-            <h3 style={{ fontSize: '14px', fontWeight: '600', margin: 0, color: '#374151' }}>Total Ad Spend</h3>
-          </div>
-          <p style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: '#1f2937' }}>
-            {toUSD(totals.totalAdSpend)}
-          </p>
-        </div>
-
-        <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <TrendingUp size={20} color="#10b981" />
-            <h3 style={{ fontSize: '14px', fontWeight: '600', margin: 0, color: '#374151' }}>Total Booked from Ads</h3>
-          </div>
-          <p style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: '#1f2937' }}>
-            {toUSD(totals.totalBookedFromAds)}
-          </p>
-        </div>
-
-        <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <BarChart3 size={20} color="#f59e0b" />
-            <h3 style={{ fontSize: '14px', fontWeight: '600', margin: 0, color: '#374151' }}>Ad Spend ROI</h3>
-          </div>
-          <p style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: '#1f2937' }}>
-            {totals.overallROI !== null ? `${totals.overallROI.toFixed(1)}%` : 'N/A'}
-          </p>
-        </div>
-
-        <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <Target size={20} color="#8b5cf6" />
-            <h3 style={{ fontSize: '14px', fontWeight: '600', margin: 0, color: '#374151' }}>Cost Per Close</h3>
-          </div>
-          <p style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: '#1f2937' }}>
-            {toUSD(totals.overallCostPerClose)}
-          </p>
-        </div>
-      </div>
+      {/* Summary cards removed (now on Insights) */}
 
       {/* Monthly Ad Tracking Tables */}
       <div style={{ marginBottom: '32px' }}>

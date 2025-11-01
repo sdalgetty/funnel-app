@@ -9,6 +9,8 @@ interface ForecastProps {
   setServiceTypes?: (types: ServiceType[]) => void;
   bookings?: Booking[];
   payments?: Payment[];
+  showTrendsOnly?: boolean;
+  showModelingOnly?: boolean;
 }
 
 const Forecast: React.FC<ForecastProps> = ({ 
@@ -16,9 +18,11 @@ const Forecast: React.FC<ForecastProps> = ({
   serviceTypes = [], 
   setServiceTypes = () => {}, 
   bookings = [], 
-  payments = [] 
+  payments = [],
+  showTrendsOnly = false,
+  showModelingOnly = false
 }) => {
-  const [viewMode, setViewMode] = useState<'trends' | 'modeling'>('trends');
+  const [viewMode, setViewMode] = useState<'trends' | 'modeling'>(showModelingOnly ? 'modeling' : (showTrendsOnly ? 'trends' : 'trends'));
   const [lookbackMonths, setLookbackMonths] = useState(12);
   const [forecastMonths, setForecastMonths] = useState(6);
 
@@ -101,88 +105,67 @@ const Forecast: React.FC<ForecastProps> = ({
   const formatNumber = (num: number) => num.toLocaleString();
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
-      {/* View Mode Toggle - Always Visible */}
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button
-              onClick={() => setViewMode('trends')}
-              style={{
-                padding: '10px 18px',
-                borderRadius: '8px',
-                border: viewMode === 'trends' ? '2px solid #3b82f6' : '2px solid #e5e7eb',
-                backgroundColor: viewMode === 'trends' ? '#3b82f6' : 'white',
-                color: viewMode === 'trends' ? 'white' : '#374151',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s',
-                boxShadow: viewMode === 'trends' ? '0 1px 3px rgba(59, 130, 246, 0.3)' : '0 1px 2px rgba(0, 0, 0, 0.05)'
-              }}
-              onMouseEnter={(e) => {
-                if (viewMode !== 'trends') {
-                  e.currentTarget.style.borderColor = '#9ca3af';
-                  e.currentTarget.style.backgroundColor = '#f9fafb';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (viewMode !== 'trends') {
-                  e.currentTarget.style.borderColor = '#e5e7eb';
-                  e.currentTarget.style.backgroundColor = 'white';
-                }
-              }}
-            >
-              <TrendingUp size={16} />
-              Trends
-            </button>
-            <button
-              onClick={() => setViewMode('modeling')}
-              style={{
-                padding: '10px 18px',
-                borderRadius: '8px',
-                border: viewMode === 'modeling' ? '2px solid #3b82f6' : '2px solid #e5e7eb',
-                backgroundColor: viewMode === 'modeling' ? '#3b82f6' : 'white',
-                color: viewMode === 'modeling' ? 'white' : '#374151',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s',
-                boxShadow: viewMode === 'modeling' ? '0 1px 3px rgba(59, 130, 246, 0.3)' : '0 1px 2px rgba(0, 0, 0, 0.05)'
-              }}
-              onMouseEnter={(e) => {
-                if (viewMode !== 'modeling') {
-                  e.currentTarget.style.borderColor = '#9ca3af';
-                  e.currentTarget.style.backgroundColor = '#f9fafb';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (viewMode !== 'modeling') {
-                  e.currentTarget.style.borderColor = '#e5e7eb';
-                  e.currentTarget.style.backgroundColor = 'white';
-                }
-              }}
-            >
-              <BarChart3 size={16} />
-              Modeling
-            </button>
+    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+      {/* View Mode Toggle */}
+      {!showTrendsOnly && !showModelingOnly && (
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setViewMode('trends')}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '8px',
+                  border: viewMode === 'trends' ? '2px solid #3b82f6' : '2px solid #e5e7eb',
+                  backgroundColor: viewMode === 'trends' ? '#3b82f6' : 'white',
+                  color: viewMode === 'trends' ? 'white' : '#374151',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s',
+                  boxShadow: viewMode === 'trends' ? '0 1px 3px rgba(59, 130, 246, 0.3)' : '0 1px 2px rgba(0, 0, 0, 0.05)'
+                }}
+              >
+                <TrendingUp size={16} />
+                Trends
+              </button>
+              <button
+                onClick={() => setViewMode('modeling')}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '8px',
+                  border: viewMode === 'modeling' ? '2px solid #3b82f6' : '2px solid #e5e7eb',
+                  backgroundColor: viewMode === 'modeling' ? '#3b82f6' : 'white',
+                  color: viewMode === 'modeling' ? 'white' : '#374151',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s',
+                  boxShadow: viewMode === 'modeling' ? '0 1px 3px rgba(59, 130, 246, 0.3)' : '0 1px 2px rgba(0, 0, 0, 0.05)'
+                }}
+              >
+                <BarChart3 size={16} />
+                Modeling
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Conditional Content Based on View Mode */}
-      {viewMode === 'modeling' ? (
+      {(showModelingOnly || (!showTrendsOnly && viewMode === 'modeling')) ? (
         <ForecastModeling
           serviceTypes={serviceTypes}
           setServiceTypes={setServiceTypes}
           bookings={bookings}
           payments={payments}
+          hideTracker={showModelingOnly}
         />
       ) : (
         <div>

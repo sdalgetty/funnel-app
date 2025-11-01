@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Edit, Trash2, Target, TrendingUp, DollarSign, Calendar, CheckCircle, X } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
+import { UnifiedDataService } from './services/unifiedDataService';
+import { supabase } from './lib/supabase';
 import type { ServiceType, Booking, Payment, ForecastModel } from './types';
 
 interface ForecastModelingProps {
@@ -7,59 +10,120 @@ interface ForecastModelingProps {
   setServiceTypes: (types: ServiceType[]) => void;
   bookings: Booking[];
   payments: Payment[];
+  showTrackerOnly?: boolean;
+  hideTracker?: boolean;
 }
 
 const ForecastModeling: React.FC<ForecastModelingProps> = ({ 
   serviceTypes, 
   setServiceTypes, 
   bookings, 
-  payments 
+  payments,
+  showTrackerOnly = false,
+  hideTracker = false
 }) => {
+  const { user } = useAuth();
   const [models, setModels] = useState<ForecastModel[]>([]);
   const [activeModel, setActiveModel] = useState<ForecastModel | null>(null);
   const [showModelModal, setShowModelModal] = useState(false);
   const [editingModel, setEditingModel] = useState<ForecastModel | null>(null);
+  const [loadingModels, setLoadingModels] = useState(true);
 
-  // Initialize with default models if none exist
-  useEffect(() => {
-    if (models.length === 0) {
-      const defaultModels: ForecastModel[] = [
-        {
-          id: 'model_2025',
-          name: '2025 Model',
-          year: 2025,
-          isActive: true,
-          serviceTypes: [
-            { serviceTypeId: 'st_1', quantity: 26, avgBooking: 819200, totalForecast: 21299200 },
-            { serviceTypeId: 'st_2', quantity: 8, avgBooking: 400000, totalForecast: 3200000 },
-            { serviceTypeId: 'st_4', quantity: 12, avgBooking: 120000, totalForecast: 1440000 },
-            { serviceTypeId: 'st_5', quantity: 15, avgBooking: 80000, totalForecast: 1200000 },
-            { serviceTypeId: 'st_6', quantity: 20, avgBooking: 50000, totalForecast: 1000000 },
-            { serviceTypeId: 'st_7', quantity: 25, avgBooking: 30000, totalForecast: 750000 },
-            { serviceTypeId: 'st_3', quantity: 10, avgBooking: 80000, totalForecast: 800000 },
-          ],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'model_2026',
-          name: '2026 Model',
-          year: 2026,
-          isActive: false,
-          serviceTypes: [
-            { serviceTypeId: 'st_1', quantity: 25, avgBooking: 850000, totalForecast: 21250000 },
-            { serviceTypeId: 'st_2', quantity: 6, avgBooking: 400000, totalForecast: 2400000 },
-            { serviceTypeId: 'st_5', quantity: 12, avgBooking: 80000, totalForecast: 960000 },
-            { serviceTypeId: 'st_3', quantity: 5, avgBooking: 80000, totalForecast: 400000 },
-          ],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ];
-      setModels(defaultModels);
-      setActiveModel(defaultModels[0]);
+  // Debug function to directly query Supabase
+  const debugQueryDatabase = async () => {
+    if (!user?.id) {
+      alert('No user ID');
+      return;
     }
-  }, [models.length]);
+    
+    try {
+      const { data, error } = await supabase
+        .from('forecast_models')
+        .select('*')
+        .eq('user_id', user.id);
+      
+      if (error) {
+        alert(`Database query error: ${error.message}\n\nCode: ${error.code}\n\nDetails: ${JSON.stringify(error)}`);
+        return;
+      }
+      
+      alert(`Direct database query results:\n\nFound ${data?.length || 0} models\n\nData: ${JSON.stringify(data, null, 2)}`);
+    } catch (err: any) {
+      alert(`Error querying database: ${err?.message || 'Unknown error'}`);
+    }
+  };
+
+  // Load models from database on mount
+  useEffect(() => {
+    const loadModels = async () => {
+      if (!user?.id) {
+        setLoadingModels(false);
+        return;
+      }
+
+      try {
+        setLoadingModels(true);
+        // First, directly query the database to see what's actually there
+        const { data: directData, error: directError } = await supabase
+          .from('forecast_models')
+          .select('*')
+          .eq('user_id', user.id);
+        
+        console.log('Direct Supabase query result:', { data: directData, error: directError });
+        
+        const loadedModels = await UnifiedDataService.getForecastModels(user.id);
+        console.log('UnifiedDataService result:', loadedModels);
+        
+        if (loadedModels.length > 0) {
+          setModels(loadedModels);
+          const active = loadedModels.find(m => m.isActive) || loadedModels[0];
+          setActiveModel(active);
+        } else {
+          // Create default model if none exist
+          const currentYear = new Date().getFullYear();
+          const defaultModel: ForecastModel = {
+            id: `model_${Date.now()}`,
+            name: `${currentYear} Model`,
+            year: currentYear,
+            isActive: true,
+            modelType: 'forecast',
+            serviceTypes: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          setModels([defaultModel]);
+          setActiveModel(defaultModel);
+          // Save the default model and update with real ID
+          const savedDefaultModel = await UnifiedDataService.saveForecastModel(user.id, defaultModel);
+          if (savedDefaultModel) {
+            setModels([savedDefaultModel]);
+            setActiveModel(savedDefaultModel);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading forecast models:', error);
+        // Fallback to default model
+        const currentYear = new Date().getFullYear();
+        const defaultModel: ForecastModel = {
+          id: `model_${Date.now()}`,
+          name: `${currentYear} Model`,
+          year: currentYear,
+          isActive: true,
+          modelType: 'forecast',
+          serviceTypes: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setModels([defaultModel]);
+        setActiveModel(defaultModel);
+      } finally {
+        setLoadingModels(false);
+      }
+    };
+
+    loadModels();
+  }, [user?.id]);
+
 
   // Calculate year progress
   const yearProgress = useMemo(() => {
@@ -125,28 +189,90 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   const formatNumber = (num: number) => num.toLocaleString();
 
   // Model management functions
-  const createModel = (modelData: Omit<ForecastModel, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const createModel = async (modelData: Omit<ForecastModel, 'id' | 'createdAt' | 'updatedAt'>) => {
+    console.log('createModel called with:', modelData);
+    if (!user?.id) {
+      console.error('createModel: No user ID');
+      return;
+    }
+    
     const newModel: ForecastModel = {
       ...modelData,
       id: `model_${Date.now()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setModels(prev => [...prev, newModel]);
-  };
-
-  const updateModel = (modelData: ForecastModel) => {
-    setModels(prev => prev.map(model => 
-      model.id === modelData.id 
-        ? { ...modelData, updatedAt: new Date().toISOString() }
-        : model
-    ));
-    if (activeModel?.id === modelData.id) {
-      setActiveModel({ ...modelData, updatedAt: new Date().toISOString() });
+    
+    console.log('createModel: Saving new model:', newModel);
+    // Save to database and get the saved model with real ID
+    const savedModel = await UnifiedDataService.saveForecastModel(user.id, newModel);
+    console.log('createModel: Save result:', savedModel);
+    
+    if (savedModel) {
+      setModels(prev => [...prev, savedModel]);
+      if (savedModel.isActive) {
+        setActiveModel(savedModel);
+      }
+    } else {
+      console.error('createModel: Save failed, using local state');
+      // Fallback to local state if save fails
+      setModels(prev => [...prev, newModel]);
     }
   };
 
-  const deleteModel = (modelId: string) => {
+  const updateModel = async (modelData: ForecastModel) => {
+    // Show alert immediately so we know this function is being called
+    alert(`updateModel called! Model ID: ${modelData.id}\n\nCheck console for save results.`);
+    
+    if (!user?.id) {
+      alert('Error: No user ID. Cannot save model.');
+      return;
+    }
+    
+    const updatedModel = { ...modelData, updatedAt: new Date().toISOString() };
+    
+    // Save to database
+    try {
+      const savedModel = await UnifiedDataService.saveForecastModel(user.id, updatedModel);
+      
+      if (savedModel) {
+        alert(`Model saved successfully! ID: ${savedModel.id}`);
+        setModels(prev => prev.map(model => 
+          model.id === modelData.id ? savedModel : model
+        ));
+        if (activeModel?.id === modelData.id) {
+          setActiveModel(savedModel);
+        }
+      } else {
+        alert(`Failed to save model to database.\n\nModel ID: ${modelData.id}\nUser ID: ${user.id}\n\nData was updated locally only.`);
+        // Still update local state so user sees their changes
+        setModels(prev => prev.map(model => 
+          model.id === modelData.id ? updatedModel : model
+        ));
+        if (activeModel?.id === modelData.id) {
+          setActiveModel(updatedModel);
+        }
+      }
+    } catch (error: any) {
+      alert(`Error saving model: ${error?.message || 'Unknown error'}\n\nCheck console for details.`);
+      // Still update local state
+      setModels(prev => prev.map(model => 
+        model.id === modelData.id ? updatedModel : model
+      ));
+      if (activeModel?.id === modelData.id) {
+        setActiveModel(updatedModel);
+      }
+    }
+  };
+
+  const deleteModel = async (modelId: string) => {
+    if (!user?.id) return;
+    
+    // Delete from database first
+    if (!modelId.startsWith('model_')) {
+      await UnifiedDataService.deleteForecastModel(user.id, modelId);
+    }
+    
     setModels(prev => prev.filter(model => model.id !== modelId));
     if (activeModel?.id === modelId) {
       const remainingModels = models.filter(model => model.id !== modelId);
@@ -154,14 +280,35 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     }
   };
 
-  const activateModel = (modelId: string) => {
-    setModels(prev => prev.map(model => ({
+  const activateModel = async (modelId: string) => {
+    if (!user?.id) return;
+    
+    const updatedModels = models.map(model => ({
       ...model,
-      isActive: model.id === modelId
-    })));
-    const model = models.find(m => m.id === modelId);
-    if (model) {
-      setActiveModel(model);
+      isActive: model.id === modelId,
+      updatedAt: new Date().toISOString()
+    }));
+    
+    // Save all models to update isActive flags
+    const savedModels = await Promise.all(
+      updatedModels.map(m => UnifiedDataService.saveForecastModel(user.id, m))
+    );
+    
+    // Update state with saved models (filter out nulls)
+    const validModels = savedModels.filter((m): m is ForecastModel => m !== null);
+    if (validModels.length > 0) {
+      setModels(validModels);
+      const activeModelData = validModels.find(m => m.id === modelId);
+      if (activeModelData) {
+        setActiveModel(activeModelData);
+      }
+    } else {
+      // Fallback to local state if save fails
+      setModels(updatedModels);
+      const model = updatedModels.find(m => m.id === modelId);
+      if (model) {
+        setActiveModel(model);
+      }
     }
   };
 
@@ -178,8 +325,191 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     setServiceTypes(prev => prev.filter(st => st.id !== id));
   };
 
+  // Tracker-only mode: render just the performance tracker block
+  if (showTrackerOnly) {
+    return (
+      <div style={{ padding: '0', maxWidth: '100%', margin: '0' }}>
+        {activeModel && (
+          <div style={{ 
+            backgroundColor: 'white', 
+            borderRadius: '12px', 
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)', 
+            overflow: 'hidden'
+          }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ 
+                    fontSize: '18px', 
+                    fontWeight: '600', 
+                    margin: '0 0 4px 0', 
+                    color: '#1f2937' 
+                  }}>
+                    Forecast Tracker
+                  </h2>
+                  <p style={{ 
+                    fontSize: '14px', 
+                    color: '#6b7280', 
+                    margin: 0 
+                  }}>
+                    Active model tracking
+                  </p>
+                </div>
+                <div style={{
+                  backgroundColor: '#f3f4f6',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  textAlign: 'left'
+                }}>
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: '#6b7280', 
+                    marginBottom: '2px' 
+                  }}>
+                    Year Progress
+                  </div>
+                  <div style={{ 
+                    fontSize: '18px', 
+                    fontWeight: '600', 
+                    color: '#1f2937' 
+                  }}>
+                    {yearProgress}%
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', fontSize: '14px' }}>
+                <thead style={{ backgroundColor: '#f5f5f5' }}>
+                  <tr>
+                    <Th>Service Type</Th>
+                    <Th align="right">Forecast Goal</Th>
+                    <Th align="right">Actual $</Th>
+                    <Th align="right">Remaining</Th>
+                    <Th align="right">% of Plan</Th>
+                    <Th align="right">Pacing Delta</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {performanceMetrics.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ 
+                        textAlign: 'left', 
+                        padding: '40px 20px',
+                        color: '#6b7280',
+                        fontStyle: 'italic'
+                      }}>
+                        <div style={{ marginBottom: '8px', fontSize: '16px' }}>📊</div>
+                        <div>No service types in this model</div>
+                        <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                          Edit the model on the Forecast page to add service types and goals
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    performanceMetrics.map((metric, index) => (
+                    <tr 
+                      key={metric.serviceTypeId}
+                      style={{ 
+                        borderBottom: '1px solid #eee',
+                        backgroundColor: index % 2 === 0 ? '#fafafa' : '#f5f5f5'
+                      }}
+                    >
+                      <Td style={{ fontWeight: '500' }}>{metric.serviceTypeName}</Td>
+                      <Td align="right">{toUSD(metric.forecastGoal)}</Td>
+                      <Td align="right">{toUSD(metric.actualRevenue)}</Td>
+                      <Td align="right" style={{ 
+                        color: metric.remaining < 0 ? '#ef4444' : '#10b981',
+                        fontWeight: '500'
+                      }}>
+                        {toUSD(metric.remaining)}
+                      </Td>
+                      <Td align="right" style={{ 
+                        color: metric.percentOfPlan >= 100 ? '#10b981' : 
+                              metric.percentOfPlan < 80 ? '#ef4444' : '#f59e0b',
+                        fontWeight: '600'
+                      }}>
+                        {metric.percentOfPlan}%
+                      </Td>
+                      <Td align="right" style={{ 
+                        color: metric.pacingDelta >= 0 ? '#10b981' : '#ef4444',
+                        fontWeight: '500'
+                      }}>
+                        {metric.pacingDelta >= 0 ? '+' : ''}{metric.pacingDelta}%
+                      </Td>
+                    </tr>
+                    ))
+                  )}
+                  {performanceMetrics.length > 0 && (
+                  <tr style={{ 
+                    backgroundColor: '#e5e7eb',
+                    borderTop: '2px solid #9ca3af',
+                    fontWeight: '600'
+                  }}>
+                    <Td style={{ fontWeight: '700', fontSize: '14px' }}>Total</Td>
+                    <Td align="right" style={{ fontWeight: '700', fontSize: '14px' }}>
+                      {toUSD(performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0))}
+                    </Td>
+                    <Td align="right" style={{ fontWeight: '700', fontSize: '14px' }}>
+                      {toUSD(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0))}
+                    </Td>
+                    <Td align="right" style={{ 
+                      fontWeight: '700', 
+                      fontSize: '14px',
+                      color: performanceMetrics.reduce((sum, m) => sum + m.remaining, 0) < 0 ? '#ef4444' : '#10b981'
+                    }}>
+                      {toUSD(performanceMetrics.reduce((sum, m) => sum + m.remaining, 0))}
+                    </Td>
+                    <Td align="right" style={{ 
+                      fontWeight: '700', 
+                      fontSize: '14px',
+                      color: Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100) >= 100 ? '#10b981' : 
+                            Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100) < 80 ? '#ef4444' : '#f59e0b'
+                    }}>
+                      {Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100)}%
+                    </Td>
+                    <Td align="right" style={{ 
+                      fontWeight: '700', 
+                      fontSize: '14px',
+                      color: Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100) - yearProgress >= 0 ? '#10b981' : '#ef4444'
+                    }}>
+                      {Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100) - yearProgress >= 0 ? '+' : ''}
+                      {Math.round(performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0) / performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0) * 100) - yearProgress}%
+                    </Td>
+                  </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+      {/* Debug button - remove after fixing */}
+      <button
+        onClick={debugQueryDatabase}
+        style={{
+          position: 'fixed',
+          top: '80px',
+          right: '20px',
+          zIndex: 1000,
+          backgroundColor: '#ef4444',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          padding: '8px 12px',
+          fontSize: '12px',
+          cursor: 'pointer'
+        }}
+      >
+        🔍 Debug DB Query
+      </button>
+      
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ 
           fontSize: '28px', 
@@ -353,7 +683,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       )}
 
       {/* Performance Tracker */}
-      {activeModel && (
+      {!hideTracker && activeModel && (
         <div style={{ 
           backgroundColor: 'white', 
           borderRadius: '12px', 
@@ -800,17 +1130,52 @@ function ModelModal({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    alert('handleSubmit called! Check console for details.');
+    console.log('handleSubmit called, formData:', formData);
+    console.log('model prop:', model);
+    
     if (!formData.name) {
       alert('Please enter a model name');
       return;
     }
 
+    // Recalculate totalForecast for all service types before saving
+    const serviceTypesWithTotals = formData.serviceTypes.map(st => ({
+      ...st,
+      totalForecast: st.quantity * st.avgBooking
+    }));
+
+    console.log('serviceTypesWithTotals:', serviceTypesWithTotals);
+
+    const modelToSave = {
+      ...formData,
+      serviceTypes: serviceTypesWithTotals,
+      modelType: model?.modelType || 'forecast',
+      createdAt: model?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
     if (model) {
-      onUpdate({ ...model, ...formData });
+      // Update existing model
+      console.log('Updating model, model.id:', model.id);
+      // Ensure we preserve the real database ID, not a temporary one
+      const realModelId = model.id?.startsWith('model_') ? null : model.id;
+      if (!realModelId) {
+        alert('Error: Cannot update model - model has temporary ID. Please refresh and try again.');
+        console.error('Model has temporary ID, cannot update:', model.id);
+        return;
+      }
+      const modelToUpdate = { ...model, ...modelToSave, id: realModelId };
+      console.log('Calling onUpdate with:', modelToUpdate);
+      await onUpdate(modelToUpdate);
     } else {
-      onCreate({ ...formData, year: new Date().getFullYear() });
+      // Create new model
+      console.log('Creating new model');
+      const newModelData = { ...modelToSave, year: modelToSave.year || new Date().getFullYear() };
+      console.log('Calling onCreate with:', newModelData);
+      await onCreate(newModelData);
     }
     onClose();
   };
@@ -853,7 +1218,10 @@ function ModelModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <form onSubmit={(e) => {
+          console.log('Form onSubmit triggered!');
+          handleSubmit(e);
+        }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
@@ -1146,7 +1514,15 @@ function ModelModal({
               Cancel
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Submit button clicked! e:', e);
+                console.log('formData:', formData);
+                console.log('model:', model);
+                await handleSubmit(e as any);
+              }}
               style={{
                 backgroundColor: '#3b82f6',
                 color: 'white',

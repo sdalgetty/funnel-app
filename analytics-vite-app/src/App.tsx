@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import BookingsAndBillingsPOC from './BookingsAndBillings'
+import Insights from './Insights'
 import Funnel from './Funnel'
 import Calculator from './Calculator'
 import Forecast from './Forecast'
@@ -34,7 +35,7 @@ function AppContent() {
     features 
   });
   
-  const [currentPage, setCurrentPage] = useState<Page>('funnel')
+  const [currentPage, setCurrentPage] = useState<Page>('insights')
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
@@ -76,7 +77,7 @@ function AppContent() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', width: '100%', overflowX: 'hidden' }}>
       {/* Mobile Device Warning */}
       {isMobile && (
         <div style={{
@@ -106,13 +107,32 @@ function AppContent() {
         display: 'flex',
         gap: '16px',
         alignItems: 'center',
-        marginTop: isMobile ? '48px' : '0'
+        marginTop: isMobile ? '48px' : '0',
+        width: '100%',
+        maxWidth: '100vw',
+        boxSizing: 'border-box'
       }}>
-        <h1 style={{ fontSize: '20px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
-          Analytics Dashboard
+        <h1 style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '0.04em', margin: 0, color: '#1f2937' }}>
+          FNNL
         </h1>
         
         <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+          <button
+            onClick={() => setCurrentPage('insights')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: currentPage === 'insights' ? '#3b82f6' : '#f3f4f6',
+              color: currentPage === 'insights' ? 'white' : '#374151',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Insights
+          </button>
           <button
             onClick={() => setCurrentPage('funnel')}
             style={{
@@ -128,6 +148,22 @@ function AppContent() {
             }}
           >
             Funnel
+          </button>
+          <button
+            onClick={() => setCurrentPage('calculator')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: currentPage === 'calculator' ? '#3b82f6' : '#f3f4f6',
+              color: currentPage === 'calculator' ? 'white' : '#374151',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Calculator
           </button>
           {features.advertising && (
             <button
@@ -271,6 +307,11 @@ function AppContent() {
 
       {/* Page Content */}
       <div style={{ padding: '0' }}>
+        {currentPage === 'insights' && (
+          <Insights 
+            dataManager={dataManager}
+          />
+        )}
         {currentPage === 'funnel' && <Funnel 
           funnelData={dataManager.funnelData} 
           dataManager={dataManager}
@@ -280,6 +321,11 @@ function AppContent() {
           })} 
           paymentsData={dataManager.payments} 
         />}
+        {currentPage === 'calculator' && (
+          <FeatureGate feature="sales">
+            <Calculator />
+          </FeatureGate>
+        )}
         {currentPage === 'advertising' && (
           <FeatureGate feature="advertising">
             <Advertising 
@@ -297,7 +343,8 @@ function AppContent() {
               serviceTypes={dataManager.serviceTypes} 
               setServiceTypes={() => {}} // Handled by data manager
               bookings={dataManager.bookings} 
-              payments={dataManager.payments} 
+              payments={dataManager.payments}
+              showModelingOnly
             />
           </FeatureGate>
         )}
