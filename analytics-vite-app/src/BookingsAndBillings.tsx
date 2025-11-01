@@ -488,7 +488,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', color: '#333', padding: '24px', maxWidth: '1400px', margin: '0 auto' }} onClick={handleClickOutside}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', color: '#333', padding: '24px', maxWidth: '1200px', margin: '0 auto' }} onClick={handleClickOutside}>
       <style>
         {`
           input[type="date"]::-webkit-calendar-picker-indicator {
@@ -942,7 +942,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
       {/* Bookings table */}
       <section style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto', maxHeight: '70vh' }}>
-          <table style={{ width: '100%', fontSize: '14px' }}>
+          <table style={{ width: '100%', fontSize: '14px', tableLayout: 'fixed' }}>
             <thead style={{ 
               backgroundColor: '#f5f5f5',
               position: 'sticky',
@@ -950,14 +950,14 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
               zIndex: 10
             }}>
               <tr>
-                <Th>Project Name</Th>
-                <Th>Service Type</Th>
-                <Th>Lead Source</Th>
-                <Th>Date Inquired</Th>
-                <Th>Date Booked</Th>
-                <Th>Project Date</Th>
-                <Th align="right">Revenue</Th>
-                <Th>Actions</Th>
+                <Th width="20%">Project Name</Th>
+                <Th width="12%">Service Type</Th>
+                <Th width="12%">Lead Source</Th>
+                <Th width="10%">Date Inquired</Th>
+                <Th width="10%">Date Booked</Th>
+                <Th width="10%">Project Date</Th>
+                <Th align="right" width="12%">Revenue</Th>
+                <Th width="14%">Actions</Th>
               </tr>
             </thead>
             <tbody>
@@ -974,7 +974,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
                     backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb'
                   }}>
                     <Td>
-                      <div style={{ fontWeight: '500' }}>{booking.projectName}</div>
+                      <div style={{ fontWeight: '500', wordWrap: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }}>{booking.projectName}</div>
                     </Td>
                     <Td>
                       {serviceType?.name || (
@@ -1331,12 +1331,12 @@ function SummaryCard({ title, value, icon }: { title: string; value: string; ico
   );
 }
 
-function Th({ children, className = "", align = 'left' }: { children: React.ReactNode; className?: string; align?: 'left' | 'right' | 'center' }) {
-  return <th style={{ textAlign: align, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#666', padding: '12px 16px' }}>{children}</th>;
+function Th({ children, className = "", align = 'left', width }: { children: React.ReactNode; className?: string; align?: 'left' | 'right' | 'center'; width?: string }) {
+  return <th style={{ textAlign: align, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#666', padding: '12px 12px', width }}>{children}</th>;
 }
 
 function Td({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' | 'center' }) {
-  return <td style={{ padding: '12px 16px', verticalAlign: 'top', textAlign: align }}>{children}</td>;
+  return <td style={{ padding: '12px 12px', verticalAlign: 'top', textAlign: align, wordWrap: 'break-word', overflowWrap: 'break-word' }}>{children}</td>;
 }
 
 // Add Booking Modal - Completely Clean (v3)

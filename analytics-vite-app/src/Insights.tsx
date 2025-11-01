@@ -277,7 +277,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Cards({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
       {children}
     </div>
   )

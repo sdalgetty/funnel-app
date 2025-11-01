@@ -77,7 +77,7 @@ function AppContent() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', width: '100%', overflowX: 'hidden' }}>
       {/* Mobile Device Warning */}
       {isMobile && (
         <div style={{
@@ -108,8 +108,9 @@ function AppContent() {
         gap: '16px',
         alignItems: 'center',
         marginTop: isMobile ? '48px' : '0',
-        maxWidth: '100%',
-        width: '100%'
+        width: '100%',
+        maxWidth: '100vw',
+        boxSizing: 'border-box'
       }}>
         <h1 style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '0.04em', margin: 0, color: '#1f2937' }}>
           FNNL
