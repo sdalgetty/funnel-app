@@ -107,7 +107,9 @@ function AppContent() {
         display: 'flex',
         gap: '16px',
         alignItems: 'center',
-        marginTop: isMobile ? '48px' : '0'
+        marginTop: isMobile ? '48px' : '0',
+        maxWidth: '100%',
+        width: '100%'
       }}>
         <h1 style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '0.04em', margin: 0, color: '#1f2937' }}>
           FNNL
