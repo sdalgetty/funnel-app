@@ -148,21 +148,28 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     // Debug logging AFTER filtering
     console.log('=== INSIGHTS AD SPEND CALCULATION (AFTER FILTER) ===');
     console.log('Campaigns for selected year (excluding defaults):', campaigns.length);
-    console.log('Filtered campaigns:', campaigns.map(c => ({
+    console.log('Filtered campaigns (full array):', campaigns);
+    console.log('Filtered campaigns (details):', campaigns.map(c => ({
       id: c.id,
       leadSourceId: c.leadSourceId,
+      leadSourceName: leadSources.find(ls => ls.id === c.leadSourceId)?.name || 'Unknown',
       year: c.year,
       month: c.month,
       spend: c.spend,
-      adSpendCents: c.adSpendCents
+      adSpendCents: c.adSpendCents,
+      spendValue: c.spend ?? c.adSpendCents ?? 0
     })));
-    console.log('Campaigns breakdown by lead source:', campaigns.reduce((acc, c) => {
+    const breakdown = campaigns.reduce((acc, c) => {
       const lsName = leadSources.find(ls => ls.id === c.leadSourceId)?.name || 'Unknown';
       const spend = c.spend ?? c.adSpendCents ?? 0;
       acc[lsName] = (acc[lsName] || 0) + spend;
       return acc;
-    }, {} as Record<string, number>));
-    console.log('Total Ad Spend:', totalAdSpend);
+    }, {} as Record<string, number>);
+    console.log('Campaigns breakdown by lead source:', breakdown);
+    console.log('Breakdown entries:', Object.entries(breakdown));
+    console.log('Total Ad Spend (calculated):', totalAdSpend);
+    console.log('Total Ad Spend (cents):', totalAdSpend);
+    console.log('Total Ad Spend (dollars):', totalAdSpend / 100);
     console.log('=====================================');
     
     // Get lead sources that have ad campaigns
