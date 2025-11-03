@@ -221,27 +221,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (error) {
         console.error('Error getting session:', error);
+        setSession(null);
+        setUser(null);
+        setLoading(false);
         return;
       }
       
       setSession(session)
       if (session?.user) {
         console.log('User found, loading profile...');
-        try {
-          const userWithProfile = await loadUserProfile(session.user)
-          console.log('Profile loaded:', userWithProfile);
-          setUser(userWithProfile)
-        } catch (profileError) {
-          console.error('Error loading profile:', profileError);
-          setUser(session.user) // Use basic auth user if profile fails
-        }
+        // Set basic user first so UI can render, then load profile in background
+        const basicUser = {
+          ...session.user,
+          firstName: '',
+          lastName: '',
+          name: session.user.user_metadata?.full_name || session.user.email,
+          companyName: '',
+          subscriptionTier: 'pro',
+          subscriptionStatus: 'active',
+          createdAt: new Date(session.user.created_at),
+          lastLoginAt: new Date(),
+          trialEndsAt: null
+        };
+        setUser(basicUser);
+        setLoading(false); // Allow UI to render immediately
+        
+        // Load profile in background (non-blocking)
+        loadUserProfile(session.user).then(userWithProfile => {
+          if (userWithProfile) {
+            console.log('Profile loaded in background:', userWithProfile);
+            setUser(userWithProfile);
+          }
+        }).catch(profileError => {
+          console.error('Error loading profile in background:', profileError);
+          // Keep using basic user - already set
+        });
       } else {
         console.log('No user session');
-        setUser(null)
+        setUser(null);
+        setLoading(false);
       }
     }).catch(error => {
       clearTimeout(timeoutId); // Clear timeout on error
       console.error('Error in session promise:', error);
+      setSession(null);
+      setUser(null);
       setLoading(false);
     })
 
@@ -251,17 +275,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state change:', event, session ? 'session exists' : 'no session');
       setSession(session)
+      
       if (session?.user) {
         console.log('User authenticated, loading profile...');
-        const userWithProfile = await loadUserProfile(session.user)
-        setUser(userWithProfile)
-        console.log('User profile loaded:', userWithProfile);
+        // Set basic user first so UI can render immediately
+        const basicUser = {
+          ...session.user,
+          firstName: '',
+          lastName: '',
+          name: session.user.user_metadata?.full_name || session.user.email,
+          companyName: '',
+          subscriptionTier: 'pro',
+          subscriptionStatus: 'active',
+          createdAt: new Date(session.user.created_at),
+          lastLoginAt: new Date(),
+          trialEndsAt: null
+        };
+        setUser(basicUser);
+        setLoading(false); // Allow UI to render immediately
+        
+        // Load profile in background (non-blocking)
+        loadUserProfile(session.user).then(userWithProfile => {
+          if (userWithProfile) {
+            console.log('Profile loaded in background:', userWithProfile);
+            setUser(userWithProfile);
+          }
+        }).catch(profileError => {
+          console.error('Error loading profile in background:', profileError);
+          // Keep using basic user - already set
+        });
       } else {
         console.log('No user session');
-        setUser(null)
+        setUser(null);
+        setLoading(false);
       }
-      console.log('Setting loading to false');
-      setLoading(false)
     })
 
     return () => subscription.unsubscribe()
