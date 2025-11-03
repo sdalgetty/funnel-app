@@ -109,23 +109,26 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     return Math.round((daysElapsed / totalDays) * 100);
   }, []);
 
-  // Calculate actual revenue by service type for current year
+  // Calculate actual revenue by service type for the model's year
   const actualRevenueByServiceType = useMemo(() => {
-    const currentYear = new Date().getFullYear();
+    // Use the active model's year, not the current calendar year
+    // This allows forecasting for any year, not just the current one
+    const modelYear = activeModel?.year || new Date().getFullYear();
     const revenueByServiceType: { [key: string]: number } = {};
 
     console.log('Forecast Tracker - Calculating actual revenue:');
-    console.log('Current year:', currentYear);
+    console.log('Model year:', modelYear);
+    console.log('Active model:', activeModel);
     console.log('Total payments:', payments.length);
     console.log('Total bookings:', bookings.length);
     console.log('Total serviceTypes:', serviceTypes.length);
     console.log('Sample payment:', payments[0]);
     console.log('Sample booking:', bookings[0]);
 
-    // Filter payments scheduled for the current year (including future dates)
+    // Filter payments scheduled for the model's year (including future dates)
     // Use paymentDate (scheduled date) or dueDate (when payment is due)
     // This shows forecasted cash flow for the year, not just payments already received
-    const currentYearPayments = payments.filter(payment => {
+    const modelYearPayments = payments.filter(payment => {
       // Use paymentDate (scheduled/expected date) or dueDate as primary source
       // This represents when the payment is scheduled/due, not when it was paid
       const scheduledDate = payment.paymentDate || payment.dueDate;
@@ -134,18 +137,18 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
         return false;
       }
       
-      // Check if payment is scheduled for current year
+      // Check if payment is scheduled for the model's year
       const paymentYear = new Date(scheduledDate).getFullYear();
-      const isCurrentYear = paymentYear === currentYear;
+      const isModelYear = paymentYear === modelYear;
       
-      return isCurrentYear;
+      return isModelYear;
     });
 
-    console.log('Current year payments (after filter):', currentYearPayments.length);
-    console.log('First few current year payments:', currentYearPayments.slice(0, 3));
+    console.log(`Payments for model year ${modelYear} (after filter):`, modelYearPayments.length);
+    console.log('First few payments for model year:', modelYearPayments.slice(0, 3));
     
-    if (currentYearPayments.length === 0) {
-      console.log('No payments found for current year. Analyzing all payments:');
+    if (modelYearPayments.length === 0) {
+      console.log(`No payments found for model year ${modelYear}. Analyzing all payments:`);
       const paymentYearAnalysis = payments.slice(0, 20).map(p => {
         const paidAtYear = p.paidAt ? new Date(p.paidAt).getFullYear() : null;
         const paymentDateYear = p.paymentDate ? new Date(p.paymentDate).getFullYear() : null;
@@ -181,7 +184,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     let paymentsWithNoBooking = 0;
     let paymentsWithNoServiceType = 0;
     
-    currentYearPayments.forEach(payment => {
+    modelYearPayments.forEach(payment => {
       const booking = bookings.find(b => b.id === payment.bookingId);
       if (!booking) {
         paymentsWithNoBooking++;
@@ -211,8 +214,8 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     const breakdownByServiceType: { [key: string]: { name: string; count: number; total: number; payments: any[] } } = {};
     
     // Build breakdown from the same payments that were added to revenueByServiceType
-    console.log('Building breakdown from currentYearPayments:', currentYearPayments.length);
-    currentYearPayments.forEach(payment => {
+    console.log('Building breakdown from modelYearPayments:', modelYearPayments.length);
+    modelYearPayments.forEach(payment => {
       const booking = bookings.find(b => b.id === payment.bookingId);
       if (booking && booking.serviceTypeId) {
         const serviceType = serviceTypes.find(st => st.id === booking.serviceTypeId);
@@ -271,7 +274,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     console.log('Final revenueByServiceType total sum:', Object.values(revenueByServiceType).reduce((sum, val) => sum + val, 0));
     
     return revenueByServiceType;
-  }, [bookings, payments, serviceTypes]);
+  }, [bookings, payments, serviceTypes, activeModel]);
 
   // Calculate performance metrics for active model
   const performanceMetrics = useMemo(() => {
