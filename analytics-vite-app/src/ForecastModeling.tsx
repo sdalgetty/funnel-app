@@ -123,16 +123,37 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
 
     // Filter payments for the current year that are completed/paid
     const currentYearPayments = payments.filter(payment => {
-      // Check if payment is paid (either has paidAt date or status is completed)
-      const isPaid = payment.paidAt || payment.status === 'completed';
-      if (!isPaid) return false;
-
-      // Get payment year from paymentDate or paidAt
+      // Check if payment is paid - use multiple indicators
+      // A payment is paid if: has paidAt, OR status is 'completed', OR isExpected is false (meaning it's not just expected)
+      const isPaid = payment.paidAt || payment.status === 'completed' || payment.isExpected === false;
+      
+      // Also check - if payment doesn't have isExpected field, assume it might be paid if it has a paymentDate
+      // For now, let's be more inclusive - if it has a paymentDate in the current year, count it
+      // Get payment year from paymentDate or paidAt or dueDate
       const paymentDateStr = payment.paidAt || payment.paymentDate || payment.dueDate;
-      if (!paymentDateStr) return false;
+      if (!paymentDateStr) {
+        console.log('Payment missing date:', payment.id);
+        return false;
+      }
       
       const paymentYear = new Date(paymentDateStr).getFullYear();
-      return paymentYear === currentYear;
+      const isCurrentYear = paymentYear === currentYear;
+      
+      // Log details for debugging
+      if (!isPaid && isCurrentYear) {
+        console.log('Payment in current year but not marked as paid:', {
+          id: payment.id,
+          paymentDate: paymentDateStr,
+          year: paymentYear,
+          paidAt: payment.paidAt,
+          status: payment.status,
+          isExpected: payment.isExpected
+        });
+      }
+      
+      // For now, include payments in current year regardless of paid status
+      // TODO: Update this once payment status logic is confirmed
+      return isCurrentYear;
     });
 
     console.log('Current year payments (after filter):', currentYearPayments.length);
