@@ -75,11 +75,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Combine auth user with profile data
       // Explicitly check for null/undefined to avoid falling back to email when name is intentionally empty
+      const firstName = profileData.first_name !== null && profileData.first_name !== undefined 
+        ? profileData.first_name 
+        : '';
+      const lastName = profileData.last_name !== null && profileData.last_name !== undefined 
+        ? profileData.last_name 
+        : '';
+      
+      // Use full_name if available, otherwise construct from first_name + last_name
+      const fullName = profileData.full_name !== null && profileData.full_name !== undefined 
+        ? profileData.full_name 
+        : (firstName && lastName ? `${firstName} ${lastName}` : (firstName || lastName || authUser.user_metadata?.full_name || authUser.email));
+      
       const combinedUser = {
         ...authUser,
-        name: profileData.full_name !== null && profileData.full_name !== undefined 
-          ? profileData.full_name 
-          : (authUser.user_metadata?.full_name || authUser.email),
+        firstName,
+        lastName,
+        name: fullName,
         companyName: profileData.company_name !== null && profileData.company_name !== undefined 
           ? profileData.company_name 
           : '',
@@ -91,8 +103,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       
       console.log('Combined user created:', {
+        profileFirstName: profileData.first_name,
+        profileLastName: profileData.last_name,
         profileFullName: profileData.full_name,
         profileCompanyName: profileData.company_name,
+        finalFirstName: combinedUser.firstName,
+        finalLastName: combinedUser.lastName,
         finalName: combinedUser.name,
         finalCompanyName: combinedUser.companyName
       });
@@ -307,10 +323,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Map frontend field names to database field names
     // Include empty strings explicitly to allow clearing values
     const dbUpdates: any = {}
+    if (updates.firstName !== undefined) dbUpdates.first_name = updates.firstName || null
+    if (updates.lastName !== undefined) dbUpdates.last_name = updates.lastName || null
     if (updates.name !== undefined) dbUpdates.full_name = updates.name || null
     if (updates.companyName !== undefined) dbUpdates.company_name = updates.companyName || null
     if (updates.email !== undefined) dbUpdates.email = updates.email
     dbUpdates.updated_at = new Date().toISOString()
+    
+    // If firstName and lastName are provided but full_name is not, construct full_name
+    if ((updates.firstName !== undefined || updates.lastName !== undefined) && updates.name === undefined) {
+      const firstName = updates.firstName !== undefined ? updates.firstName : user.firstName || ''
+      const lastName = updates.lastName !== undefined ? updates.lastName : user.lastName || ''
+      dbUpdates.full_name = (firstName && lastName) ? `${firstName} ${lastName}` : (firstName || lastName || null)
+    }
 
     console.log('Database updates:', dbUpdates);
     console.log('Updating user with ID:', user.id);
@@ -344,9 +369,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } else {
       // Fallback: update local state directly if reload fails
       console.warn('Failed to reload profile, updating local state directly');
+      const updatedFirstName = updates.firstName !== undefined ? updates.firstName : user.firstName
+      const updatedLastName = updates.lastName !== undefined ? updates.lastName : user.lastName
+      const updatedName = updates.name !== undefined 
+        ? updates.name 
+        : ((updatedFirstName && updatedLastName) ? `${updatedFirstName} ${updatedLastName}` : (updatedFirstName || updatedLastName || user.name))
+      
       setUser({
         ...user,
-        name: updates.name !== undefined ? updates.name : user.name,
+        firstName: updatedFirstName,
+        lastName: updatedLastName,
+        name: updatedName,
         companyName: updates.companyName !== undefined ? updates.companyName : user.companyName,
         email: updates.email !== undefined ? updates.email : user.email
       })

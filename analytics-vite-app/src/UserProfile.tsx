@@ -29,6 +29,8 @@ export default function UserProfile() {
   const [activeSection, setActiveSection] = useState<ProfileSection>('account');
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
     name: user?.name || '',
     companyName: user?.companyName || '',
     email: user?.email || '',
@@ -45,6 +47,8 @@ export default function UserProfile() {
   React.useEffect(() => {
     if (user) {
       setFormData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
         name: user.name || '',
         companyName: user.companyName || '',
         email: user.email || '',
@@ -71,7 +75,9 @@ export default function UserProfile() {
     try {
       // Update the user profile with the form data
       await updateProfile({
-        name: formData.name,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        name: formData.name, // Keep full_name for backwards compatibility
         companyName: formData.companyName,
         email: formData.email,
         // Note: timezone, dateFormat, and notifications would be stored separately in a real app
@@ -84,6 +90,8 @@ export default function UserProfile() {
 
   const handleCancel = () => {
     setFormData({
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
       name: user.name,
       companyName: user.companyName || '',
       email: user.email,
@@ -349,44 +357,86 @@ function AccountSection({
         </h3>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <label style={{ 
-              display: 'block', 
-              fontSize: '14px', 
-              fontWeight: '500', 
-              color: '#374151',
-              marginBottom: '6px',
-              textAlign: 'left'
-            }}>
-              Full Name
-            </label>
-            {isEditing ? (
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  backgroundColor: 'white',
-                  textAlign: 'left'
-                }}
-              />
-            ) : (
-              <div style={{
-                padding: '10px 12px',
-                backgroundColor: '#f9fafb',
-                borderRadius: '6px',
-                fontSize: '14px',
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '500', 
                 color: '#374151',
+                marginBottom: '6px',
                 textAlign: 'left'
               }}>
-                {user.name}
-              </div>
-            )}
+                First Name
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: 'white',
+                    textAlign: 'left'
+                  }}
+                />
+              ) : (
+                <div style={{
+                  padding: '10px 12px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  color: '#374151',
+                  textAlign: 'left'
+                }}>
+                  {user.firstName || 'Not set'}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '500', 
+                color: '#374151',
+                marginBottom: '6px',
+                textAlign: 'left'
+              }}>
+                Last Name
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: 'white',
+                    textAlign: 'left'
+                  }}
+                />
+              ) : (
+                <div style={{
+                  padding: '10px 12px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  color: '#374151',
+                  textAlign: 'left'
+                }}>
+                  {user.lastName || 'Not set'}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
