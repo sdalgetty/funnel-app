@@ -19,6 +19,9 @@ export default function Insights({ dataManager }: { dataManager: any }) {
 
   // Debug logging
   console.log('Insights component - dataManager:', dataManager);
+  console.log('Insights component - dataManager keys:', dataManager ? Object.keys(dataManager) : 'no dataManager');
+  console.log('Insights component - adCampaigns from dataManager:', dataManager?.adCampaigns);
+  console.log('Insights component - adCampaigns length:', adCampaigns.length);
   console.log('Insights component - bookings:', bookings.length, bookings);
   console.log('Insights component - payments:', payments.length, payments);
   console.log('Insights component - dataManager.loading:', dataManager?.loading);
