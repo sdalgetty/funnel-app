@@ -114,6 +114,20 @@ export default function Insights({ dataManager }: { dataManager: any }) {
 
   // Advertising totals (current selected year)
   const advertisingTotals = useMemo(() => {
+    // Debug logging BEFORE filtering
+    console.log('=== INSIGHTS AD SPEND CALCULATION (BEFORE FILTER) ===');
+    console.log('Selected year:', selectedYear);
+    console.log('Total campaigns (all years, before filter):', adCampaigns.length);
+    console.log('All campaigns:', adCampaigns.map(c => ({
+      id: c.id,
+      leadSourceId: c.leadSourceId,
+      year: c.year,
+      month: c.month,
+      spend: c.spend,
+      adSpendCents: c.adSpendCents,
+      isDefault: c.id.startsWith('default_')
+    })));
+    
     const campaigns = adCampaigns.filter(c => c.year === selectedYear && !c.id.startsWith('default_'))
     // Use same calculation as Advertising page - prefer spend, fallback to adSpendCents
     const totalAdSpend = campaigns.reduce((s, c) => {
@@ -121,11 +135,17 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       return s + spend;
     }, 0)
     
-    // Debug logging
-    console.log('=== INSIGHTS AD SPEND CALCULATION ===');
-    console.log('Selected year:', selectedYear);
-    console.log('Total campaigns (all years):', adCampaigns.length);
+    // Debug logging AFTER filtering
+    console.log('=== INSIGHTS AD SPEND CALCULATION (AFTER FILTER) ===');
     console.log('Campaigns for selected year (excluding defaults):', campaigns.length);
+    console.log('Filtered campaigns:', campaigns.map(c => ({
+      id: c.id,
+      leadSourceId: c.leadSourceId,
+      year: c.year,
+      month: c.month,
+      spend: c.spend,
+      adSpendCents: c.adSpendCents
+    })));
     console.log('Campaigns breakdown by lead source:', campaigns.reduce((acc, c) => {
       const lsName = leadSources.find(ls => ls.id === c.leadSourceId)?.name || 'Unknown';
       const spend = c.spend ?? c.adSpendCents ?? 0;
