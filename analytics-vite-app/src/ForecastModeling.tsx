@@ -339,27 +339,40 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                     Active model tracking
                   </p>
                 </div>
-                <div style={{
-                  backgroundColor: '#f3f4f6',
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  textAlign: 'left'
-                }}>
-                  <div style={{ 
-                    fontSize: '12px', 
-                    color: '#6b7280', 
-                    marginBottom: '2px' 
-                  }}>
-                    Year Progress
-                  </div>
-                  <div style={{ 
-                    fontSize: '18px', 
-                    fontWeight: '600', 
-                    color: '#1f2937' 
-                  }}>
-                    {yearProgress}%
-                  </div>
-                </div>
+                {(() => {
+                  const totalActual = performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0);
+                  const totalForecast = performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0);
+                  const overallPercentOfPlan = totalForecast > 0 ? Math.round((totalActual / totalForecast) * 100) : 0;
+                  const backgroundColor = overallPercentOfPlan >= 100 ? '#d1fae5' : 
+                                        overallPercentOfPlan < 80 ? '#fee2e2' : '#fef3c7';
+                  const textColor = overallPercentOfPlan >= 100 ? '#065f46' : 
+                                  overallPercentOfPlan < 80 ? '#991b1b' : '#92400e';
+                  
+                  return (
+                    <div style={{
+                      backgroundColor,
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      textAlign: 'left',
+                      border: `1px solid ${overallPercentOfPlan >= 100 ? '#10b981' : overallPercentOfPlan < 80 ? '#ef4444' : '#f59e0b'}`
+                    }}>
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: textColor, 
+                        marginBottom: '2px' 
+                      }}>
+                        % of Plan
+                      </div>
+                      <div style={{ 
+                        fontSize: '18px', 
+                        fontWeight: '600', 
+                        color: textColor
+                      }}>
+                        {overallPercentOfPlan}%
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -682,27 +695,40 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                   {activeModel.name}
                 </p>
               </div>
-              <div style={{
-                backgroundColor: '#f3f4f6',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                textAlign: 'left'
-              }}>
-                <div style={{ 
-                  fontSize: '12px', 
-                  color: '#6b7280', 
-                  marginBottom: '2px' 
-                }}>
-                  Year Progress
-                </div>
-                <div style={{ 
-                  fontSize: '18px', 
-                  fontWeight: '600', 
-                  color: '#1f2937' 
-                }}>
-                  {yearProgress}%
-                </div>
-              </div>
+              {(() => {
+                const totalActual = performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0);
+                const totalForecast = performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0);
+                const overallPercentOfPlan = totalForecast > 0 ? Math.round((totalActual / totalForecast) * 100) : 0;
+                const backgroundColor = overallPercentOfPlan >= 100 ? '#d1fae5' : 
+                                      overallPercentOfPlan < 80 ? '#fee2e2' : '#fef3c7';
+                const textColor = overallPercentOfPlan >= 100 ? '#065f46' : 
+                                overallPercentOfPlan < 80 ? '#991b1b' : '#92400e';
+                
+                return (
+                  <div style={{
+                    backgroundColor,
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    textAlign: 'left',
+                    border: `1px solid ${overallPercentOfPlan >= 100 ? '#10b981' : overallPercentOfPlan < 80 ? '#ef4444' : '#f59e0b'}`
+                  }}>
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: textColor, 
+                      marginBottom: '2px' 
+                    }}>
+                      % of Plan
+                    </div>
+                    <div style={{ 
+                      fontSize: '18px', 
+                      fontWeight: '600', 
+                      color: textColor
+                    }}>
+                      {overallPercentOfPlan}%
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
