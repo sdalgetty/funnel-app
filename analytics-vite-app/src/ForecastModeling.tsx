@@ -122,38 +122,22 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     console.log('Sample payment:', payments[0]);
     console.log('Sample booking:', bookings[0]);
 
-    // Filter payments for the current year that are completed/paid
+    // Filter payments scheduled for the current year (including future dates)
+    // Use paymentDate (scheduled date) or dueDate (when payment is due)
+    // This shows forecasted cash flow for the year, not just payments already received
     const currentYearPayments = payments.filter(payment => {
-      // Check if payment is paid - use multiple indicators
-      // A payment is paid if: has paidAt, OR status is 'completed', OR isExpected is false (meaning it's not just expected)
-      const isPaid = payment.paidAt || payment.status === 'completed' || payment.isExpected === false;
-      
-      // Also check - if payment doesn't have isExpected field, assume it might be paid if it has a paymentDate
-      // For now, let's be more inclusive - if it has a paymentDate in the current year, count it
-      // Get payment year from paymentDate or paidAt or dueDate
-      const paymentDateStr = payment.paidAt || payment.paymentDate || payment.dueDate;
-      if (!paymentDateStr) {
-        console.log('Payment missing date:', payment.id);
+      // Use paymentDate (scheduled/expected date) or dueDate as primary source
+      // This represents when the payment is scheduled/due, not when it was paid
+      const scheduledDate = payment.paymentDate || payment.dueDate;
+      if (!scheduledDate) {
+        console.log('Payment missing scheduled date (paymentDate/dueDate):', payment.id);
         return false;
       }
       
-      const paymentYear = new Date(paymentDateStr).getFullYear();
+      // Check if payment is scheduled for current year
+      const paymentYear = new Date(scheduledDate).getFullYear();
       const isCurrentYear = paymentYear === currentYear;
       
-      // Log details for debugging
-      if (!isPaid && isCurrentYear) {
-        console.log('Payment in current year but not marked as paid:', {
-          id: payment.id,
-          paymentDate: paymentDateStr,
-          year: paymentYear,
-          paidAt: payment.paidAt,
-          status: payment.status,
-          isExpected: payment.isExpected
-        });
-      }
-      
-      // For now, include payments in current year regardless of paid status
-      // TODO: Update this once payment status logic is confirmed
       return isCurrentYear;
     });
 
@@ -161,13 +145,36 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     console.log('First few current year payments:', currentYearPayments.slice(0, 3));
     
     if (currentYearPayments.length === 0) {
-      console.log('No payments found for current year. Sample of all payments:', payments.slice(0, 5).map(p => ({
-        id: p.id,
-        paymentDate: p.paymentDate,
-        paidAt: p.paidAt,
-        dueDate: p.dueDate,
-        year: new Date(p.paymentDate || p.paidAt || p.dueDate || '').getFullYear()
-      })));
+      console.log('No payments found for current year. Analyzing all payments:');
+      const paymentYearAnalysis = payments.slice(0, 20).map(p => {
+        const paidAtYear = p.paidAt ? new Date(p.paidAt).getFullYear() : null;
+        const paymentDateYear = p.paymentDate ? new Date(p.paymentDate).getFullYear() : null;
+        const dueDateYear = p.dueDate ? new Date(p.dueDate).getFullYear() : null;
+        return {
+          id: p.id,
+          paidAt: p.paidAt,
+          paidAtYear,
+          paymentDate: p.paymentDate,
+          paymentDateYear,
+          dueDate: p.dueDate,
+          dueDateYear,
+          status: p.status,
+          amount: p.amount || p.amountCents
+        };
+      });
+      console.log('Sample payment years:', paymentYearAnalysis);
+      
+      // Count payments by year
+      const byYear: { [year: number]: number } = {};
+      payments.forEach(p => {
+        const year = p.paidAt ? new Date(p.paidAt).getFullYear() : 
+                     (p.paymentDate ? new Date(p.paymentDate).getFullYear() : 
+                      (p.dueDate ? new Date(p.dueDate).getFullYear() : null));
+        if (year) {
+          byYear[year] = (byYear[year] || 0) + 1;
+        }
+      });
+      console.log('Payment count by year:', byYear);
     }
 
     // Group payments by service type via their booking
@@ -200,8 +207,11 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     
     console.log(`Summary: ${paymentsWithNoBooking} payments with no booking, ${paymentsWithNoServiceType} payments with no serviceTypeId`);
     
-    // Detailed breakdown by service type for comparison
+    // Detailed breakdown by service type - use the same data as revenueByServiceType
     const breakdownByServiceType: { [key: string]: { name: string; count: number; total: number; payments: any[] } } = {};
+    
+    // Build breakdown from the same payments that were added to revenueByServiceType
+    console.log('Building breakdown from currentYearPayments:', currentYearPayments.length);
     currentYearPayments.forEach(payment => {
       const booking = bookings.find(b => b.id === payment.bookingId);
       if (booking && booking.serviceTypeId) {
@@ -233,6 +243,15 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     });
     
     console.log('=== DETAILED BREAKDOWN BY SERVICE TYPE ===');
+    console.log('breakdownByServiceType keys:', Object.keys(breakdownByServiceType));
+    console.log('breakdownByServiceType entries count:', Object.entries(breakdownByServiceType).length);
+    
+    if (Object.keys(breakdownByServiceType).length === 0) {
+      console.log('WARNING: breakdownByServiceType is empty but revenueByServiceType might have data!');
+      console.log('revenueByServiceType at this point:', revenueByServiceType);
+      console.log('This suggests the breakdown and revenue calculation are out of sync');
+    }
+    
     Object.entries(breakdownByServiceType).forEach(([serviceTypeId, breakdown]) => {
       console.log(`${breakdown.name} (${serviceTypeId}):`, {
         paymentCount: breakdown.count,
@@ -243,7 +262,8 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     });
     
     const grandTotal = Object.values(breakdownByServiceType).reduce((sum, b) => sum + b.total, 0);
-    console.log(`=== GRAND TOTAL: $${(grandTotal / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ===`);
+    console.log(`=== GRAND TOTAL FROM BREAKDOWN: $${(grandTotal / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ===`);
+    console.log(`=== COMPARISON: revenueByServiceType total: $${(Object.values(revenueByServiceType).reduce((sum, val) => sum + val, 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ===`);
 
     console.log('Final revenueByServiceType:', revenueByServiceType);
     console.log('Final revenueByServiceType keys:', Object.keys(revenueByServiceType));
