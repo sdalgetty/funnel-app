@@ -184,21 +184,19 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       {/* SALES FORECAST - Tracker from Forecast Modeling (use existing component for now) */}
       <Section title="Sales Forecast">
         <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12 }}>
-          {console.log('Insights rendering ForecastModeling with:', {
-            paymentsLength: payments.length,
-            bookingsLength: bookings.length,
-            serviceTypesLength: serviceTypes.length,
-            paymentsSample: payments.slice(0, 3),
-            dataManagerPaymentsLength: dataManager?.payments?.length,
-            dataManagerLoading: dataManager?.loading
-          })}
-          <ForecastModeling 
-            serviceTypes={serviceTypes}
-            setServiceTypes={() => {}}
-            bookings={bookings}
-            payments={payments}
-            showTrackerOnly
-          />
+          {dataManager?.loading ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: '#666' }}>
+              Loading forecast data...
+            </div>
+          ) : (
+            <ForecastModeling 
+              serviceTypes={serviceTypes}
+              setServiceTypes={() => {}}
+              bookings={bookings}
+              payments={payments}
+              showTrackerOnly
+            />
+          )}
         </div>
       </Section>
 
