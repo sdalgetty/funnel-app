@@ -57,53 +57,53 @@ export function calculateCurrentYearRevenueByServiceType(
     let dateSource: 'paymentDate' | 'dueDate' | 'expectedDate' | null = null;
     let dateValue: string | null = null;
     
-    // Try paymentDate first (full date YYYY-MM-DD)
-    if (payment.paymentDate) {
+    // Helper function to extract year from date string without timezone issues
+    const extractYearFromDateString = (dateString: string): number | null => {
+      // If it's YYYY-MM format, extract year directly
+      if (dateString.match(/^\d{4}-\d{2}$/)) {
+        return parseInt(dateString.split('-')[0]);
+      }
+      // If it's YYYY-MM-DD format, extract year directly (avoid timezone issues)
+      if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return parseInt(dateString.split('-')[0]);
+      }
+      // Fallback to Date parsing if format is different
       try {
-        const d = new Date(payment.paymentDate);
+        const d = new Date(dateString);
         if (!isNaN(d.getTime())) {
-          paymentYear = d.getFullYear();
-          dateSource = 'paymentDate';
-          dateValue = payment.paymentDate;
+          return d.getFullYear();
         }
       } catch (e) {
-        console.warn(`Error parsing paymentDate for payment ${payment.id}:`, payment.paymentDate);
+        // Ignore
+      }
+      return null;
+    };
+    
+    // Try paymentDate first (full date YYYY-MM-DD)
+    if (payment.paymentDate) {
+      paymentYear = extractYearFromDateString(payment.paymentDate);
+      if (paymentYear !== null) {
+        dateSource = 'paymentDate';
+        dateValue = payment.paymentDate;
       }
     }
     
     // Try dueDate if paymentDate didn't work
     if (!paymentYear && payment.dueDate) {
-      try {
-        const d = new Date(payment.dueDate);
-        if (!isNaN(d.getTime())) {
-          paymentYear = d.getFullYear();
-          dateSource = 'dueDate';
-          dateValue = payment.dueDate;
-        }
-      } catch (e) {
-        console.warn(`Error parsing dueDate for payment ${payment.id}:`, payment.dueDate);
+      paymentYear = extractYearFromDateString(payment.dueDate);
+      if (paymentYear !== null) {
+        dateSource = 'dueDate';
+        dateValue = payment.dueDate;
       }
     }
     
     // Try expectedDate if neither paymentDate nor dueDate worked
     // expectedDate might be in YYYY-MM format
     if (!paymentYear && payment.expectedDate) {
-      if (payment.expectedDate.match(/^\d{4}-\d{2}$/)) {
-        // It's YYYY-MM format, extract year
-        paymentYear = parseInt(payment.expectedDate.split('-')[0]);
+      paymentYear = extractYearFromDateString(payment.expectedDate);
+      if (paymentYear !== null) {
         dateSource = 'expectedDate';
         dateValue = payment.expectedDate;
-      } else {
-        try {
-          const d = new Date(payment.expectedDate);
-          if (!isNaN(d.getTime())) {
-            paymentYear = d.getFullYear();
-            dateSource = 'expectedDate';
-            dateValue = payment.expectedDate;
-          }
-        } catch (e) {
-          console.warn(`Error parsing expectedDate for payment ${payment.id}:`, payment.expectedDate);
-        }
       }
     }
     
