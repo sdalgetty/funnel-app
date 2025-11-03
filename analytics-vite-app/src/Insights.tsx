@@ -120,16 +120,22 @@ export default function Insights({ dataManager }: { dataManager: any }) {
   // Advertising totals (current selected year)
   const advertisingTotals = useMemo(() => {
     // Early return if dataManager is not ready or has no data yet
-    if (!dataManager || dataManager.loading || !dataManager.adCampaigns) {
-      console.log('=== INSIGHTS AD SPEND CALCULATION - SKIPPING (data not ready) ===');
+    if (!dataManager || dataManager.loading) {
+      console.log('=== INSIGHTS AD SPEND CALCULATION - SKIPPING (dataManager loading) ===');
       console.log('dataManager exists:', !!dataManager);
       console.log('dataManager.loading:', dataManager?.loading);
-      console.log('dataManager.adCampaigns exists:', !!dataManager?.adCampaigns);
       return { totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 };
     }
     
     // Use dataManager.adCampaigns directly to avoid stale closure issues
-    const campaignsFromManager = dataManager.adCampaigns;
+    const campaignsFromManager = dataManager.adCampaigns || [];
+    
+    // Check if we have actual campaigns (not just empty array)
+    if (campaignsFromManager.length === 0) {
+      console.log('=== INSIGHTS AD SPEND CALCULATION - SKIPPING (no campaigns) ===');
+      console.log('dataManager.adCampaigns length:', campaignsFromManager.length);
+      return { totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 };
+    }
     
     // Debug logging BEFORE filtering
     console.log('=== INSIGHTS AD SPEND CALCULATION (BEFORE FILTER) ===');
