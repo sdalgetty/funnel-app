@@ -1198,20 +1198,48 @@ export class UnifiedDataService {
     }
 
     try {
-      const { error } = await supabase
+      // Check if calculator goals record exists
+      const { data: existingData, error: fetchError } = await supabase
         .from('funnels')
-        .upsert({
-          user_id: userId,
-          name: 'Calculator',
-          year: 0,
-          month: 0,
-          bookings_goal: goals.bookingsGoal,
-          inquiry_to_call: goals.inquiryToCall,
-          call_to_booking: goals.callToBooking,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,year,month'
-        });
+        .select('id')
+        .eq('user_id', userId)
+        .eq('year', 0)
+        .eq('month', 0)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Error checking for existing calculator goals:', fetchError);
+        return false;
+      }
+
+      const recordId = existingData?.id;
+
+      const upsertData: any = {
+        user_id: userId,
+        name: 'Calculator',
+        year: 0,
+        month: 0,
+        bookings_goal: goals.bookingsGoal,
+        inquiry_to_call: goals.inquiryToCall,
+        call_to_booking: goals.callToBooking,
+        updated_at: new Date().toISOString(),
+      };
+
+      let error;
+      if (recordId) {
+        // Update existing record
+        const { error: updateError } = await supabase
+          .from('funnels')
+          .update(upsertData)
+          .eq('id', recordId);
+        error = updateError;
+      } else {
+        // Insert new record
+        const { error: insertError } = await supabase
+          .from('funnels')
+          .insert(upsertData);
+        error = insertError;
+      }
 
       if (error) {
         console.error('Error saving calculator goals:', error);
