@@ -85,7 +85,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     const inquiryToTaken = totalInquiries > 0 ? ((totalCallsTaken / totalInquiries) * 100).toFixed(1) : '0.0'
     const showUpRate = totalCallsBooked > 0 ? ((totalCallsTaken / totalCallsBooked) * 100).toFixed(1) : '0.0'
     const takenToClose = totalCallsTaken > 0 ? ((totalCloses / totalCallsTaken) * 100).toFixed(1) : '0.0'
-    // Revenue per call taken uses bookings dollars from funnel divided by callsTaken
+    // Revenue per call taken uses ALL bookings (not just trackable) divided by callsTaken
     const totalBookings = dynamicSalesTotals.bookingsCents
     const revenuePerCallTaken = totalCallsTaken > 0 ? Math.round(totalBookings / totalCallsTaken) : 0
     return { totalCallsBooked, totalCallsTaken, inquiryToBooked, inquiryToTaken, showUpRate, takenToClose, revenuePerCallTaken, avgCallsBooked, avgCallsTaken }
