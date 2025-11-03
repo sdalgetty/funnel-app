@@ -119,6 +119,15 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     console.log('Total payments:', payments.length);
     console.log('Total bookings:', bookings.length);
     console.log('Total serviceTypes:', serviceTypes.length);
+    console.log('payments array:', payments);
+    console.log('bookings array length:', bookings.length);
+    console.log('serviceTypes array length:', serviceTypes.length);
+    
+    // Early return if no data
+    if (payments.length === 0) {
+      console.warn('WARNING: No payments found! This could mean data is still loading.');
+      return revenueByServiceType;
+    }
     
     // Debug: Show sample payments and their date fields
     console.log('=== SAMPLE PAYMENTS (first 5) ===');
