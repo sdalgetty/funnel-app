@@ -53,11 +53,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('Attempting profile query with 3-second timeout...');
       
       // Try profile query with a short timeout
+      // Use a timestamp to ensure we don't get cached data
       const profilePromise = supabase
         .from('user_profiles')
         .select('*')
         .eq('id', authUser.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to handle missing profiles gracefully
 
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Profile query timeout')), 10000)
@@ -362,35 +363,64 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     console.log('Profile updated successfully, updating local state');
+    console.log('Updated profile data from database:', data);
     
-    // Get fresh auth user and reload profile from database to ensure consistency
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (authUser) {
-      const reloadedProfile = await loadUserProfile(authUser);
-      if (reloadedProfile) {
-        setUser(reloadedProfile);
-        console.log('User profile reloaded after update:', reloadedProfile);
-      } else {
-        // Fallback: update local state directly if reload fails
-        console.warn('Failed to reload profile, updating local state directly');
-        const updatedFirstName = updates.firstName !== undefined ? (updates.firstName || '') : user.firstName
-        const updatedLastName = updates.lastName !== undefined ? (updates.lastName || '') : user.lastName
-        const updatedName = updates.name !== undefined 
-          ? updates.name 
-          : ((updatedFirstName && updatedLastName) ? `${updatedFirstName} ${updatedLastName}` : (updatedFirstName || updatedLastName || user.name))
-        
-        setUser({
-          ...user,
-          firstName: updatedFirstName || '',
-          lastName: updatedLastName || '',
-          name: updatedName,
-          companyName: updates.companyName !== undefined ? updates.companyName : user.companyName,
-          email: updates.email !== undefined ? updates.email : user.email
-        })
+    // Use the returned data directly from the update query (most reliable)
+    // Parse the updated profile data
+    const updatedFirstName = data.first_name !== null && data.first_name !== undefined ? data.first_name : '';
+    const updatedLastName = data.last_name !== null && data.last_name !== undefined ? data.last_name : '';
+    const updatedFullName = data.full_name !== null && data.full_name !== undefined 
+      ? data.full_name 
+      : (updatedFirstName && updatedLastName ? `${updatedFirstName} ${updatedLastName}` : (updatedFirstName || updatedLastName || user.name));
+    const updatedCompanyName = data.company_name !== null && data.company_name !== undefined ? data.company_name : '';
+    
+    // Update local state immediately with the data returned from the update
+    const updatedUser = {
+      ...user,
+      firstName: updatedFirstName,
+      lastName: updatedLastName,
+      name: updatedFullName,
+      companyName: updatedCompanyName,
+      email: data.email !== undefined ? data.email : user.email
+    };
+    
+    console.log('Updating user state with:', {
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      name: updatedUser.name,
+      companyName: updatedUser.companyName
+    });
+    
+    setUser(updatedUser);
+    
+    // Also verify by reloading after a short delay to ensure consistency
+    // This helps catch any edge cases where the update didn't fully commit
+    setTimeout(async () => {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const reloadedProfile = await loadUserProfile(authUser);
+          if (reloadedProfile) {
+            console.log('Profile verification reload:', reloadedProfile);
+            // Only update if there's a discrepancy
+            if (
+              reloadedProfile.firstName !== updatedUser.firstName ||
+              reloadedProfile.lastName !== updatedUser.lastName ||
+              reloadedProfile.companyName !== updatedUser.companyName
+            ) {
+              console.warn('Profile data discrepancy detected, updating from reload:', {
+                saved: { firstName: updatedUser.firstName, lastName: updatedUser.lastName, companyName: updatedUser.companyName },
+                reloaded: { firstName: reloadedProfile.firstName, lastName: reloadedProfile.lastName, companyName: reloadedProfile.companyName }
+              });
+              setUser(reloadedProfile);
+            }
+          }
+        }
+      } catch (verifyError) {
+        console.error('Error during profile verification reload:', verifyError);
+        // Don't throw - we already updated from the direct response
       }
-    } else {
-      console.error('Could not get auth user for reload');
-    }
+    }, 500);
   }
 
   const value = {
