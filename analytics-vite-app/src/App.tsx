@@ -149,22 +149,6 @@ function AppContent() {
           >
             Funnel
           </button>
-          <button
-            onClick={() => setCurrentPage('calculator')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              backgroundColor: currentPage === 'calculator' ? '#3b82f6' : '#f3f4f6',
-              color: currentPage === 'calculator' ? 'white' : '#374151',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            Calculator
-          </button>
           {features.advertising && (
             <button
               onClick={() => setCurrentPage('advertising')}
@@ -319,11 +303,6 @@ function AppContent() {
           paymentsData={dataManager.payments}
           serviceTypes={dataManager.serviceTypes}
         />}
-        {currentPage === 'calculator' && (
-          <FeatureGate feature="sales">
-            <Calculator dataManager={dataManager} />
-          </FeatureGate>
-        )}
         {currentPage === 'advertising' && (
           <FeatureGate feature="advertising">
             <Advertising 

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import Forecast from './Forecast'
 import ForecastModeling from './ForecastModeling'
+import Calculator from './Calculator'
 import type { FunnelData, Booking, Payment, ServiceType, AdCampaign, LeadSource } from './types'
 import { Users, Phone, CheckCircle, DollarSign, TrendingUp, Target, BarChart3 } from 'lucide-react'
 
@@ -263,6 +264,11 @@ export default function Insights({ dataManager }: { dataManager: any }) {
           <Card icon={<Target size={20} color="#8b5cf6" />} label="Call Show Up Rate" value={`${callTotals.showUpRate}%`} sub="Call attendance" />
           <Card icon={<DollarSign size={20} color="#10b981" />} label="Revenue Per Call Taken" value={toUSD(callTotals.revenuePerCallTaken)} sub="Per call value" />
         </Cards>
+      </Section>
+
+      {/* CALCULATOR */}
+      <Section title="Sales Calculator">
+        <Calculator dataManager={dataManager} compact />
       </Section>
 
       {/* SALES FORECAST - Tracker from Forecast Modeling (use existing component for now) */}

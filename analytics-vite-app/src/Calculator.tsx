@@ -14,9 +14,10 @@ interface CalculatorData {
 
 interface CalculatorProps {
   dataManager?: any;
+  compact?: boolean; // If true, show 4 columns without title
 }
 
-const Calculator: React.FC<CalculatorProps> = ({ dataManager }) => {
+const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false }) => {
   const { user } = useAuth();
   const currentYear = new Date().getFullYear();
 
@@ -225,6 +226,362 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager }) => {
   // Determine if pace is on track
   const isOnTrack = calculations.paceBookings >= data.bookingsGoal;
 
+  // Render a section card (used for both 2-column and 4-column layouts)
+  const renderSection = (title: string, icon: React.ReactNode, children: React.ReactNode) => (
+    <div style={{
+      backgroundColor: 'white',
+      borderRadius: '12px',
+      padding: '20px',
+      border: '1px solid #e5e7eb',
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+      minWidth: 0,
+      overflow: 'hidden',
+      height: '100%'
+    }}>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '8px', 
+        marginBottom: '20px' 
+      }}>
+        {icon}
+        <h2 style={{ 
+          fontSize: '18px', 
+          fontWeight: '600', 
+          margin: 0, 
+          color: '#1f2937' 
+        }}>
+          {title}
+        </h2>
+      </div>
+      {children}
+    </div>
+  );
+
+  // Annual Goals Section Content
+  const annualGoalsContent = (
+    <>
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '14px', 
+          fontWeight: '500', 
+          color: '#374151', 
+          marginBottom: '6px' 
+        }}>
+          Bookings Goal
+        </label>
+        <input
+          type="number"
+          value={data.bookingsGoal}
+          onChange={(e) => updateData('bookingsGoal', parseInt(e.target.value) || 0)}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: '8px',
+            border: '1px solid #d1d5db',
+            fontSize: '16px',
+            backgroundColor: 'white',
+            boxSizing: 'border-box'
+          }}
+        />
+      </div>
+
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '14px', 
+          fontWeight: '500', 
+          color: '#374151', 
+          marginBottom: '6px' 
+        }}>
+          Inquiry to Call Rate (%)
+        </label>
+        <input
+          type="number"
+          value={data.inquiryToCall}
+          onChange={(e) => updateData('inquiryToCall', parseInt(e.target.value) || 0)}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: '8px',
+            border: '1px solid #d1d5db',
+            fontSize: '16px',
+            backgroundColor: 'white',
+            boxSizing: 'border-box'
+          }}
+        />
+      </div>
+
+      <div>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '14px', 
+          fontWeight: '500', 
+          color: '#374151', 
+          marginBottom: '6px' 
+        }}>
+          Call to Booking Rate (%)
+        </label>
+        <input
+          type="number"
+          value={data.callToBooking}
+          onChange={(e) => updateData('callToBooking', parseInt(e.target.value) || 0)}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: '8px',
+            border: '1px solid #d1d5db',
+            fontSize: '16px',
+            backgroundColor: 'white',
+            boxSizing: 'border-box'
+          }}
+        />
+      </div>
+    </>
+  );
+
+  // Required Activity Section Content
+  const requiredActivityContent = (
+    <>
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '16px',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div>
+            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>
+              Required Inquiries
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#1f2937' }}>
+              {formatNumber(calculations.requiredInquiries)}
+            </div>
+          </div>
+          <Users size={24} color="#6b7280" />
+        </div>
+      </div>
+
+      <div>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '16px',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div>
+            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>
+              Required Calls
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#1f2937' }}>
+              {formatNumber(calculations.requiredCalls)}
+            </div>
+          </div>
+          <Phone size={24} color="#6b7280" />
+        </div>
+      </div>
+    </>
+  );
+
+  // Progress YTD Section Content
+  const progressYtdContent = (
+    <>
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '14px', 
+          fontWeight: '500', 
+          color: '#374151', 
+          marginBottom: '6px' 
+        }}>
+          Inquiries YTD
+        </label>
+        <input
+          type="number"
+          value={data.inqYtd}
+          readOnly
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: '8px',
+            border: '1px solid #d1d5db',
+            fontSize: '16px',
+            backgroundColor: '#f9fafb',
+            color: '#6b7280',
+            boxSizing: 'border-box',
+            cursor: 'not-allowed'
+          }}
+        />
+      </div>
+
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '14px', 
+          fontWeight: '500', 
+          color: '#374151', 
+          marginBottom: '6px' 
+        }}>
+          Calls YTD
+        </label>
+        <input
+          type="number"
+          value={data.callsYtd}
+          readOnly
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: '8px',
+            border: '1px solid #d1d5db',
+            fontSize: '16px',
+            backgroundColor: '#f9fafb',
+            color: '#6b7280',
+            boxSizing: 'border-box',
+            cursor: 'not-allowed'
+          }}
+        />
+      </div>
+
+      <div>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '14px', 
+          fontWeight: '500', 
+          color: '#374151', 
+          marginBottom: '6px' 
+        }}>
+          Bookings YTD
+        </label>
+        <input
+          type="number"
+          value={data.bookingsYtd}
+          readOnly
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: '8px',
+            border: '1px solid #d1d5db',
+            fontSize: '16px',
+            backgroundColor: '#f9fafb',
+            color: '#6b7280',
+            boxSizing: 'border-box',
+            cursor: 'not-allowed'
+          }}
+        />
+      </div>
+    </>
+  );
+
+  // Annualized Pace Section Content
+  const annualizedPaceContent = (
+    <>
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '16px',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div>
+            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>
+              Inquiries Pace
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#1f2937' }}>
+              {formatNumber(calculations.paceInq)}
+            </div>
+          </div>
+          <Users size={24} color="#6b7280" />
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '16px',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div>
+            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>
+              Calls Pace
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#1f2937' }}>
+              {formatNumber(calculations.paceCalls)}
+            </div>
+          </div>
+          <Phone size={24} color="#6b7280" />
+        </div>
+      </div>
+
+      <div>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '16px',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb',
+          backgroundColor: isOnTrack ? '#d1fae5' : '#fef2f2'
+        }}>
+          <div>
+            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>
+              Bookings Pace
+            </div>
+            <div style={{ 
+              fontSize: '20px', 
+              fontWeight: '700', 
+              color: isOnTrack ? '#065f46' : '#991b1b'
+            }}>
+              {formatNumber(calculations.paceBookings)}
+            </div>
+            {isOnTrack ? (
+              <div style={{ fontSize: '12px', color: '#065f46', marginTop: '4px' }}>
+                ✓ On track for goal
+              </div>
+            ) : (
+              <div style={{ fontSize: '12px', color: '#991b1b', marginTop: '4px' }}>
+                ⚠ Behind goal
+              </div>
+            )}
+          </div>
+          <CheckCircle size={24} color={isOnTrack ? '#10b981' : '#ef4444'} />
+        </div>
+      </div>
+    </>
+  );
+
+  // If compact mode, render 4 columns
+  if (compact) {
+    return (
+      <div style={{ 
+        display: 'grid', 
+        gap: '16px',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        maxWidth: '100%',
+        overflow: 'hidden'
+      }}>
+        {renderSection('Annual Goals', <Target size={20} color="#3b82f6" />, annualGoalsContent)}
+        {renderSection('Required Activity', <TrendingUp size={20} color="#10b981" />, requiredActivityContent)}
+        {renderSection('Progress — Actual YTD', <CheckCircle size={20} color="#f59e0b" />, progressYtdContent)}
+        {renderSection('Annualized Pace', <DollarSign size={20} color="#8b5cf6" />, annualizedPaceContent)}
+      </div>
+    );
+  }
+
+  // Original 2-column layout
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ marginBottom: '32px' }}>
