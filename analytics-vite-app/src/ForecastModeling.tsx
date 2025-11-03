@@ -404,10 +404,13 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                       <Td align="right">{toUSD(metric.forecastGoal)}</Td>
                       <Td align="right">{toUSD(metric.actualRevenue)}</Td>
                       <Td align="right" style={{ 
-                        color: metric.remaining < 0 ? '#ef4444' : '#10b981',
+                        color: metric.remaining < 0 ? '#10b981' : '#ef4444',
                         fontWeight: '500'
                       }}>
-                        {toUSD(metric.remaining)}
+                        {metric.remaining < 0 
+                          ? toUSD(Math.abs(metric.remaining)) // Surplus: show as positive (green)
+                          : `-${toUSD(metric.remaining)}` // Deficit: show with negative (red)
+                        }
                       </Td>
                       <Td align="right" style={{ 
                         color: metric.percentOfPlan >= 100 ? '#10b981' : 
@@ -441,9 +444,14 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                     <Td align="right" style={{ 
                       fontWeight: '700', 
                       fontSize: '14px',
-                      color: performanceMetrics.reduce((sum, m) => sum + m.remaining, 0) < 0 ? '#ef4444' : '#10b981'
+                      color: performanceMetrics.reduce((sum, m) => sum + m.remaining, 0) < 0 ? '#10b981' : '#ef4444'
                     }}>
-                      {toUSD(performanceMetrics.reduce((sum, m) => sum + m.remaining, 0))}
+                      {(() => {
+                        const totalRemaining = performanceMetrics.reduce((sum, m) => sum + m.remaining, 0);
+                        return totalRemaining < 0 
+                          ? toUSD(Math.abs(totalRemaining)) // Surplus: show as positive (green)
+                          : `-${toUSD(totalRemaining)}` // Deficit: show with negative (red)
+                      })()}
                     </Td>
                     <Td align="right" style={{ 
                       fontWeight: '700', 
@@ -739,10 +747,13 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                     <Td align="right">{toUSD(metric.forecastGoal)}</Td>
                     <Td align="right">{toUSD(metric.actualRevenue)}</Td>
                     <Td align="right" style={{ 
-                      color: metric.remaining < 0 ? '#ef4444' : '#10b981',
+                      color: metric.remaining < 0 ? '#10b981' : '#ef4444',
                       fontWeight: '500'
                     }}>
-                      {toUSD(metric.remaining)}
+                      {metric.remaining < 0 
+                        ? toUSD(Math.abs(metric.remaining)) // Surplus: show as positive (green)
+                        : `-${toUSD(metric.remaining)}` // Deficit: show with negative (red)
+                      }
                     </Td>
                     <Td align="right" style={{ 
                       color: metric.percentOfPlan >= 100 ? '#10b981' : 
@@ -778,9 +789,14 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                   <Td align="right" style={{ 
                     fontWeight: '700', 
                     fontSize: '14px',
-                    color: performanceMetrics.reduce((sum, m) => sum + m.remaining, 0) < 0 ? '#ef4444' : '#10b981'
+                    color: performanceMetrics.reduce((sum, m) => sum + m.remaining, 0) < 0 ? '#10b981' : '#ef4444'
                   }}>
-                    {toUSD(performanceMetrics.reduce((sum, m) => sum + m.remaining, 0))}
+                    {(() => {
+                      const totalRemaining = performanceMetrics.reduce((sum, m) => sum + m.remaining, 0);
+                      return totalRemaining < 0 
+                        ? toUSD(Math.abs(totalRemaining)) // Surplus: show as positive (green)
+                        : `-${toUSD(totalRemaining)}` // Deficit: show with negative (red)
+                    })()}
                   </Td>
                   <Td align="right" style={{ 
                     fontWeight: '700', 
