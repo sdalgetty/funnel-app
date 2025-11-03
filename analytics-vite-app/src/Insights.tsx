@@ -370,8 +370,27 @@ export default function Insights({ dataManager }: { dataManager: any }) {
               c => c.year === selectedYear && !c.id.startsWith('default_')
             );
             console.log('Filtered campaigns (year + not default):', campaigns.length);
+            
+            // Calculate breakdown by lead source
+            const breakdownByLeadSource = campaigns.reduce((acc, c) => {
+              const lsName = leadSources.find(ls => ls.id === c.leadSourceId)?.name || 'Unknown';
+              const spend = c.spend ?? c.adSpendCents ?? 0;
+              if (!acc[lsName]) {
+                acc[lsName] = { count: 0, total: 0 };
+              }
+              acc[lsName].count++;
+              acc[lsName].total += spend;
+              return acc;
+            }, {} as Record<string, { count: number; total: number }>);
+            
+            console.log('Breakdown by Lead Source:');
+            Object.entries(breakdownByLeadSource).forEach(([name, data]) => {
+              console.log(`  ${name}: ${data.count} campaigns, $${(data.total / 100).toFixed(2)}`);
+            });
+            
             console.log('Campaigns details:', campaigns.map(c => ({
               id: c.id,
+              leadSource: leadSources.find(ls => ls.id === c.leadSourceId)?.name || 'Unknown',
               year: c.year,
               month: c.month,
               spend: c.spend,
