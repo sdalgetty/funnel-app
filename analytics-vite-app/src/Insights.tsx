@@ -346,11 +346,25 @@ export default function Insights({ dataManager }: { dataManager: any }) {
         <Cards>
           {(() => {
             // Simple direct calculation matching Advertising page sum row logic
+            // Wait for dataManager to be ready and have campaigns
+            if (!dataManager || dataManager.loading || !dataManager.adCampaigns || dataManager.adCampaigns.length === 0) {
+              // Return zeros while loading
+              return (
+                <>
+                  <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value="$0.00" />
+                  <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value="$0.00" />
+                  <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value="N/A" />
+                  <Card icon={<Target size={20} color="#8b5cf6" />} label="Cost Per Close" value="$0.00" />
+                </>
+              );
+            }
+            
             // Get all campaigns for selected year, exclude defaults, sum across all lead sources
-            const allCampaigns = dataManager?.adCampaigns || [];
+            const allCampaigns = dataManager.adCampaigns;
             console.log('=== NEW DIRECT CALCULATION ===');
             console.log('All campaigns from dataManager:', allCampaigns.length);
             console.log('Selected year:', selectedYear);
+            console.log('dataManager.loading:', dataManager.loading);
             
             const campaigns = allCampaigns.filter(
               c => c.year === selectedYear && !c.id.startsWith('default_')
@@ -374,15 +388,15 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             console.log('==============================');
             
             // Get lead sources that have ad campaigns
-            const leadSourcesWithAds = new Set((dataManager?.adCampaigns || []).map(c => c.leadSourceId));
-            const totalBookedFromAds = (dataManager?.bookings || [])
+            const leadSourcesWithAds = new Set(allCampaigns.map(c => c.leadSourceId));
+            const totalBookedFromAds = (dataManager.bookings || [])
               .filter(b => {
                 const lsId = b.leadSourceId;
                 return leadSourcesWithAds.has(lsId) && b.dateBooked?.startsWith(String(selectedYear));
               })
               .reduce((s, b) => s + (b.revenue || b.bookedRevenue || 0), 0);
             
-            const closesFromAds = (dataManager?.bookings || []).filter(b => {
+            const closesFromAds = (dataManager.bookings || []).filter(b => {
               const lsId = b.leadSourceId;
               return leadSourcesWithAds.has(lsId) && b.dateBooked?.startsWith(String(selectedYear));
             }).length;
