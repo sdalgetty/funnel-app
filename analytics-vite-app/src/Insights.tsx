@@ -347,13 +347,31 @@ export default function Insights({ dataManager }: { dataManager: any }) {
           {(() => {
             // Simple direct calculation matching Advertising page sum row logic
             // Get all campaigns for selected year, exclude defaults, sum across all lead sources
-            const campaigns = (dataManager?.adCampaigns || []).filter(
+            const allCampaigns = dataManager?.adCampaigns || [];
+            console.log('=== NEW DIRECT CALCULATION ===');
+            console.log('All campaigns from dataManager:', allCampaigns.length);
+            console.log('Selected year:', selectedYear);
+            
+            const campaigns = allCampaigns.filter(
               c => c.year === selectedYear && !c.id.startsWith('default_')
             );
+            console.log('Filtered campaigns (year + not default):', campaigns.length);
+            console.log('Campaigns details:', campaigns.map(c => ({
+              id: c.id,
+              year: c.year,
+              month: c.month,
+              spend: c.spend,
+              adSpendCents: c.adSpendCents,
+              spendValue: c.spend ?? c.adSpendCents ?? 0
+            })));
+            
             const totalAdSpend = campaigns.reduce((sum, c) => {
               const spend = c.spend ?? c.adSpendCents ?? 0;
               return sum + spend;
             }, 0);
+            console.log('Total Ad Spend (cents):', totalAdSpend);
+            console.log('Total Ad Spend (dollars):', totalAdSpend / 100);
+            console.log('==============================');
             
             // Get lead sources that have ad campaigns
             const leadSourcesWithAds = new Set((dataManager?.adCampaigns || []).map(c => c.leadSourceId));
