@@ -26,14 +26,18 @@ export default function Insights({ dataManager }: { dataManager: any }) {
   const leadSources: LeadSource[] = dataManager?.leadSources || []
 
   // Debug logging
-  console.log('Insights component - dataManager:', dataManager);
-  console.log('Insights component - dataManager keys:', dataManager ? Object.keys(dataManager) : 'no dataManager');
-  console.log('Insights component - adCampaigns from dataManager (raw):', dataManager?.adCampaigns);
-  console.log('Insights component - adCampaigns state (after useEffect):', adCampaigns);
-  console.log('Insights component - adCampaigns length:', adCampaigns.length);
-  console.log('Insights component - bookings:', bookings.length);
-  console.log('Insights component - payments:', payments.length);
-  console.log('Insights component - dataManager.loading:', dataManager?.loading);
+  console.log('=== INSIGHTS COMPONENT DEBUG ===');
+  console.log('dataManager exists:', !!dataManager);
+  console.log('dataManager keys:', dataManager ? Object.keys(dataManager) : 'no dataManager');
+  console.log('dataManager.loading:', dataManager?.loading);
+  console.log('dataManager.adCampaigns (raw):', dataManager?.adCampaigns);
+  console.log('dataManager.adCampaigns length:', dataManager?.adCampaigns?.length || 0);
+  console.log('adCampaigns state (after useEffect):', adCampaigns);
+  console.log('adCampaigns state length:', adCampaigns.length);
+  console.log('bookings length:', bookings.length);
+  console.log('payments length:', payments.length);
+  console.log('leadSources length:', leadSources.length);
+  console.log('================================');
 
   const yearData = useMemo(() => funnelData.filter(m => m.year === selectedYear), [funnelData, selectedYear])
 
