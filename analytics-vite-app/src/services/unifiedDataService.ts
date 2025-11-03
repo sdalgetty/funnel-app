@@ -1149,4 +1149,79 @@ export class UnifiedDataService {
       return false;
     }
   }
+
+  // Calculator Goals - stored as a special row in funnels table with year=0, month=0
+  static async getCalculatorGoals(userId: string): Promise<{
+    bookingsGoal: number;
+    inquiryToCall: number;
+    callToBooking: number;
+  } | null> {
+    if (!this.isSupabaseConfigured()) {
+      return { bookingsGoal: 50, inquiryToCall: 25, callToBooking: 35 };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('funnels')
+        .select('bookings_goal, inquiry_to_call, call_to_booking')
+        .eq('user_id', userId)
+        .eq('year', 0)
+        .eq('month', 0)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching calculator goals:', error);
+        return null;
+      }
+
+      if (!data) {
+        return null; // No goals saved yet
+      }
+
+      return {
+        bookingsGoal: data.bookings_goal || 50,
+        inquiryToCall: data.inquiry_to_call || 25,
+        callToBooking: data.call_to_booking || 35,
+      };
+    } catch (error) {
+      console.error('Error fetching calculator goals:', error);
+      return null;
+    }
+  }
+
+  static async saveCalculatorGoals(
+    userId: string,
+    goals: { bookingsGoal: number; inquiryToCall: number; callToBooking: number }
+  ): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return true; // Mock success
+    }
+
+    try {
+      const { error } = await supabase
+        .from('funnels')
+        .upsert({
+          user_id: userId,
+          name: 'Calculator',
+          year: 0,
+          month: 0,
+          bookings_goal: goals.bookingsGoal,
+          inquiry_to_call: goals.inquiryToCall,
+          call_to_booking: goals.callToBooking,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,year,month'
+        });
+
+      if (error) {
+        console.error('Error saving calculator goals:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error saving calculator goals:', error);
+      return false;
+    }
+  }
 }

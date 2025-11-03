@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Target, TrendingUp, Users, Phone, CheckCircle, DollarSign } from 'lucide-react';
-import type { FunnelData } from './types';
+import { useAuth } from './contexts/AuthContext';
+import { UnifiedDataService } from './services/unifiedDataService';
 
 interface CalculatorData {
   bookingsGoal: number;
@@ -12,34 +13,82 @@ interface CalculatorData {
 }
 
 interface CalculatorProps {
-  funnelData?: FunnelData[];
+  dataManager?: any;
 }
 
-const Calculator: React.FC<CalculatorProps> = ({ funnelData = [] }) => {
-  // Calculate YTD totals from funnel data
-  const getYtdTotals = () => {
-    const currentYear = new Date().getFullYear();
-    
-    // Get all data for the current year (not just up to current month)
-    const yearData = funnelData.filter(item => item.year === currentYear);
-    
-    return yearData.reduce((acc, month) => ({
-      inquiries: acc.inquiries + month.inquiries,
-      callsTaken: acc.callsTaken + month.callsTaken,
-      bookings: acc.bookings + month.closes, // Use closes as bookings (deals closed)
-    }), { inquiries: 0, callsTaken: 0, bookings: 0 });
-  };
+const Calculator: React.FC<CalculatorProps> = ({ dataManager }) => {
+  const { user } = useAuth();
+  const currentYear = new Date().getFullYear();
 
-  const ytdTotals = getYtdTotals();
+  // Calculate YTD totals from actual funnel data
+  const ytdTotals = useMemo(() => {
+    const funnelData = dataManager?.funnelData || [];
+    const bookings = dataManager?.bookings || [];
+    const serviceTypes = dataManager?.serviceTypes || [];
+    
+    // Get trackable service type IDs (for closes calculation)
+    const trackableServiceIds = new Set(
+      serviceTypes.filter((st: any) => st.tracksInFunnel).map((st: any) => st.id)
+    );
+    
+    // Get all data for the current year
+    const yearData = funnelData.filter((item: any) => item.year === currentYear);
+    
+    // Calculate inquiries and calls from funnel data
+    const totalInquiries = yearData.reduce((acc: number, month: any) => acc + (month.inquiries || 0), 0);
+    const totalCallsTaken = yearData.reduce((acc: number, month: any) => acc + (month.callsTaken || 0), 0);
+    
+    // Calculate closes from bookings (only trackable service types)
+    const totalCloses = bookings.filter((b: any) => {
+      if (!b?.dateBooked) return false;
+      const [y] = b.dateBooked.split('-');
+      return parseInt(y, 10) === currentYear && trackableServiceIds.has(b.serviceTypeId);
+    }).length;
+    
+    return {
+      inquiries: totalInquiries,
+      callsTaken: totalCallsTaken,
+      bookings: totalCloses, // Use closes count as bookings
+    };
+  }, [dataManager?.funnelData, dataManager?.bookings, dataManager?.serviceTypes, currentYear]);
 
   const [data, setData] = useState<CalculatorData>({
     bookingsGoal: 50,
     inquiryToCall: 25,
     callToBooking: 35,
-    inqYtd: ytdTotals.inquiries,
-    callsYtd: ytdTotals.callsTaken,
-    bookingsYtd: ytdTotals.bookings,
+    inqYtd: 0,
+    callsYtd: 0,
+    bookingsYtd: 0,
   });
+
+  // Load goals from database on mount
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const loadGoals = async () => {
+      const goals = await UnifiedDataService.getCalculatorGoals(user.id);
+      if (goals) {
+        setData(prev => ({
+          ...prev,
+          bookingsGoal: goals.bookingsGoal,
+          inquiryToCall: goals.inquiryToCall,
+          callToBooking: goals.callToBooking,
+        }));
+      }
+    };
+
+    loadGoals();
+  }, [user?.id]);
+
+  // Update YTD data when funnel data changes
+  useEffect(() => {
+    setData(prev => ({
+      ...prev,
+      inqYtd: ytdTotals.inquiries,
+      callsYtd: ytdTotals.callsTaken,
+      bookingsYtd: ytdTotals.bookings,
+    }));
+  }, [ytdTotals]);
 
   const [calculations, setCalculations] = useState({
     requiredCalls: 0,
@@ -106,9 +155,51 @@ const Calculator: React.FC<CalculatorProps> = ({ funnelData = [] }) => {
     recalculate();
   }, [data]);
 
+  // Debounced save function for goals
+  const saveGoalsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const dataRef = React.useRef(data);
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
   const updateData = (field: keyof CalculatorData, value: number) => {
-    setData(prev => ({ ...prev, [field]: value }));
+    setData(prev => {
+      const updated = { ...prev, [field]: value };
+      dataRef.current = updated;
+      
+      // Save goals to database (debounced)
+      if (field === 'bookingsGoal' || field === 'inquiryToCall' || field === 'callToBooking') {
+        if (saveGoalsTimeoutRef.current) {
+          clearTimeout(saveGoalsTimeoutRef.current);
+        }
+        
+        saveGoalsTimeoutRef.current = setTimeout(async () => {
+          if (user?.id) {
+            // Use ref to get latest value
+            const currentData = dataRef.current;
+            await UnifiedDataService.saveCalculatorGoals(user.id, {
+              bookingsGoal: currentData.bookingsGoal,
+              inquiryToCall: currentData.inquiryToCall,
+              callToBooking: currentData.callToBooking,
+            });
+          }
+        }, 500);
+      }
+      
+      return updated;
+    });
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveGoalsTimeoutRef.current) {
+        clearTimeout(saveGoalsTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Determine if pace is on track
   const isOnTrack = calculations.paceBookings >= data.bookingsGoal;

@@ -321,7 +321,7 @@ function AppContent() {
         />}
         {currentPage === 'calculator' && (
           <FeatureGate feature="sales">
-            <Calculator />
+            <Calculator dataManager={dataManager} />
           </FeatureGate>
         )}
         {currentPage === 'advertising' && (
