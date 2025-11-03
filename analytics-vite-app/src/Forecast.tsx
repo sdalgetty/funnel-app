@@ -26,6 +26,11 @@ const Forecast: React.FC<ForecastProps> = ({
   const [lookbackMonths, setLookbackMonths] = useState(12);
   const [forecastMonths, setForecastMonths] = useState(6);
 
+  // Get trackable service type IDs (for calculating closes/revenue from bookings)
+  const trackableServiceIds = useMemo(() => {
+    return new Set(serviceTypes.filter(st => st.tracksInFunnel).map(st => st.id));
+  }, [serviceTypes]);
+
   // Get historical data for lookback period
   const historicalData = useMemo(() => {
     if (lookbackMonths === -1) {
@@ -42,6 +47,79 @@ const Forecast: React.FC<ForecastProps> = ({
     });
   }, [funnelData, lookbackMonths]);
 
+  // Calculate closes and revenue from actual bookings data for lookback period
+  const bookingsData = useMemo(() => {
+    const now = new Date();
+    const cutoffDate = lookbackMonths === -1 
+      ? null 
+      : new Date(now.getFullYear(), now.getMonth() - lookbackMonths, 1);
+    
+    console.log('=== FORECAST BOOKINGS DATA CALCULATION ===');
+    console.log('Lookback months:', lookbackMonths);
+    console.log('Cutoff date:', cutoffDate?.toISOString());
+    console.log('Total bookings:', bookings.length);
+    console.log('Trackable service IDs:', Array.from(trackableServiceIds));
+    
+    let totalCloses = 0;
+    let totalRevenue = 0;
+    const monthMap = new Map<string, { closes: number; revenue: number }>();
+    let skippedCount = 0;
+    let skippedNoDate = 0;
+    let skippedNotTrackable = 0;
+    let skippedBeforeCutoff = 0;
+    
+    bookings.forEach(booking => {
+      if (!booking?.dateBooked) {
+        skippedNoDate++;
+        return;
+      }
+      if (!trackableServiceIds.has(booking.serviceTypeId)) {
+        skippedNotTrackable++;
+        return;
+      }
+      
+      // Parse dateBooked (YYYY-MM-DD or YYYY-MM)
+      const [year, month] = booking.dateBooked.split('-');
+      const bookingDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      
+      // Check if within lookback period
+      if (cutoffDate && bookingDate < cutoffDate) {
+        skippedBeforeCutoff++;
+        return;
+      }
+      
+      const monthKey = `${year}-${month.padStart(2, '0')}`;
+      if (!monthMap.has(monthKey)) {
+        monthMap.set(monthKey, { closes: 0, revenue: 0 });
+      }
+      
+      const monthData = monthMap.get(monthKey)!;
+      monthData.closes += 1;
+      monthData.revenue += booking.bookedRevenue || 0;
+      totalCloses += 1;
+      totalRevenue += booking.bookedRevenue || 0;
+    });
+    
+    console.log('Skipped bookings:', {
+      noDate: skippedNoDate,
+      notTrackable: skippedNotTrackable,
+      beforeCutoff: skippedBeforeCutoff,
+      total: skippedCount
+    });
+    console.log('Total closes:', totalCloses);
+    console.log('Total revenue (cents):', totalRevenue);
+    console.log('Total revenue (dollars):', totalRevenue / 100);
+    console.log('Months with bookings:', monthMap.size);
+    console.log('Month breakdown:', Array.from(monthMap.entries()).map(([key, data]) => ({
+      month: key,
+      closes: data.closes,
+      revenue: data.revenue / 100
+    })));
+    console.log('==========================================');
+    
+    return { totalCloses, totalRevenue, monthMap, monthsCount: monthMap.size };
+  }, [bookings, trackableServiceIds, lookbackMonths]);
+
   // Calculate averages from historical data
   const averages = useMemo(() => {
     if (historicalData.length === 0) {
@@ -54,28 +132,59 @@ const Forecast: React.FC<ForecastProps> = ({
       };
     }
 
+    // Use funnelData for inquiries, calls (these are accurate)
+    // Use bookingsData for closes and revenue (more accurate than stored funnelData)
     return historicalData.reduce((acc, month) => ({
-      inquiries: acc.inquiries + month.inquiries,
-      callsBooked: acc.callsBooked + month.callsBooked,
-      callsTaken: acc.callsTaken + month.callsTaken,
-      closes: acc.closes + month.closes,
-      bookings: acc.bookings + month.bookings,
+      inquiries: acc.inquiries + (month.inquiries || 0),
+      callsBooked: acc.callsBooked + (month.callsBooked || 0),
+      callsTaken: acc.callsTaken + (month.callsTaken || 0),
+      closes: acc.closes + (month.closes || 0), // Will be replaced by bookingsData
+      bookings: acc.bookings + (month.bookings || 0), // Will be replaced by bookingsData
     }), { inquiries: 0, callsBooked: 0, callsTaken: 0, closes: 0, bookings: 0 });
-  }, [historicalData]);
+  }, [historicalData, bookingsData]);
 
   // Calculate monthly averages
   const monthlyAverages = useMemo(() => {
     const monthsWithData = historicalData.length;
-    if (monthsWithData === 0) return averages;
+    if (monthsWithData === 0) {
+      return {
+        inquiries: 0,
+        callsBooked: 0,
+        callsTaken: 0,
+        closes: 0,
+        bookings: 0,
+      };
+    }
 
-    return {
+    // Use bookingsData months count for closes/revenue if available
+    const closesMonthsCount = bookingsData.monthsCount > 0 ? bookingsData.monthsCount : monthsWithData;
+    const revenueMonthsCount = bookingsData.monthsCount > 0 ? bookingsData.monthsCount : monthsWithData;
+
+    const result = {
       inquiries: Math.round(averages.inquiries / monthsWithData),
       callsBooked: Math.round(averages.callsBooked / monthsWithData),
       callsTaken: Math.round(averages.callsTaken / monthsWithData),
-      closes: Math.round(averages.closes / monthsWithData),
-      bookings: Math.round(averages.bookings / monthsWithData),
+      closes: closesMonthsCount > 0 ? Math.round(bookingsData.totalCloses / closesMonthsCount) : 0,
+      bookings: revenueMonthsCount > 0 ? Math.round(bookingsData.totalRevenue / revenueMonthsCount) : 0,
     };
-  }, [averages, historicalData.length]);
+
+    console.log('=== FORECAST MONTHLY AVERAGES ===');
+    console.log('Months with funnel data:', monthsWithData);
+    console.log('Months with bookings:', closesMonthsCount);
+    console.log('Total closes:', bookingsData.totalCloses);
+    console.log('Total revenue (cents):', bookingsData.totalRevenue);
+    console.log('Monthly averages:', {
+      inquiries: result.inquiries,
+      callsBooked: result.callsBooked,
+      callsTaken: result.callsTaken,
+      closes: result.closes,
+      bookings: result.bookings,
+      bookingsDollars: result.bookings / 100
+    });
+    console.log('================================');
+
+    return result;
+  }, [averages, historicalData.length, bookingsData]);
 
   // Generate forecast data
   const forecastData = useMemo(() => {
