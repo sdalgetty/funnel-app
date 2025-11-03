@@ -119,19 +119,28 @@ export default function Insights({ dataManager }: { dataManager: any }) {
 
   // Advertising totals (current selected year)
   const advertisingTotals = useMemo(() => {
+    // Early return if dataManager is not ready or has no data yet
+    if (!dataManager || dataManager.loading || !dataManager.adCampaigns) {
+      console.log('=== INSIGHTS AD SPEND CALCULATION - SKIPPING (data not ready) ===');
+      console.log('dataManager exists:', !!dataManager);
+      console.log('dataManager.loading:', dataManager?.loading);
+      console.log('dataManager.adCampaigns exists:', !!dataManager?.adCampaigns);
+      return { totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 };
+    }
+    
     // Use dataManager.adCampaigns directly to avoid stale closure issues
-    const campaignsFromManager = dataManager?.adCampaigns || [];
+    const campaignsFromManager = dataManager.adCampaigns;
     
     // Debug logging BEFORE filtering
     console.log('=== INSIGHTS AD SPEND CALCULATION (BEFORE FILTER) ===');
     console.log('useMemo running at:', new Date().toISOString());
-    console.log('dataManager object:', dataManager);
-    console.log('dataManager?.adCampaigns reference:', dataManager?.adCampaigns);
-    console.log('dataManager?.adCampaigns === campaignsFromManager:', dataManager?.adCampaigns === campaignsFromManager);
+    console.log('dataManager object keys:', Object.keys(dataManager));
+    console.log('dataManager?.adCampaigns reference:', dataManager.adCampaigns);
+    console.log('dataManager.bookings length:', dataManager.bookings?.length || 0);
+    console.log('dataManager.payments length:', dataManager.payments?.length || 0);
+    console.log('dataManager.adCampaigns length:', dataManager.adCampaigns?.length || 0);
     console.log('Selected year:', selectedYear);
-    console.log('adCampaigns variable length:', adCampaigns.length);
-    console.log('dataManager.adCampaigns length:', campaignsFromManager.length);
-    console.log('dataManager.loading:', dataManager?.loading);
+    console.log('campaignsFromManager length:', campaignsFromManager.length);
     console.log('Total campaigns (all years, before filter):', campaignsFromManager.length);
     console.log('All campaigns:', campaignsFromManager.map(c => ({
       id: c.id,
