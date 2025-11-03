@@ -124,9 +124,14 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     
     // Debug logging BEFORE filtering
     console.log('=== INSIGHTS AD SPEND CALCULATION (BEFORE FILTER) ===');
+    console.log('useMemo running at:', new Date().toISOString());
+    console.log('dataManager object:', dataManager);
+    console.log('dataManager?.adCampaigns reference:', dataManager?.adCampaigns);
+    console.log('dataManager?.adCampaigns === campaignsFromManager:', dataManager?.adCampaigns === campaignsFromManager);
     console.log('Selected year:', selectedYear);
     console.log('adCampaigns variable length:', adCampaigns.length);
     console.log('dataManager.adCampaigns length:', campaignsFromManager.length);
+    console.log('dataManager.loading:', dataManager?.loading);
     console.log('Total campaigns (all years, before filter):', campaignsFromManager.length);
     console.log('All campaigns:', campaignsFromManager.map(c => ({
       id: c.id,
@@ -187,7 +192,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? (totalBookedFromAds / totalAdSpend) : null
     const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0
     return { totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
-  }, [dataManager?.adCampaigns, bookings, selectedYear, leadSources])
+  }, [dataManager, dataManager?.adCampaigns, bookings, selectedYear, leadSources])
 
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' })
   const formatNumber = (n: number) => n.toLocaleString()
