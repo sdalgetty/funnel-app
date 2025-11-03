@@ -20,36 +20,68 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager }) => {
   const { user } = useAuth();
   const currentYear = new Date().getFullYear();
 
+  // Show loading state if dataManager is not ready (check early to prevent errors)
+  if (!dataManager || dataManager.loading) {
+    return (
+      <div style={{ 
+        padding: '24px', 
+        maxWidth: '1200px', 
+        margin: '0 auto',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '400px'
+      }}>
+        <div style={{ textAlign: 'center', color: '#6b7280' }}>
+          <div style={{ fontSize: '16px', marginBottom: '8px' }}>Loading calculator data...</div>
+        </div>
+      </div>
+    );
+  }
+
   // Calculate YTD totals from actual funnel data
   const ytdTotals = useMemo(() => {
-    const funnelData = dataManager?.funnelData || [];
-    const bookings = dataManager?.bookings || [];
-    const serviceTypes = dataManager?.serviceTypes || [];
-    
-    // Get trackable service type IDs (for closes calculation)
-    const trackableServiceIds = new Set(
-      serviceTypes.filter((st: any) => st.tracksInFunnel).map((st: any) => st.id)
-    );
-    
-    // Get all data for the current year
-    const yearData = funnelData.filter((item: any) => item.year === currentYear);
-    
-    // Calculate inquiries and calls from funnel data
-    const totalInquiries = yearData.reduce((acc: number, month: any) => acc + (month.inquiries || 0), 0);
-    const totalCallsTaken = yearData.reduce((acc: number, month: any) => acc + (month.callsTaken || 0), 0);
-    
-    // Calculate closes from bookings (only trackable service types)
-    const totalCloses = bookings.filter((b: any) => {
-      if (!b?.dateBooked) return false;
-      const [y] = b.dateBooked.split('-');
-      return parseInt(y, 10) === currentYear && trackableServiceIds.has(b.serviceTypeId);
-    }).length;
-    
-    return {
-      inquiries: totalInquiries,
-      callsTaken: totalCallsTaken,
-      bookings: totalCloses, // Use closes count as bookings
-    };
+    try {
+      const funnelData = dataManager?.funnelData || [];
+      const bookings = dataManager?.bookings || [];
+      const serviceTypes = dataManager?.serviceTypes || [];
+      
+      // Get trackable service type IDs (for closes calculation)
+      const trackableServiceIds = new Set(
+        serviceTypes.filter((st: any) => st?.tracksInFunnel).map((st: any) => st?.id).filter(Boolean)
+      );
+      
+      // Get all data for the current year
+      const yearData = (funnelData || []).filter((item: any) => item?.year === currentYear);
+      
+      // Calculate inquiries and calls from funnel data
+      const totalInquiries = yearData.reduce((acc: number, month: any) => acc + (month?.inquiries || 0), 0);
+      const totalCallsTaken = yearData.reduce((acc: number, month: any) => acc + (month?.callsTaken || 0), 0);
+      
+      // Calculate closes from bookings (only trackable service types)
+      const totalCloses = (bookings || []).filter((b: any) => {
+        if (!b?.dateBooked) return false;
+        try {
+          const [y] = b.dateBooked.split('-');
+          return parseInt(y, 10) === currentYear && trackableServiceIds.has(b?.serviceTypeId);
+        } catch {
+          return false;
+        }
+      }).length;
+      
+      return {
+        inquiries: totalInquiries,
+        callsTaken: totalCallsTaken,
+        bookings: totalCloses, // Use closes count as bookings
+      };
+    } catch (error) {
+      console.error('Error calculating YTD totals:', error);
+      return {
+        inquiries: 0,
+        callsTaken: 0,
+        bookings: 0,
+      };
+    }
   }, [dataManager?.funnelData, dataManager?.bookings, dataManager?.serviceTypes, currentYear]);
 
   const [data, setData] = useState<CalculatorData>({
@@ -192,25 +224,6 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager }) => {
 
   // Determine if pace is on track
   const isOnTrack = calculations.paceBookings >= data.bookingsGoal;
-
-  // Show loading state if dataManager is not ready
-  if (!dataManager || dataManager.loading) {
-    return (
-      <div style={{ 
-        padding: '24px', 
-        maxWidth: '1200px', 
-        margin: '0 auto',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '400px'
-      }}>
-        <div style={{ textAlign: 'center', color: '#6b7280' }}>
-          <div style={{ fontSize: '16px', marginBottom: '8px' }}>Loading calculator data...</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
