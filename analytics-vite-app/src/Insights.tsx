@@ -366,35 +366,53 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             console.log('Selected year:', selectedYear);
             console.log('dataManager.loading:', dataManager.loading);
             
-            const campaigns = allCampaigns.filter(
+            const filteredCampaigns = allCampaigns.filter(
               c => c.year === selectedYear && !c.id.startsWith('default_')
             );
-            console.log('Filtered campaigns (year + not default):', campaigns.length);
+            console.log('Filtered campaigns (year + not default):', filteredCampaigns.length);
             
-            // Check for duplicate campaigns (same leadSourceId, year, month)
-            const campaignKeys = new Map<string, number[]>();
-            campaigns.forEach((c, index) => {
+            // Deduplicate campaigns (same leadSourceId, year, month) - keep the first one
+            const seenKeys = new Set<string>();
+            const campaigns: typeof filteredCampaigns = [];
+            const duplicates: Array<{ key: string; campaigns: typeof filteredCampaigns }> = [];
+            
+            filteredCampaigns.forEach(c => {
               const key = `${c.leadSourceId}_${c.year}_${c.month}`;
-              if (!campaignKeys.has(key)) {
-                campaignKeys.set(key, []);
+              if (seenKeys.has(key)) {
+                // This is a duplicate - collect it for logging
+                const existing = duplicates.find(d => d.key === key);
+                if (existing) {
+                  existing.campaigns.push(c);
+                } else {
+                  // Find the original campaign we already added
+                  const original = campaigns.find(oc => 
+                    `${oc.leadSourceId}_${oc.year}_${oc.month}` === key
+                  );
+                  duplicates.push({
+                    key,
+                    campaigns: original ? [original, c] : [c]
+                  });
+                }
+              } else {
+                seenKeys.add(key);
+                campaigns.push(c);
               }
-              campaignKeys.get(key)!.push(index);
             });
             
-            const duplicates = Array.from(campaignKeys.entries()).filter(([_, indices]) => indices.length > 1);
             if (duplicates.length > 0) {
-              console.log(`⚠️ Found ${duplicates.length} duplicate campaign group(s):`);
-              duplicates.forEach(([key, indices]) => {
+              console.log(`⚠️ Found ${duplicates.length} duplicate campaign group(s) - deduplicating:`);
+              duplicates.forEach(({ key, campaigns: dupCampaigns }) => {
                 const [leadSourceId, year, month] = key.split('_');
                 const lsName = leadSources.find(ls => ls.id === leadSourceId)?.name || 'Unknown';
-                console.log(`  - ${lsName}, ${year}-${month.padStart(2, '0')}: ${indices.length} campaigns`);
-                indices.forEach(idx => {
-                  const c = campaigns[idx];
+                console.log(`  - ${lsName}, ${year}-${month.padStart(2, '0')}: ${dupCampaigns.length} campaigns (keeping first, removing duplicates)`);
+                dupCampaigns.forEach((c, idx) => {
                   const spend = c.spend ?? c.adSpendCents ?? 0;
-                  console.log(`    Campaign ID: ${c.id}, Spend: $${(spend / 100).toFixed(2)}`);
+                  console.log(`    ${idx === 0 ? '[KEPT]' : '[REMOVED]'} Campaign ID: ${c.id}, Spend: $${(spend / 100).toFixed(2)}`);
                 });
               });
             }
+            
+            console.log(`Using ${campaigns.length} unique campaigns (after deduplication)`);
             
             // Calculate breakdown by lead source
             const breakdownByLeadSource = campaigns.reduce((acc, c) => {
