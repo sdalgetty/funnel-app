@@ -343,19 +343,44 @@ export default function Insights({ dataManager }: { dataManager: any }) {
 
       {/* ADVERTISING */}
       <Section title="Advertising">
-        {(() => {
-          console.log('=== RENDERING ADVERTISING CARDS ===');
-          console.log('advertisingTotals object:', advertisingTotals);
-          console.log('advertisingTotals.totalAdSpend:', advertisingTotals.totalAdSpend);
-          console.log('advertisingTotals.totalAdSpend in dollars:', advertisingTotals.totalAdSpend / 100);
-          console.log('===================================');
-          return null;
-        })()}
         <Cards>
-          <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value={toUSD(advertisingTotals.totalAdSpend)} />
-          <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value={toUSD(advertisingTotals.totalBookedFromAds)} />
-          <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value={advertisingTotals.overallROI !== null ? advertisingTotals.overallROI.toFixed(2) : 'N/A'} />
-          <Card icon={<Target size={20} color="#8b5cf6" />} label="Cost Per Close" value={toUSD(advertisingTotals.costPerClose)} />
+          {(() => {
+            // Simple direct calculation matching Advertising page sum row logic
+            // Get all campaigns for selected year, exclude defaults, sum across all lead sources
+            const campaigns = (dataManager?.adCampaigns || []).filter(
+              c => c.year === selectedYear && !c.id.startsWith('default_')
+            );
+            const totalAdSpend = campaigns.reduce((sum, c) => {
+              const spend = c.spend ?? c.adSpendCents ?? 0;
+              return sum + spend;
+            }, 0);
+            
+            // Get lead sources that have ad campaigns
+            const leadSourcesWithAds = new Set((dataManager?.adCampaigns || []).map(c => c.leadSourceId));
+            const totalBookedFromAds = (dataManager?.bookings || [])
+              .filter(b => {
+                const lsId = b.leadSourceId;
+                return leadSourcesWithAds.has(lsId) && b.dateBooked?.startsWith(String(selectedYear));
+              })
+              .reduce((s, b) => s + (b.revenue || b.bookedRevenue || 0), 0);
+            
+            const closesFromAds = (dataManager?.bookings || []).filter(b => {
+              const lsId = b.leadSourceId;
+              return leadSourcesWithAds.has(lsId) && b.dateBooked?.startsWith(String(selectedYear));
+            }).length;
+            
+            const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? (totalBookedFromAds / totalAdSpend) : null;
+            const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0;
+            
+            return (
+              <>
+                <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value={toUSD(totalAdSpend)} />
+                <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value={toUSD(totalBookedFromAds)} />
+                <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value={overallROI !== null ? overallROI.toFixed(2) : 'N/A'} />
+                <Card icon={<Target size={20} color="#8b5cf6" />} label="Cost Per Close" value={toUSD(costPerClose)} />
+              </>
+            );
+          })()}
         </Cards>
       </Section>
     </div>
