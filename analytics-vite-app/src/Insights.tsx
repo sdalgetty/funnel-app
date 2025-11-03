@@ -361,104 +361,26 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             
             // Get all campaigns for selected year, exclude defaults, sum across all lead sources
             const allCampaigns = dataManager.adCampaigns;
-            console.log('=== NEW DIRECT CALCULATION ===');
-            console.log('All campaigns from dataManager:', allCampaigns.length);
-            console.log('Selected year:', selectedYear);
-            console.log('dataManager.loading:', dataManager.loading);
-            
             const filteredCampaigns = allCampaigns.filter(
               c => c.year === selectedYear && !c.id.startsWith('default_')
             );
-            console.log('Filtered campaigns (year + not default):', filteredCampaigns.length);
             
             // Deduplicate campaigns (same leadSourceId, year, month) - keep the first one
             const seenKeys = new Set<string>();
             const campaigns: typeof filteredCampaigns = [];
-            const duplicates: Array<{ key: string; campaigns: typeof filteredCampaigns }> = [];
             
             filteredCampaigns.forEach(c => {
               const key = `${c.leadSourceId}_${c.year}_${c.month}`;
-              if (seenKeys.has(key)) {
-                // This is a duplicate - collect it for logging
-                const existing = duplicates.find(d => d.key === key);
-                if (existing) {
-                  existing.campaigns.push(c);
-                } else {
-                  // Find the original campaign we already added
-                  const original = campaigns.find(oc => 
-                    `${oc.leadSourceId}_${oc.year}_${oc.month}` === key
-                  );
-                  duplicates.push({
-                    key,
-                    campaigns: original ? [original, c] : [c]
-                  });
-                }
-              } else {
+              if (!seenKeys.has(key)) {
                 seenKeys.add(key);
                 campaigns.push(c);
               }
             });
             
-            if (duplicates.length > 0) {
-              console.log(`⚠️ Found ${duplicates.length} duplicate campaign group(s) - deduplicating:`);
-              duplicates.forEach(({ key, campaigns: dupCampaigns }) => {
-                const [leadSourceId, year, month] = key.split('_');
-                const lsName = leadSources.find(ls => ls.id === leadSourceId)?.name || 'Unknown';
-                console.log(`  - ${lsName}, ${year}-${month.padStart(2, '0')}: ${dupCampaigns.length} campaigns (keeping first, removing duplicates)`);
-                dupCampaigns.forEach((c, idx) => {
-                  const spend = c.spend ?? c.adSpendCents ?? 0;
-                  console.log(`    ${idx === 0 ? '[KEPT]' : '[REMOVED]'} Campaign ID: ${c.id}, Spend: $${(spend / 100).toFixed(2)}`);
-                });
-              });
-            }
-            
-            console.log(`Using ${campaigns.length} unique campaigns (after deduplication)`);
-            
-            // Calculate breakdown by lead source
-            const breakdownByLeadSource = campaigns.reduce((acc, c) => {
-              const leadSource = leadSources.find(ls => ls.id === c.leadSourceId);
-              const lsName = leadSource?.name || `[ORPHANED - ID: ${c.leadSourceId || 'null'}]`;
-              const spend = c.spend ?? c.adSpendCents ?? 0;
-              if (!acc[lsName]) {
-                acc[lsName] = { count: 0, total: 0, leadSourceId: c.leadSourceId };
-              }
-              acc[lsName].count++;
-              acc[lsName].total += spend;
-              return acc;
-            }, {} as Record<string, { count: number; total: number; leadSourceId: string }>);
-            
-            console.log('Breakdown by Lead Source:');
-            Object.entries(breakdownByLeadSource).forEach(([name, data]) => {
-              console.log(`  ${name}: ${data.count} campaigns, $${(data.total / 100).toFixed(2)} (leadSourceId: ${data.leadSourceId})`);
-            });
-            
-            // Check for orphaned campaigns
-            const orphanedCampaigns = campaigns.filter(c => !leadSources.find(ls => ls.id === c.leadSourceId));
-            if (orphanedCampaigns.length > 0) {
-              console.log(`⚠️ Found ${orphanedCampaigns.length} orphaned campaign(s) with missing lead sources:`);
-              orphanedCampaigns.forEach(c => {
-                const spend = c.spend ?? c.adSpendCents ?? 0;
-                console.log(`  - Campaign ID: ${c.id}, leadSourceId: ${c.leadSourceId || 'null'}, Spend: $${(spend / 100).toFixed(2)}`);
-              });
-            }
-            
-            console.log('Campaigns details:', campaigns.map(c => ({
-              id: c.id,
-              leadSource: leadSources.find(ls => ls.id === c.leadSourceId)?.name || 'Unknown',
-              year: c.year,
-              month: c.month,
-              spend: c.spend,
-              adSpendCents: c.adSpendCents,
-              spendValue: c.spend ?? c.adSpendCents ?? 0
-            })));
-            
             const totalAdSpend = campaigns.reduce((sum, c) => {
               const spend = c.spend ?? c.adSpendCents ?? 0;
               return sum + spend;
             }, 0);
-            console.log('Total Ad Spend (cents):', totalAdSpend);
-            console.log('Total Ad Spend (dollars):', totalAdSpend / 100);
-            console.log('==============================');
             
             // Get lead sources that have ad campaigns
             const leadSourcesWithAds = new Set(allCampaigns.map(c => c.leadSourceId));
