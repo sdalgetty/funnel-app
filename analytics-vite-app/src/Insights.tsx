@@ -207,7 +207,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? (totalBookedFromAds / totalAdSpend) : null
     const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0
     return { totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
-  }, [dataManager, dataManager?.adCampaigns, bookings, selectedYear, leadSources])
+  }, [dataManager, dataManager?.loading, dataManager?.adCampaigns, bookings, selectedYear, leadSources])
 
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' })
   const formatNumber = (n: number) => n.toLocaleString()
