@@ -37,14 +37,42 @@ export function calculateCurrentYearRevenueByServiceType(
   console.log('=== Revenue Calculation Service ===');
   console.log(`Calculating revenue for year: ${year}`);
   console.log(`Input: ${payments.length} payments, ${bookings.length} bookings, ${serviceTypes.length} service types`);
-  console.log('First 3 payments:', payments.slice(0, 3).map(p => ({
+  
+  // Check for January dates that might have timezone issues
+  const januaryPayments = payments.filter(p => {
+    const dateStr = p.paymentDate || p.dueDate || p.expectedDate || '';
+    return dateStr.includes('-01-') || dateStr.match(/^\d{4}-01$/);
+  });
+  console.log(`Found ${januaryPayments.length} payments with January dates:`, januaryPayments.slice(0, 5).map(p => ({
     id: p.id,
-    amount: p.amount || p.amountCents,
     paymentDate: p.paymentDate,
     dueDate: p.dueDate,
     expectedDate: p.expectedDate,
     bookingId: p.bookingId
   })));
+
+  // Helper function to extract year from date string without timezone issues
+  // Defined at function scope so it can be used in both calculation and logging
+  const extractYearFromDateString = (dateString: string): number | null => {
+    // If it's YYYY-MM format, extract year directly
+    if (dateString.match(/^\d{4}-\d{2}$/)) {
+      return parseInt(dateString.split('-')[0]);
+    }
+    // If it's YYYY-MM-DD format, extract year directly (avoid timezone issues)
+    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return parseInt(dateString.split('-')[0]);
+    }
+    // Fallback to Date parsing if format is different
+    try {
+      const d = new Date(dateString);
+      if (!isNaN(d.getTime())) {
+        return d.getFullYear();
+      }
+    } catch (e) {
+      // Ignore
+    }
+    return null;
+  };
 
   const revenueByServiceType: Map<string, ServiceTypeRevenue> = new Map();
   
@@ -56,28 +84,6 @@ export function calculateCurrentYearRevenueByServiceType(
     let paymentYear: number | null = null;
     let dateSource: 'paymentDate' | 'dueDate' | 'expectedDate' | null = null;
     let dateValue: string | null = null;
-    
-    // Helper function to extract year from date string without timezone issues
-    const extractYearFromDateString = (dateString: string): number | null => {
-      // If it's YYYY-MM format, extract year directly
-      if (dateString.match(/^\d{4}-\d{2}$/)) {
-        return parseInt(dateString.split('-')[0]);
-      }
-      // If it's YYYY-MM-DD format, extract year directly (avoid timezone issues)
-      if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        return parseInt(dateString.split('-')[0]);
-      }
-      // Fallback to Date parsing if format is different
-      try {
-        const d = new Date(dateString);
-        if (!isNaN(d.getTime())) {
-          return d.getFullYear();
-        }
-      } catch (e) {
-        // Ignore
-      }
-      return null;
-    };
     
     // Try paymentDate first (full date YYYY-MM-DD)
     if (payment.paymentDate) {
@@ -178,6 +184,37 @@ export function calculateCurrentYearRevenueByServiceType(
     payments: r.payments
   })));
   
+  // Log unmatched payments that might be January dates
+  const unmatchedJanuaryPayments = unmatchedPayments.filter(u => {
+    const dateStr = u.payment.paymentDate || u.payment.dueDate || u.payment.expectedDate || '';
+    return dateStr.includes('-01-') || dateStr.match(/^\d{4}-01$/);
+  });
+  
+  if (unmatchedJanuaryPayments.length > 0) {
+    console.log('=== UNMATCHED JANUARY PAYMENTS (Potential Timezone Issues) ===');
+    console.log(`Found ${unmatchedJanuaryPayments.length} unmatched January payments`);
+    unmatchedJanuaryPayments.slice(0, 10).forEach((u, idx) => {
+      const booking = bookings.find(b => b.id === u.payment.bookingId);
+      const serviceType = booking ? serviceTypes.find(st => st.id === booking.serviceTypeId) : null;
+      console.log(`Unmatched January Payment ${idx + 1}:`, {
+        paymentId: u.payment.id,
+        bookingId: u.payment.bookingId,
+        bookingName: booking?.projectName || 'NOT FOUND',
+        serviceType: serviceType?.name || 'NOT FOUND',
+        amount: u.payment.amount || u.payment.amountCents,
+        amountDollars: `$${((u.payment.amount || u.payment.amountCents || 0) / 100).toFixed(2)}`,
+        paymentDate: u.payment.paymentDate,
+        dueDate: u.payment.dueDate,
+        expectedDate: u.payment.expectedDate,
+        reason: u.reason,
+        // Test what year the date parsing would give
+        parsedYearFromPaymentDate: u.payment.paymentDate ? extractYearFromDateString(u.payment.paymentDate) : null,
+        parsedYearFromDueDate: u.payment.dueDate ? extractYearFromDateString(u.payment.dueDate) : null,
+        parsedYearFromExpectedDate: u.payment.expectedDate ? extractYearFromDateString(u.payment.expectedDate) : null
+      });
+    });
+  }
+  
   // Also log a specific check for "Print Sale" if it exists
   const printSaleResult = result.find(r => r.serviceTypeName.toLowerCase().includes('print'));
   if (printSaleResult) {
@@ -212,6 +249,38 @@ export function calculateCurrentYearRevenueByServiceType(
       });
     }
   }
+  
+  // Check Events and Associate Weddings specifically
+  ['Events', 'Associate Weddings'].forEach(serviceTypeName => {
+    const serviceType = serviceTypes.find(st => st.name === serviceTypeName);
+    if (serviceType) {
+      const resultEntry = result.find(r => r.serviceTypeId === serviceType.id);
+      const serviceBookings = bookings.filter(b => b.serviceTypeId === serviceType.id);
+      const serviceBookingIds = serviceBookings.map(b => b.id);
+      const allServicePayments = payments.filter(p => serviceBookingIds.includes(p.bookingId));
+      const unmatchedServicePayments = unmatchedPayments.filter(u => 
+        serviceBookingIds.includes(u.payment.bookingId)
+      );
+      
+      console.log(`=== ${serviceTypeName} ANALYSIS ===`);
+      console.log('Total bookings:', serviceBookings.length);
+      console.log('Total payments for bookings:', allServicePayments.length);
+      console.log('Matched payments:', resultEntry?.paymentCount || 0);
+      console.log('Unmatched payments:', unmatchedServicePayments.length);
+      if (unmatchedServicePayments.length > 0) {
+        unmatchedServicePayments.forEach((u, idx) => {
+          console.log(`  Unmatched ${idx + 1}:`, {
+            paymentId: u.payment.id,
+            amount: `$${((u.payment.amount || u.payment.amountCents || 0) / 100).toFixed(2)}`,
+            paymentDate: u.payment.paymentDate,
+            dueDate: u.payment.dueDate,
+            expectedDate: u.payment.expectedDate,
+            reason: u.reason
+          });
+        });
+      }
+    }
+  });
   
   return result;
 }
