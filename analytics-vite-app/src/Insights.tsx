@@ -371,6 +371,31 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             );
             console.log('Filtered campaigns (year + not default):', campaigns.length);
             
+            // Check for duplicate campaigns (same leadSourceId, year, month)
+            const campaignKeys = new Map<string, number[]>();
+            campaigns.forEach((c, index) => {
+              const key = `${c.leadSourceId}_${c.year}_${c.month}`;
+              if (!campaignKeys.has(key)) {
+                campaignKeys.set(key, []);
+              }
+              campaignKeys.get(key)!.push(index);
+            });
+            
+            const duplicates = Array.from(campaignKeys.entries()).filter(([_, indices]) => indices.length > 1);
+            if (duplicates.length > 0) {
+              console.log(`⚠️ Found ${duplicates.length} duplicate campaign group(s):`);
+              duplicates.forEach(([key, indices]) => {
+                const [leadSourceId, year, month] = key.split('_');
+                const lsName = leadSources.find(ls => ls.id === leadSourceId)?.name || 'Unknown';
+                console.log(`  - ${lsName}, ${year}-${month.padStart(2, '0')}: ${indices.length} campaigns`);
+                indices.forEach(idx => {
+                  const c = campaigns[idx];
+                  const spend = c.spend ?? c.adSpendCents ?? 0;
+                  console.log(`    Campaign ID: ${c.id}, Spend: $${(spend / 100).toFixed(2)}`);
+                });
+              });
+            }
+            
             // Calculate breakdown by lead source
             const breakdownByLeadSource = campaigns.reduce((acc, c) => {
               const leadSource = leadSources.find(ls => ls.id === c.leadSourceId);
