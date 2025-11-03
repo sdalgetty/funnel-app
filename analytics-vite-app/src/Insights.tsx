@@ -323,6 +323,14 @@ export default function Insights({ dataManager }: { dataManager: any }) {
 
       {/* ADVERTISING */}
       <Section title="Advertising">
+        {(() => {
+          console.log('=== RENDERING ADVERTISING CARDS ===');
+          console.log('advertisingTotals object:', advertisingTotals);
+          console.log('advertisingTotals.totalAdSpend:', advertisingTotals.totalAdSpend);
+          console.log('advertisingTotals.totalAdSpend in dollars:', advertisingTotals.totalAdSpend / 100);
+          console.log('===================================');
+          return null;
+        })()}
         <Cards>
           <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value={toUSD(advertisingTotals.totalAdSpend)} />
           <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value={toUSD(advertisingTotals.totalBookedFromAds)} />
