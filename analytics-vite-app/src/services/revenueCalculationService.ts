@@ -184,7 +184,33 @@ export function calculateCurrentYearRevenueByServiceType(
     console.log('=== PRINT SALE DETAILED BREAKDOWN ===');
     console.log('Print Sale result:', printSaleResult);
     console.log('Print Sale total:', `$${(printSaleResult.totalRevenueCents / 100).toFixed(2)}`);
+    console.log('Print Sale payment count:', printSaleResult.paymentCount);
     console.log('Print Sale payments:', printSaleResult.payments);
+    
+    // Find Print Sale service type to check unmatched payments
+    const printSaleServiceType = serviceTypes.find(st => st.name.toLowerCase().includes('print'));
+    if (printSaleServiceType) {
+      const printSaleBookings = bookings.filter(b => b.serviceTypeId === printSaleServiceType.id);
+      const printSaleBookingIds = printSaleBookings.map(b => b.id);
+      const printSaleUnmatched = unmatchedPayments.filter(u => 
+        printSaleBookingIds.includes(u.payment.bookingId)
+      );
+      
+      console.log('=== PRINT SALE UNMATCHED PAYMENTS ===');
+      console.log('Unmatched Print Sale payments:', printSaleUnmatched.length);
+      printSaleUnmatched.forEach((u, idx) => {
+        console.log(`Unmatched Payment ${idx + 1}:`, {
+          paymentId: u.payment.id,
+          bookingId: u.payment.bookingId,
+          amount: u.payment.amount || u.payment.amountCents,
+          amountDollars: `$${((u.payment.amount || u.payment.amountCents || 0) / 100).toFixed(2)}`,
+          paymentDate: u.payment.paymentDate,
+          dueDate: u.payment.dueDate,
+          expectedDate: u.payment.expectedDate,
+          reason: u.reason
+        });
+      });
+    }
   }
   
   return result;
