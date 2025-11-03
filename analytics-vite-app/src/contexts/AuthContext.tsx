@@ -74,16 +74,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       // Combine auth user with profile data
+      // Explicitly check for null/undefined to avoid falling back to email when name is intentionally empty
       const combinedUser = {
         ...authUser,
-        name: profileData.full_name || authUser.user_metadata?.full_name || authUser.email,
-        companyName: profileData.company_name || '',
+        name: profileData.full_name !== null && profileData.full_name !== undefined 
+          ? profileData.full_name 
+          : (authUser.user_metadata?.full_name || authUser.email),
+        companyName: profileData.company_name !== null && profileData.company_name !== undefined 
+          ? profileData.company_name 
+          : '',
         subscriptionTier: profileData.subscription_tier || 'pro',
         subscriptionStatus: profileData.subscription_status || 'active',
         createdAt: new Date(authUser.created_at),
         lastLoginAt: new Date(),
         trialEndsAt: profileData.trial_ends_at ? new Date(profileData.trial_ends_at) : null
       };
+      
+      console.log('Combined user created:', {
+        profileFullName: profileData.full_name,
+        profileCompanyName: profileData.company_name,
+        finalName: combinedUser.name,
+        finalCompanyName: combinedUser.companyName
+      });
 
       console.log('Successfully loaded profile data:', combinedUser);
       return combinedUser;
@@ -287,36 +299,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('updateProfile called with:', updates);
     console.log('Current user:', user);
     
-    if (user) {
-      // Map frontend field names to database field names
-      const dbUpdates: any = {}
-      if (updates.name) dbUpdates.full_name = updates.name
-      if (updates.companyName) dbUpdates.company_name = updates.companyName
-      if (updates.email) dbUpdates.email = updates.email
+    if (!user) {
+      console.error('No user found for profile update');
+      throw new Error('No user found for profile update');
+    }
 
-      console.log('Database updates:', dbUpdates);
-      console.log('Updating user with ID:', user.id);
+    // Map frontend field names to database field names
+    // Include empty strings explicitly to allow clearing values
+    const dbUpdates: any = {}
+    if (updates.name !== undefined) dbUpdates.full_name = updates.name || null
+    if (updates.companyName !== undefined) dbUpdates.company_name = updates.companyName || null
+    if (updates.email !== undefined) dbUpdates.email = updates.email
+    dbUpdates.updated_at = new Date().toISOString()
 
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .update(dbUpdates)
-        .eq('id', user.id)
-        .select()
+    console.log('Database updates:', dbUpdates);
+    console.log('Updating user with ID:', user.id);
 
-      console.log('Update result:', { data, error });
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(dbUpdates)
+      .eq('id', user.id)
+      .select()
+      .single()
 
-      if (error) {
-        console.error('Profile update error:', error);
-        throw error;
-      }
+    console.log('Update result:', { data, error });
 
-      console.log('Profile updated successfully, updating local state');
+    if (error) {
+      console.error('Profile update error:', error);
+      throw error;
+    }
+
+    if (!data) {
+      console.error('No data returned from update');
+      throw new Error('Update succeeded but no data returned');
+    }
+
+    console.log('Profile updated successfully, updating local state');
+    
+    // Reload the profile from database to ensure consistency
+    const reloadedProfile = await loadUserProfile(user);
+    if (reloadedProfile) {
+      setUser(reloadedProfile);
+      console.log('User profile reloaded after update:', reloadedProfile);
+    } else {
+      // Fallback: update local state directly if reload fails
+      console.warn('Failed to reload profile, updating local state directly');
       setUser({
         ...user,
-        ...updates
+        name: updates.name !== undefined ? updates.name : user.name,
+        companyName: updates.companyName !== undefined ? updates.companyName : user.companyName,
+        email: updates.email !== undefined ? updates.email : user.email
       })
-    } else {
-      console.error('No user found for profile update');
     }
   }
 
