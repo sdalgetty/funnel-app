@@ -118,6 +118,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     console.log('Current year:', currentYear);
     console.log('Total payments:', payments.length);
     console.log('Total bookings:', bookings.length);
+    console.log('Total serviceTypes:', serviceTypes.length);
     console.log('Sample payment:', payments[0]);
     console.log('Sample booking:', bookings[0]);
 
@@ -245,20 +246,36 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     console.log(`=== GRAND TOTAL: $${(grandTotal / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ===`);
 
     console.log('Final revenueByServiceType:', revenueByServiceType);
+    console.log('Final revenueByServiceType keys:', Object.keys(revenueByServiceType));
+    console.log('Final revenueByServiceType values:', Object.values(revenueByServiceType));
+    console.log('Final revenueByServiceType total sum:', Object.values(revenueByServiceType).reduce((sum, val) => sum + val, 0));
+    
     return revenueByServiceType;
-  }, [bookings, payments]);
+  }, [bookings, payments, serviceTypes]);
 
   // Calculate performance metrics for active model
   const performanceMetrics = useMemo(() => {
     if (!activeModel) return [];
 
-    return activeModel.serviceTypes.map(modelService => {
+    console.log('=== PERFORMANCE METRICS CALCULATION ===');
+    console.log('activeModel.serviceTypes:', activeModel.serviceTypes);
+    console.log('actualRevenueByServiceType:', actualRevenueByServiceType);
+
+    const metrics = activeModel.serviceTypes.map(modelService => {
       const serviceType = serviceTypes.find(st => st.id === modelService.serviceTypeId);
       const actualRevenue = actualRevenueByServiceType[modelService.serviceTypeId] || 0;
       const forecastGoal = modelService.totalForecast;
       const remaining = forecastGoal - actualRevenue;
       const percentOfPlan = forecastGoal > 0 ? Math.round((actualRevenue / forecastGoal) * 100) : 0;
       const pacingDelta = percentOfPlan - yearProgress;
+
+      console.log(`Metric for ${serviceType?.name || 'Unknown'} (${modelService.serviceTypeId}):`, {
+        actualRevenue,
+        actualRevenueDollars: `$${(actualRevenue / 100).toFixed(2)}`,
+        forecastGoal,
+        remaining,
+        percentOfPlan
+      });
 
       return {
         serviceTypeId: modelService.serviceTypeId,
@@ -270,6 +287,12 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
         pacingDelta,
       };
     });
+    
+    console.log('Final performanceMetrics:', metrics);
+    const totalActual = metrics.reduce((sum, m) => sum + m.actualRevenue, 0);
+    console.log(`Total Actual Revenue from metrics: $${(totalActual / 100).toFixed(2)}`);
+    
+    return metrics;
   }, [activeModel, serviceTypes, actualRevenueByServiceType, yearProgress]);
 
   // Helper functions
