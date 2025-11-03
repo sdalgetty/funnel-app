@@ -40,6 +40,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Helper function to build combined user from auth user and profile data
+  const buildCombinedUser = async (authUser: any, profileData: any) => {
+    // Explicitly check for null/undefined to avoid falling back to email when name is intentionally empty
+    const firstName = profileData.first_name !== null && profileData.first_name !== undefined 
+      ? profileData.first_name 
+      : '';
+    const lastName = profileData.last_name !== null && profileData.last_name !== undefined 
+      ? profileData.last_name 
+      : '';
+    
+    // Use full_name if available, otherwise construct from first_name + last_name
+    const fullName = profileData.full_name !== null && profileData.full_name !== undefined 
+      ? profileData.full_name 
+      : (firstName && lastName ? `${firstName} ${lastName}` : (firstName || lastName || authUser.user_metadata?.full_name || authUser.email));
+    
+    const combinedUser = {
+      ...authUser,
+      firstName,
+      lastName,
+      name: fullName,
+      companyName: profileData.company_name !== null && profileData.company_name !== undefined 
+        ? profileData.company_name 
+        : '',
+      subscriptionTier: profileData.subscription_tier || 'pro',
+      subscriptionStatus: profileData.subscription_status || 'active',
+      createdAt: new Date(authUser.created_at),
+      lastLoginAt: new Date(),
+      trialEndsAt: profileData.trial_ends_at ? new Date(profileData.trial_ends_at) : null
+    };
+    
+    console.log('Combined user created:', {
+      profileFirstName: profileData.first_name,
+      profileLastName: profileData.last_name,
+      profileFullName: profileData.full_name,
+      profileCompanyName: profileData.company_name,
+      finalFirstName: combinedUser.firstName,
+      finalLastName: combinedUser.lastName,
+      finalName: combinedUser.name,
+      finalCompanyName: combinedUser.companyName
+    });
+
+    console.log('Successfully built combined user:', combinedUser);
+    return combinedUser;
+  };
+
   // Helper function to load user profile data
   const loadUserProfile = async (authUser: any) => {
     console.log('Loading user profile for:', authUser?.id);
@@ -50,72 +95,74 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      console.log('Attempting profile query with 3-second timeout...');
+      console.log('Attempting profile query...');
       
-      // Try profile query with a short timeout
-      // Use a timestamp to ensure we don't get cached data
-      const profilePromise = supabase
+      // Query for profile - use maybeSingle to handle missing profiles gracefully
+      const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', authUser.id)
-        .maybeSingle(); // Use maybeSingle instead of single to handle missing profiles gracefully
+        .maybeSingle();
 
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile query timeout')), 10000)
-      );
+      console.log('Profile query completed:', { 
+        profileData, 
+        profileError,
+        errorCode: profileError?.code,
+        firstName: profileData?.first_name,
+        lastName: profileData?.last_name,
+        companyName: profileData?.company_name,
+        fullName: profileData?.full_name
+      });
 
-      const result = await Promise.race([profilePromise, timeoutPromise]);
-      const { data: profileData, error: profileError } = result as any;
+      // If profile doesn't exist, create one
+      if (profileError?.code === 'PGRST116' || !profileData) {
+        console.log('Profile does not exist, creating one...');
+        const { data: newProfile, error: createError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: authUser.id,
+            email: authUser.email,
+            full_name: authUser.user_metadata?.full_name || null,
+            first_name: null,
+            last_name: null,
+            company_name: null,
+            subscription_tier: 'pro',
+            subscription_status: 'active'
+          })
+          .select()
+          .single();
 
-      console.log('Profile query completed:', { profileData, profileError });
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          // If insert fails (maybe profile was created between check and insert), try query again
+          const { data: retryProfile } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', authUser.id)
+            .maybeSingle();
+          
+          if (retryProfile) {
+            return await buildCombinedUser(authUser, retryProfile);
+          }
+          throw createError;
+        }
+
+        console.log('Profile created successfully:', newProfile);
+        return await buildCombinedUser(authUser, newProfile);
+      }
 
       if (profileError) {
         console.error('Profile query error:', profileError);
         throw profileError;
       }
 
-      // Combine auth user with profile data
-      // Explicitly check for null/undefined to avoid falling back to email when name is intentionally empty
-      const firstName = profileData.first_name !== null && profileData.first_name !== undefined 
-        ? profileData.first_name 
-        : '';
-      const lastName = profileData.last_name !== null && profileData.last_name !== undefined 
-        ? profileData.last_name 
-        : '';
-      
-      // Use full_name if available, otherwise construct from first_name + last_name
-      const fullName = profileData.full_name !== null && profileData.full_name !== undefined 
-        ? profileData.full_name 
-        : (firstName && lastName ? `${firstName} ${lastName}` : (firstName || lastName || authUser.user_metadata?.full_name || authUser.email));
-      
-      const combinedUser = {
-        ...authUser,
-        firstName,
-        lastName,
-        name: fullName,
-        companyName: profileData.company_name !== null && profileData.company_name !== undefined 
-          ? profileData.company_name 
-          : '',
-        subscriptionTier: profileData.subscription_tier || 'pro',
-        subscriptionStatus: profileData.subscription_status || 'active',
-        createdAt: new Date(authUser.created_at),
-        lastLoginAt: new Date(),
-        trialEndsAt: profileData.trial_ends_at ? new Date(profileData.trial_ends_at) : null
-      };
-      
-      console.log('Combined user created:', {
-        profileFirstName: profileData.first_name,
-        profileLastName: profileData.last_name,
-        profileFullName: profileData.full_name,
-        profileCompanyName: profileData.company_name,
-        finalFirstName: combinedUser.firstName,
-        finalLastName: combinedUser.lastName,
-        finalName: combinedUser.name,
-        finalCompanyName: combinedUser.companyName
-      });
+      if (!profileData) {
+        console.log('No profile data found in database after query');
+        return null;
+      }
 
-      console.log('Successfully loaded profile data:', combinedUser);
-      return combinedUser;
+      // Build combined user from profile data
+      return await buildCombinedUser(authUser, profileData);
     } catch (error) {
       console.error('Profile loading failed, using basic user:', error);
       // Return basic user if profile query fails
