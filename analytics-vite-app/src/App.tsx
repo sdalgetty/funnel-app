@@ -303,16 +303,6 @@ function AppContent() {
           paymentsData={dataManager.payments}
           serviceTypes={dataManager.serviceTypes}
         />}
-        {currentPage === 'advertising' && (
-          <FeatureGate feature="advertising">
-            <Advertising 
-              bookings={dataManager.bookings} 
-              leadSources={dataManager.leadSources} 
-              funnelData={dataManager.funnelData}
-              dataManager={dataManager}
-            />
-          </FeatureGate>
-        )}
         {currentPage === 'forecast' && (
           <FeatureGate feature="forecast">
             <Forecast 
@@ -322,6 +312,16 @@ function AppContent() {
               bookings={dataManager.bookings} 
               payments={dataManager.payments}
               showModelingOnly
+            />
+          </FeatureGate>
+        )}
+        {currentPage === 'advertising' && (
+          <FeatureGate feature="advertising">
+            <Advertising 
+              bookings={dataManager.bookings} 
+              leadSources={dataManager.leadSources} 
+              funnelData={dataManager.funnelData}
+              dataManager={dataManager}
             />
           </FeatureGate>
         )}
