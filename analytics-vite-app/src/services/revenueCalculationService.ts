@@ -37,6 +37,14 @@ export function calculateCurrentYearRevenueByServiceType(
   console.log('=== Revenue Calculation Service ===');
   console.log(`Calculating revenue for year: ${year}`);
   console.log(`Input: ${payments.length} payments, ${bookings.length} bookings, ${serviceTypes.length} service types`);
+  console.log('First 3 payments:', payments.slice(0, 3).map(p => ({
+    id: p.id,
+    amount: p.amount || p.amountCents,
+    paymentDate: p.paymentDate,
+    dueDate: p.dueDate,
+    expectedDate: p.expectedDate,
+    bookingId: p.bookingId
+  })));
 
   const revenueByServiceType: Map<string, ServiceTypeRevenue> = new Map();
   
@@ -160,12 +168,24 @@ export function calculateCurrentYearRevenueByServiceType(
   // Log results
   console.log(`=== Calculation Results ===`);
   console.log(`Matched ${payments.length - unmatchedPayments.length} payments for year ${year}`);
-  console.log(`Unmatched ${unmatchedPayments.length} payments:`, unmatchedPayments);
+  console.log(`Unmatched ${unmatchedPayments.length} payments:`, unmatchedPayments.slice(0, 10)); // Only show first 10
   console.log(`Revenue by service type:`, result.map(r => ({
     name: r.serviceTypeName,
+    serviceTypeId: r.serviceTypeId,
     total: `$${(r.totalRevenueCents / 100).toFixed(2)}`,
-    paymentCount: r.paymentCount
+    totalCents: r.totalRevenueCents,
+    paymentCount: r.paymentCount,
+    payments: r.payments
   })));
+  
+  // Also log a specific check for "Print Sale" if it exists
+  const printSaleResult = result.find(r => r.serviceTypeName.toLowerCase().includes('print'));
+  if (printSaleResult) {
+    console.log('=== PRINT SALE DETAILED BREAKDOWN ===');
+    console.log('Print Sale result:', printSaleResult);
+    console.log('Print Sale total:', `$${(printSaleResult.totalRevenueCents / 100).toFixed(2)}`);
+    console.log('Print Sale payments:', printSaleResult.payments);
+  }
   
   return result;
 }
