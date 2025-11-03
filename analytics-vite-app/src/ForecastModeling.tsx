@@ -119,12 +119,61 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     console.log('Total payments:', payments.length);
     console.log('Total bookings:', bookings.length);
     console.log('Total serviceTypes:', serviceTypes.length);
+    
+    // Debug: Show sample payments and their date fields
+    console.log('=== SAMPLE PAYMENTS (first 5) ===');
+    payments.slice(0, 5).forEach((p, idx) => {
+      const booking = bookings.find(b => b.id === p.bookingId);
+      const serviceType = booking ? serviceTypes.find(st => st.id === booking.serviceTypeId) : null;
+      console.log(`Payment ${idx + 1}:`, {
+        id: p.id,
+        bookingId: p.bookingId,
+        bookingName: booking?.projectName || 'NOT FOUND',
+        serviceType: serviceType?.name || 'NOT FOUND',
+        amount: p.amount || p.amountCents,
+        amountDollars: `$${((p.amount || p.amountCents || 0) / 100).toFixed(2)}`,
+        paymentDate: p.paymentDate || 'NULL',
+        dueDate: p.dueDate || 'NULL',
+        expectedDate: p.expectedDate || 'NULL',
+        paidAt: p.paidAt || 'NULL',
+        status: p.status
+      });
+    });
 
         // First, analyze what years the payments are actually in
+        console.log('=== ANALYZING PAYMENT DATES ===');
+        console.log(`Analyzing ${payments.length} payments...`);
         const paymentYearAnalysis = payments.map(p => {
-          const paymentDateYear = p.paymentDate ? new Date(p.paymentDate).getFullYear() : null;
-          const dueDateYear = p.dueDate ? new Date(p.dueDate).getFullYear() : null;
-          const paidAtYear = p.paidAt ? new Date(p.paidAt).getFullYear() : null;
+          let paymentDateYear = null;
+          let dueDateYear = null;
+          let paidAtYear = null;
+          
+          try {
+            if (p.paymentDate) {
+              const d = new Date(p.paymentDate);
+              paymentDateYear = isNaN(d.getTime()) ? null : d.getFullYear();
+            }
+          } catch (e) {
+            console.warn(`Error parsing paymentDate for payment ${p.id}:`, p.paymentDate, e);
+          }
+          
+          try {
+            if (p.dueDate) {
+              const d = new Date(p.dueDate);
+              dueDateYear = isNaN(d.getTime()) ? null : d.getFullYear();
+            }
+          } catch (e) {
+            console.warn(`Error parsing dueDate for payment ${p.id}:`, p.dueDate, e);
+          }
+          
+          try {
+            if (p.paidAt) {
+              const d = new Date(p.paidAt);
+              paidAtYear = isNaN(d.getTime()) ? null : d.getFullYear();
+            }
+          } catch (e) {
+            console.warn(`Error parsing paidAt for payment ${p.id}:`, p.paidAt, e);
+          }
           
           // expectedDate might be in YYYY-MM format
           let expectedDateYear = null;
@@ -132,7 +181,12 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
             if (p.expectedDate.match(/^\d{4}-\d{2}$/)) {
               expectedDateYear = parseInt(p.expectedDate.split('-')[0]);
             } else {
-              expectedDateYear = new Date(p.expectedDate).getFullYear();
+              try {
+                const d = new Date(p.expectedDate);
+                expectedDateYear = isNaN(d.getTime()) ? null : d.getFullYear();
+              } catch (e) {
+                console.warn(`Error parsing expectedDate for payment ${p.id}:`, p.expectedDate, e);
+              }
             }
           }
           
@@ -149,6 +203,9 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
             amount: p.amount || p.amountCents || 0
           };
         });
+        
+        // Log analysis results for first few payments
+        console.log('Payment year analysis (first 10):', paymentYearAnalysis.slice(0, 10));
         
         // Count payments by year from all date sources
         const byYear: { [year: number]: { count: number; total: number; sources: string[] } } = {};
