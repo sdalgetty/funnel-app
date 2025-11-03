@@ -34,18 +34,52 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
     }
   }, [dataManager?.adCampaigns]);
 
-  // Auto-select the first lead source if none selected and we have lead sources
+  // Auto-select the lead source based on existing campaigns
   useEffect(() => {
-    if (!selectedLeadSourceId && leadSources.length > 0) {
-      // If there are existing campaigns, use that lead source, otherwise use the first one
-      const leadSourceWithCampaigns = adCampaigns.find(c => c.leadSourceId);
-      if (leadSourceWithCampaigns) {
-        setSelectedLeadSourceId(leadSourceWithCampaigns.leadSourceId);
-      } else {
-        setSelectedLeadSourceId(leadSources[0].id);
+    if (!selectedLeadSourceId && leadSources.length > 0 && adCampaigns.length > 0) {
+      // Find lead sources that have campaigns, prioritized by:
+      // 1. Campaigns from the current year
+      // 2. Most recent campaigns
+      const campaignsByLeadSource = new Map<string, AdCampaign[]>();
+      
+      adCampaigns.forEach(campaign => {
+        if (!campaign.id.startsWith('default_')) { // Only real campaigns
+          const existing = campaignsByLeadSource.get(campaign.leadSourceId) || [];
+          campaignsByLeadSource.set(campaign.leadSourceId, [...existing, campaign]);
+        }
+      });
+
+      if (campaignsByLeadSource.size > 0) {
+        // Find the lead source with the most recent campaigns or current year campaigns
+        let bestLeadSourceId = '';
+        let bestScore = -1;
+
+        campaignsByLeadSource.forEach((campaigns, leadSourceId) => {
+          // Prioritize current year campaigns
+          const currentYearCampaigns = campaigns.filter(c => c.year === currentYear);
+          const recentCampaigns = currentYearCampaigns.length > 0 ? currentYearCampaigns : campaigns;
+          
+          // Score based on number of campaigns and most recent year
+          const score = recentCampaigns.length * 1000 + (recentCampaigns[0]?.year || 0);
+          
+          if (score > bestScore) {
+            bestScore = score;
+            bestLeadSourceId = leadSourceId;
+          }
+        });
+
+        if (bestLeadSourceId) {
+          setSelectedLeadSourceId(bestLeadSourceId);
+          return;
+        }
       }
     }
-  }, [leadSources, adCampaigns, selectedLeadSourceId]);
+
+    // Fallback: select first lead source only if no campaigns exist
+    if (!selectedLeadSourceId && leadSources.length > 0 && adCampaigns.length === 0) {
+      setSelectedLeadSourceId(leadSources[0].id);
+    }
+  }, [leadSources, adCampaigns, selectedLeadSourceId, currentYear]);
 
   // Helper functions
   const toUSD = (cents: number) => {
