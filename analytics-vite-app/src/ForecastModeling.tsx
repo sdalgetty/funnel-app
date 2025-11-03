@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Edit, Trash2, Target, TrendingUp, DollarSign, Calendar, CheckCircle, X } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { UnifiedDataService } from './services/unifiedDataService';
+import { calculateCurrentYearRevenueByServiceType } from './services/revenueCalculationService';
 import type { ServiceType, Booking, Payment, ForecastModel } from './types';
 
 interface ForecastModelingProps {
@@ -110,6 +111,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   }, []);
 
   // Calculate actual revenue by service type for current calendar year
+  // Using dedicated revenue calculation service for reliability
   const actualRevenueByServiceType = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const revenueByServiceType: { [key: string]: number } = {};
@@ -119,318 +121,27 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     console.log('Total payments:', payments.length);
     console.log('Total bookings:', bookings.length);
     console.log('Total serviceTypes:', serviceTypes.length);
-    console.log('payments array:', payments);
-    console.log('bookings array length:', bookings.length);
-    console.log('serviceTypes array length:', serviceTypes.length);
     
     // Early return if no data
-    if (payments.length === 0) {
-      console.warn('WARNING: No payments found! This could mean data is still loading.');
+    if (payments.length === 0 || bookings.length === 0 || serviceTypes.length === 0) {
+      console.warn('WARNING: Missing data! Payments:', payments.length, 'Bookings:', bookings.length, 'ServiceTypes:', serviceTypes.length);
       return revenueByServiceType;
     }
     
-    // Debug: Show sample payments and their date fields
-    console.log('=== SAMPLE PAYMENTS (first 5) ===');
-    payments.slice(0, 5).forEach((p, idx) => {
-      const booking = bookings.find(b => b.id === p.bookingId);
-      const serviceType = booking ? serviceTypes.find(st => st.id === booking.serviceTypeId) : null;
-      console.log(`Payment ${idx + 1}:`, {
-        id: p.id,
-        bookingId: p.bookingId,
-        bookingName: booking?.projectName || 'NOT FOUND',
-        serviceType: serviceType?.name || 'NOT FOUND',
-        amount: p.amount || p.amountCents,
-        amountDollars: `$${((p.amount || p.amountCents || 0) / 100).toFixed(2)}`,
-        paymentDate: p.paymentDate || 'NULL',
-        dueDate: p.dueDate || 'NULL',
-        expectedDate: p.expectedDate || 'NULL',
-        paidAt: p.paidAt || 'NULL',
-        status: p.status
-      });
-    });
-
-        // First, analyze what years the payments are actually in
-        console.log('=== ANALYZING PAYMENT DATES ===');
-        console.log(`Analyzing ${payments.length} payments...`);
-        const paymentYearAnalysis = payments.map(p => {
-          let paymentDateYear = null;
-          let dueDateYear = null;
-          let paidAtYear = null;
-          
-          try {
-            if (p.paymentDate) {
-              const d = new Date(p.paymentDate);
-              paymentDateYear = isNaN(d.getTime()) ? null : d.getFullYear();
-            }
-          } catch (e) {
-            console.warn(`Error parsing paymentDate for payment ${p.id}:`, p.paymentDate, e);
-          }
-          
-          try {
-            if (p.dueDate) {
-              const d = new Date(p.dueDate);
-              dueDateYear = isNaN(d.getTime()) ? null : d.getFullYear();
-            }
-          } catch (e) {
-            console.warn(`Error parsing dueDate for payment ${p.id}:`, p.dueDate, e);
-          }
-          
-          try {
-            if (p.paidAt) {
-              const d = new Date(p.paidAt);
-              paidAtYear = isNaN(d.getTime()) ? null : d.getFullYear();
-            }
-          } catch (e) {
-            console.warn(`Error parsing paidAt for payment ${p.id}:`, p.paidAt, e);
-          }
-          
-          // expectedDate might be in YYYY-MM format
-          let expectedDateYear = null;
-          if (p.expectedDate) {
-            if (p.expectedDate.match(/^\d{4}-\d{2}$/)) {
-              expectedDateYear = parseInt(p.expectedDate.split('-')[0]);
-            } else {
-              try {
-                const d = new Date(p.expectedDate);
-                expectedDateYear = isNaN(d.getTime()) ? null : d.getFullYear();
-              } catch (e) {
-                console.warn(`Error parsing expectedDate for payment ${p.id}:`, p.expectedDate, e);
-              }
-            }
-          }
-          
-          return {
-            id: p.id,
-            paymentDate: p.paymentDate,
-            paymentDateYear,
-            dueDate: p.dueDate,
-            dueDateYear,
-            expectedDate: p.expectedDate,
-            expectedDateYear,
-            paidAt: p.paidAt,
-            paidAtYear,
-            amount: p.amount || p.amountCents || 0
-          };
-        });
-        
-        // Log analysis results for first few payments
-        console.log('Payment year analysis (first 10):', paymentYearAnalysis.slice(0, 10));
-        
-        // Count payments by year from all date sources
-        const byYear: { [year: number]: { count: number; total: number; sources: string[] } } = {};
-        paymentYearAnalysis.forEach(p => {
-          const years = [
-            { year: p.paymentDateYear, source: 'paymentDate' },
-            { year: p.dueDateYear, source: 'dueDate' },
-            { year: p.expectedDateYear, source: 'expectedDate' }
-          ].filter(y => y.year !== null && !isNaN(y.year));
-          
-          years.forEach(({ year, source }) => {
-            if (!byYear[year!]) {
-              byYear[year!] = { count: 0, total: 0, sources: [] };
-            }
-            byYear[year!].count++;
-            byYear[year!].total += p.amount;
-            if (!byYear[year!].sources.includes(source)) {
-              byYear[year!].sources.push(source);
-            }
-          });
-        });
-        
-        console.log('Payments by year (from all date sources):', Object.entries(byYear).map(([year, data]) => ({
-          year: parseInt(year),
-          count: data.count,
-          totalDollars: `$${(data.total / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-          sources: data.sources.join(', ')
-        })));
-
-    // Filter payments scheduled for current calendar year (including future dates in that year)
-    // Check paymentDate, dueDate, or expectedDate (which may be in YYYY-MM format)
-    // This shows forecasted cash flow for the year, not just payments already received
-    const currentYearPayments = payments.filter(payment => {
-      // Try paymentDate first (full date YYYY-MM-DD)
-      let scheduledDate = payment.paymentDate;
-      let paymentYear: number | null = null;
-      
-      if (scheduledDate) {
-        paymentYear = new Date(scheduledDate).getFullYear();
-      } else {
-        // Try dueDate (full date YYYY-MM-DD)
-        scheduledDate = payment.dueDate;
-        if (scheduledDate) {
-          paymentYear = new Date(scheduledDate).getFullYear();
-        } else {
-          // Try expectedDate (may be YYYY-MM format)
-          scheduledDate = payment.expectedDate;
-          if (scheduledDate) {
-            // expectedDate might be in YYYY-MM format, so parse it correctly
-            if (scheduledDate.match(/^\d{4}-\d{2}$/)) {
-              // It's YYYY-MM format, extract year
-              paymentYear = parseInt(scheduledDate.split('-')[0]);
-            } else {
-              // Try parsing as full date
-              paymentYear = new Date(scheduledDate).getFullYear();
-            }
-          }
-        }
-      }
-      
-      // If we found a date, check if it's for the current year
-      if (paymentYear !== null && !isNaN(paymentYear)) {
-        return paymentYear === currentYear;
-      }
-      
-      return false;
-    });
-
-    // Log which date field was used for each payment
-    const dateSourceCounts = { paymentDate: 0, dueDate: 0, expectedDate: 0, none: 0 };
-    currentYearPayments.forEach(p => {
-      if (p.paymentDate) dateSourceCounts.paymentDate++;
-      else if (p.dueDate) dateSourceCounts.dueDate++;
-      else if (p.expectedDate) dateSourceCounts.expectedDate++;
-      else dateSourceCounts.none++;
+    // Use the dedicated revenue calculation service
+    const revenueResults = calculateCurrentYearRevenueByServiceType(
+      payments,
+      bookings,
+      serviceTypes,
+      currentYear
+    );
+    
+    // Convert to the expected format (serviceTypeId -> cents)
+    revenueResults.forEach(result => {
+      revenueByServiceType[result.serviceTypeId] = result.totalRevenueCents;
     });
     
-    console.log(`Payments for current year ${currentYear} (after filter):`, currentYearPayments.length);
-    console.log('Date source breakdown:', dateSourceCounts);
-    console.log('First few payments for current year:', currentYearPayments.slice(0, 3).map(p => ({
-      id: p.id,
-      amount: p.amount || p.amountCents,
-      paymentDate: p.paymentDate,
-      dueDate: p.dueDate,
-      expectedDate: p.expectedDate,
-      bookingId: p.bookingId
-    })));
-
-    // Group payments by service type via their booking
-    let paymentsWithNoBooking = 0;
-    let paymentsWithNoServiceType = 0;
-    
-    // Track payments by service type name for debugging
-    const paymentsByServiceTypeName: { [key: string]: any[] } = {};
-    
-    currentYearPayments.forEach(payment => {
-      const booking = bookings.find(b => b.id === payment.bookingId);
-      if (!booking) {
-        paymentsWithNoBooking++;
-        console.log('Payment missing booking:', { paymentId: payment.id, bookingId: payment.bookingId });
-        return;
-      }
-      
-      if (!booking.serviceTypeId) {
-        paymentsWithNoServiceType++;
-        console.log('Payment has booking but no serviceTypeId:', { paymentId: payment.id, bookingId: payment.bookingId, booking: booking.projectName });
-        return;
-      }
-
-      const serviceType = serviceTypes.find(st => st.id === booking.serviceTypeId);
-      const serviceTypeName = serviceType?.name || 'Unknown';
-      
-      // Use amount or amountCents (both in cents)
-      const paymentAmount = payment.amount || payment.amountCents || 0;
-      
-      if (!revenueByServiceType[booking.serviceTypeId]) {
-        revenueByServiceType[booking.serviceTypeId] = 0;
-      }
-      revenueByServiceType[booking.serviceTypeId] += paymentAmount;
-      
-      // Track for debugging
-      if (!paymentsByServiceTypeName[serviceTypeName]) {
-        paymentsByServiceTypeName[serviceTypeName] = [];
-      }
-      paymentsByServiceTypeName[serviceTypeName].push({
-        paymentId: payment.id,
-        bookingName: booking.projectName,
-        amount: paymentAmount,
-        amountDollars: (paymentAmount / 100).toFixed(2),
-        paymentDate: payment.paymentDate,
-        dueDate: payment.dueDate,
-        expectedDate: payment.expectedDate,
-        status: payment.status,
-        paidAt: payment.paidAt
-      });
-      
-      console.log(`Added ${paymentAmount} cents ($${(paymentAmount/100).toFixed(2)}) to serviceType "${serviceTypeName}" (${booking.serviceTypeId}), total now: ${revenueByServiceType[booking.serviceTypeId]} cents ($${(revenueByServiceType[booking.serviceTypeId]/100).toFixed(2)})`);
-    });
-    
-    // Log summary by service type name
-    console.log('=== PAYMENTS BY SERVICE TYPE NAME ===');
-    Object.entries(paymentsByServiceTypeName).forEach(([serviceTypeName, paymentList]) => {
-      const total = paymentList.reduce((sum, p) => sum + p.amount, 0);
-      console.log(`${serviceTypeName}:`, {
-        paymentCount: paymentList.length,
-        totalCents: total,
-        totalDollars: `$${(total / 100).toFixed(2)}`,
-        payments: paymentList
-      });
-    });
-    
-    console.log(`Summary: ${paymentsWithNoBooking} payments with no booking, ${paymentsWithNoServiceType} payments with no serviceTypeId`);
-    
-    // Detailed breakdown by service type - use the same data as revenueByServiceType
-    const breakdownByServiceType: { [key: string]: { name: string; count: number; total: number; payments: any[] } } = {};
-    
-    // Build breakdown from the same payments that were added to revenueByServiceType
-    console.log('Building breakdown from currentYearPayments:', currentYearPayments.length);
-    currentYearPayments.forEach(payment => {
-      const booking = bookings.find(b => b.id === payment.bookingId);
-      if (booking && booking.serviceTypeId) {
-        const serviceType = serviceTypes.find(st => st.id === booking.serviceTypeId);
-        const serviceTypeName = serviceType?.name || 'Unknown';
-        
-        if (!breakdownByServiceType[booking.serviceTypeId]) {
-          breakdownByServiceType[booking.serviceTypeId] = {
-            name: serviceTypeName,
-            count: 0,
-            total: 0,
-            payments: []
-          };
-        }
-        
-        const paymentAmount = payment.amount || payment.amountCents || 0;
-        breakdownByServiceType[booking.serviceTypeId].count++;
-        breakdownByServiceType[booking.serviceTypeId].total += paymentAmount;
-        breakdownByServiceType[booking.serviceTypeId].payments.push({
-          id: payment.id,
-          bookingName: booking.projectName,
-          amount: paymentAmount,
-          amountDollars: (paymentAmount / 100).toFixed(2),
-          paymentDate: payment.paymentDate || payment.paidAt || payment.dueDate,
-          status: payment.status,
-          paidAt: payment.paidAt
-        });
-      }
-    });
-    
-    console.log('=== DETAILED BREAKDOWN BY SERVICE TYPE ===');
-    console.log('breakdownByServiceType keys:', Object.keys(breakdownByServiceType));
-    console.log('breakdownByServiceType entries count:', Object.entries(breakdownByServiceType).length);
-    
-    if (Object.keys(breakdownByServiceType).length === 0) {
-      console.log('WARNING: breakdownByServiceType is empty but revenueByServiceType might have data!');
-      console.log('revenueByServiceType at this point:', revenueByServiceType);
-      console.log('This suggests the breakdown and revenue calculation are out of sync');
-    }
-    
-    Object.entries(breakdownByServiceType).forEach(([serviceTypeId, breakdown]) => {
-      console.log(`${breakdown.name} (${serviceTypeId}):`, {
-        paymentCount: breakdown.count,
-        totalCents: breakdown.total,
-        totalDollars: `$${(breakdown.total / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        payments: breakdown.payments
-      });
-    });
-    
-    const grandTotal = Object.values(breakdownByServiceType).reduce((sum, b) => sum + b.total, 0);
-    console.log(`=== GRAND TOTAL FROM BREAKDOWN: $${(grandTotal / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ===`);
-    console.log(`=== COMPARISON: revenueByServiceType total: $${(Object.values(revenueByServiceType).reduce((sum, val) => sum + val, 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ===`);
-
-    console.log('Final revenueByServiceType:', revenueByServiceType);
-    console.log('Final revenueByServiceType keys:', Object.keys(revenueByServiceType));
-    console.log('Final revenueByServiceType values:', Object.values(revenueByServiceType));
-    console.log('Final revenueByServiceType total sum:', Object.values(revenueByServiceType).reduce((sum, val) => sum + val, 0));
-    
+    console.log('Final revenueByServiceType from service:', revenueByServiceType);
     return revenueByServiceType;
   }, [bookings, payments, serviceTypes]);
 
