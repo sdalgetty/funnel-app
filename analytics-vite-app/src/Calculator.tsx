@@ -139,17 +139,6 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager }) => {
     });
   };
 
-  // Update YTD data when funnel data changes
-  useEffect(() => {
-    const newYtdTotals = getYtdTotals();
-    setData(prev => ({
-      ...prev,
-      inqYtd: newYtdTotals.inquiries,
-      callsYtd: newYtdTotals.callsTaken,
-      bookingsYtd: newYtdTotals.bookings,
-    }));
-  }, [funnelData]);
-
   // Recalculate when data changes
   useEffect(() => {
     recalculate();
