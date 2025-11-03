@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import Forecast from './Forecast'
 import ForecastModeling from './ForecastModeling'
@@ -10,20 +10,29 @@ export default function Insights({ dataManager }: { dataManager: any }) {
   const currentYear = new Date().getFullYear()
   const [selectedYear, setSelectedYear] = useState<number>(currentYear)
 
+  // Use useState and useEffect to ensure we get the latest data, similar to Advertising component
+  const [adCampaigns, setAdCampaigns] = useState<AdCampaign[]>([]);
+  
+  useEffect(() => {
+    if (dataManager) {
+      setAdCampaigns(dataManager.adCampaigns || []);
+    }
+  }, [dataManager?.adCampaigns]);
+
   const funnelData: FunnelData[] = dataManager?.funnelData || []
   const bookings: Booking[] = dataManager?.bookings || []
   const payments: Payment[] = dataManager?.payments || []
   const serviceTypes: ServiceType[] = dataManager?.serviceTypes || []
-  const adCampaigns: AdCampaign[] = dataManager?.adCampaigns || []
   const leadSources: LeadSource[] = dataManager?.leadSources || []
 
   // Debug logging
   console.log('Insights component - dataManager:', dataManager);
   console.log('Insights component - dataManager keys:', dataManager ? Object.keys(dataManager) : 'no dataManager');
-  console.log('Insights component - adCampaigns from dataManager:', dataManager?.adCampaigns);
+  console.log('Insights component - adCampaigns from dataManager (raw):', dataManager?.adCampaigns);
+  console.log('Insights component - adCampaigns state (after useEffect):', adCampaigns);
   console.log('Insights component - adCampaigns length:', adCampaigns.length);
-  console.log('Insights component - bookings:', bookings.length, bookings);
-  console.log('Insights component - payments:', payments.length, payments);
+  console.log('Insights component - bookings:', bookings.length);
+  console.log('Insights component - payments:', payments.length);
   console.log('Insights component - dataManager.loading:', dataManager?.loading);
 
   const yearData = useMemo(() => funnelData.filter(m => m.year === selectedYear), [funnelData, selectedYear])
