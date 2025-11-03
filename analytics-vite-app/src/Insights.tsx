@@ -33,7 +33,9 @@ export default function Insights({ dataManager }: { dataManager: any }) {
 
   const yearData = useMemo(() => funnelData.filter(m => m.year === selectedYear), [funnelData, selectedYear])
 
-  // Dynamic totals (closes and bookings) derived from Sales records that are tracked in the Funnel
+  // Dynamic totals (closes and bookings) derived from Sales records
+  // Closes: Only bookings with trackable service types
+  // Bookings: ALL bookings regardless of trackInFunnel
   const dynamicSalesTotals = useMemo(() => {
     const trackableServiceIds = new Set(serviceTypes.filter(st => st.tracksInFunnel).map(st => st.id))
     let closes = 0
@@ -41,9 +43,13 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     bookings.forEach(b => {
       if (!b?.dateBooked) return
       const [y] = b.dateBooked.split('-')
-      if (parseInt(y, 10) === selectedYear && trackableServiceIds.has(b.serviceTypeId)) {
-        closes += 1
+      if (parseInt(y, 10) === selectedYear) {
+        // Always add to bookings (all bookings count)
         bookingsCents += b.bookedRevenue || 0
+        // Only add to closes if service type is trackable
+        if (trackableServiceIds.has(b.serviceTypeId)) {
+          closes += 1
+        }
       }
     })
     return { closes, bookingsCents }
