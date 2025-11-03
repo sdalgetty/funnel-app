@@ -157,13 +157,33 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     });
 
     console.log('Current year payments (after filter):', currentYearPayments.length);
-    console.log('Current year payments:', currentYearPayments);
+    console.log('First few current year payments:', currentYearPayments.slice(0, 3));
+    
+    if (currentYearPayments.length === 0) {
+      console.log('No payments found for current year. Sample of all payments:', payments.slice(0, 5).map(p => ({
+        id: p.id,
+        paymentDate: p.paymentDate,
+        paidAt: p.paidAt,
+        dueDate: p.dueDate,
+        year: new Date(p.paymentDate || p.paidAt || p.dueDate || '').getFullYear()
+      })));
+    }
 
     // Group payments by service type via their booking
+    let paymentsWithNoBooking = 0;
+    let paymentsWithNoServiceType = 0;
+    
     currentYearPayments.forEach(payment => {
       const booking = bookings.find(b => b.id === payment.bookingId);
-      if (!booking || !booking.serviceTypeId) {
-        console.log('Payment missing booking or serviceTypeId:', { paymentId: payment.id, bookingId: payment.bookingId, booking, serviceTypeId: booking?.serviceTypeId });
+      if (!booking) {
+        paymentsWithNoBooking++;
+        console.log('Payment missing booking:', { paymentId: payment.id, bookingId: payment.bookingId });
+        return;
+      }
+      
+      if (!booking.serviceTypeId) {
+        paymentsWithNoServiceType++;
+        console.log('Payment has booking but no serviceTypeId:', { paymentId: payment.id, bookingId: payment.bookingId, booking: booking.projectName });
         return;
       }
 
@@ -174,8 +194,10 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
         revenueByServiceType[booking.serviceTypeId] = 0;
       }
       revenueByServiceType[booking.serviceTypeId] += paymentAmount;
-      console.log(`Added ${paymentAmount} cents to serviceType ${booking.serviceTypeId}, total now: ${revenueByServiceType[booking.serviceTypeId]}`);
+      console.log(`Added ${paymentAmount} cents ($${(paymentAmount/100).toFixed(2)}) to serviceType ${booking.serviceTypeId}, total now: ${revenueByServiceType[booking.serviceTypeId]}`);
     });
+    
+    console.log(`Summary: ${paymentsWithNoBooking} payments with no booking, ${paymentsWithNoServiceType} payments with no serviceTypeId`);
 
     console.log('Final revenueByServiceType:', revenueByServiceType);
     return revenueByServiceType;
