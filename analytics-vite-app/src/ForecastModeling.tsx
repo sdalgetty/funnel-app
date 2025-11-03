@@ -198,6 +198,51 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     });
     
     console.log(`Summary: ${paymentsWithNoBooking} payments with no booking, ${paymentsWithNoServiceType} payments with no serviceTypeId`);
+    
+    // Detailed breakdown by service type for comparison
+    const breakdownByServiceType: { [key: string]: { name: string; count: number; total: number; payments: any[] } } = {};
+    currentYearPayments.forEach(payment => {
+      const booking = bookings.find(b => b.id === payment.bookingId);
+      if (booking && booking.serviceTypeId) {
+        const serviceType = serviceTypes.find(st => st.id === booking.serviceTypeId);
+        const serviceTypeName = serviceType?.name || 'Unknown';
+        
+        if (!breakdownByServiceType[booking.serviceTypeId]) {
+          breakdownByServiceType[booking.serviceTypeId] = {
+            name: serviceTypeName,
+            count: 0,
+            total: 0,
+            payments: []
+          };
+        }
+        
+        const paymentAmount = payment.amount || payment.amountCents || 0;
+        breakdownByServiceType[booking.serviceTypeId].count++;
+        breakdownByServiceType[booking.serviceTypeId].total += paymentAmount;
+        breakdownByServiceType[booking.serviceTypeId].payments.push({
+          id: payment.id,
+          bookingName: booking.projectName,
+          amount: paymentAmount,
+          amountDollars: (paymentAmount / 100).toFixed(2),
+          paymentDate: payment.paymentDate || payment.paidAt || payment.dueDate,
+          status: payment.status,
+          paidAt: payment.paidAt
+        });
+      }
+    });
+    
+    console.log('=== DETAILED BREAKDOWN BY SERVICE TYPE ===');
+    Object.entries(breakdownByServiceType).forEach(([serviceTypeId, breakdown]) => {
+      console.log(`${breakdown.name} (${serviceTypeId}):`, {
+        paymentCount: breakdown.count,
+        totalCents: breakdown.total,
+        totalDollars: `$${(breakdown.total / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        payments: breakdown.payments
+      });
+    });
+    
+    const grandTotal = Object.values(breakdownByServiceType).reduce((sum, b) => sum + b.total, 0);
+    console.log(`=== GRAND TOTAL: $${(grandTotal / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ===`);
 
     console.log('Final revenueByServiceType:', revenueByServiceType);
     return revenueByServiceType;
