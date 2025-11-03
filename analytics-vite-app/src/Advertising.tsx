@@ -21,6 +21,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
     year: number;
     spend: number;
     leadsGenerated: number;
+    notes?: string;
     isNew: boolean;
   } | null>(null);
 
@@ -61,13 +62,14 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
   const selectedLeadSource = leadSources.find(ls => ls.id === selectedLeadSourceId);
 
   // Handler functions
-  const handleEditCampaign = (leadSource: LeadSource, month: number, year: number, spend: number, leadsGenerated: number, isNew: boolean) => {
+  const handleEditCampaign = (leadSource: LeadSource, month: number, year: number, spend: number, leadsGenerated: number, notes: string | undefined, isNew: boolean) => {
     setEditingCampaign({
       leadSource,
       month,
       year,
       spend,
       leadsGenerated,
+      notes,
       isNew
     });
     setIsEditModalOpen(true);
@@ -78,7 +80,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
     setEditingCampaign(null);
   };
 
-  const handleSaveCampaign = async (updatedData: { spend: number; leadsGenerated: number }) => {
+  const handleSaveCampaign = async (updatedData: { spend: number; leadsGenerated: number; notes?: string }) => {
     if (!editingCampaign || !selectedLeadSource) return;
 
     const now = new Date().toISOString();
@@ -96,6 +98,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
           adSpendCents: adSpendCents,
           spend: adSpendCents,
           leadsGenerated: updatedData.leadsGenerated,
+          notes: updatedData.notes,
           lastUpdated: now
         });
       }
@@ -111,7 +114,8 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
         await dataManager.updateAdCampaign(existingCampaign.id, {
           adSpendCents: adSpendCents,
           spend: adSpendCents,
-          leadsGenerated: updatedData.leadsGenerated
+          leadsGenerated: updatedData.leadsGenerated,
+          notes: updatedData.notes
         });
       }
     }
@@ -270,14 +274,15 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
           <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', fontSize: '14px' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f9fafb' }}>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Month</th>
-                    <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Ad Spend</th>
-                    <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Leads Generated</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Actions</th>
-                  </tr>
-                </thead>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f9fafb' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Month</th>
+                      <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Ad Spend</th>
+                      <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Leads Generated</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Notes</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Actions</th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {allMonths.map((campaign, index) => {
                     const monthName = new Date(currentYear, campaign.month - 1).toLocaleString('default', { month: 'long' });
@@ -296,9 +301,12 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
                         <td style={{ padding: '12px', textAlign: 'right', color: isDefault ? '#9ca3af' : '#1f2937' }}>
                           {formatNumber(campaign.leadsGenerated)}
                         </td>
+                        <td style={{ padding: '12px', color: isDefault ? '#9ca3af' : '#1f2937', textAlign: 'left', maxWidth: '300px', wordWrap: 'break-word' }}>
+                          {campaign.notes || (isDefault ? '—' : '')}
+                        </td>
                         <td style={{ padding: '12px', color: '#1f2937', textAlign: 'left' }}>
                           <button
-                            onClick={() => handleEditCampaign(selectedLeadSource, campaign.month, currentYear, campaign.spend, campaign.leadsGenerated, isDefault)}
+                            onClick={() => handleEditCampaign(selectedLeadSource, campaign.month, currentYear, campaign.spend, campaign.leadsGenerated, campaign.notes, isDefault)}
                             style={{
                               padding: '4px 8px',
                               backgroundColor: '#3b82f6',
@@ -436,7 +444,8 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
             <EditCampaignForm
               initialData={{
                 spend: editingCampaign.spend,
-                leadsGenerated: editingCampaign.leadsGenerated
+                leadsGenerated: editingCampaign.leadsGenerated,
+                notes: editingCampaign.notes || ''
               }}
               onSave={handleSaveCampaign}
               onCancel={handleCloseModal}
@@ -454,13 +463,14 @@ function EditCampaignForm({
   onSave, 
   onCancel 
 }: { 
-  initialData: { spend: number; leadsGenerated: number };
-  onSave: (data: { spend: number; leadsGenerated: number }) => void;
+  initialData: { spend: number; leadsGenerated: number; notes: string };
+  onSave: (data: { spend: number; leadsGenerated: number; notes?: string }) => void;
   onCancel: () => void;
 }) {
   const [formData, setFormData] = useState({
     spend: initialData.spend / 100, // Convert from cents to dollars for display
-    leadsGenerated: initialData.leadsGenerated
+    leadsGenerated: initialData.leadsGenerated,
+    notes: initialData.notes || ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -471,7 +481,8 @@ function EditCampaignForm({
     
     onSave({
       spend: spendInCents,
-      leadsGenerated: formData.leadsGenerated
+      leadsGenerated: formData.leadsGenerated,
+      notes: formData.notes.trim() || undefined
     });
   };
 
@@ -507,7 +518,7 @@ function EditCampaignForm({
         />
       </div>
 
-      <div style={{ marginBottom: '24px' }}>
+      <div style={{ marginBottom: '16px' }}>
         <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px', textAlign: 'left' }}>
           Leads Generated
         </label>
@@ -526,6 +537,29 @@ function EditCampaignForm({
             fontSize: '14px'
           }}
           required
+        />
+      </div>
+
+      <div style={{ marginBottom: '24px' }}>
+        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px', textAlign: 'left' }}>
+          Notes
+        </label>
+        <textarea
+          value={formData.notes}
+          onChange={(e) => handleChange('notes', e.target.value)}
+          placeholder="Notes about what changed month to month..."
+          rows={4}
+          style={{
+            width: '100%',
+            maxWidth: '100%',
+            boxSizing: 'border-box',
+            padding: '8px 12px',
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            fontSize: '14px',
+            fontFamily: 'inherit',
+            resize: 'vertical'
+          }}
         />
       </div>
 

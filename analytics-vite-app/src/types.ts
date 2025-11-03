@@ -127,6 +127,7 @@ export interface AdCampaign {
   adSpendCents: number; // in cents
   spend: number; // in cents
   leadsGenerated: number;
+  notes?: string; // Notes about what changed month to month
   createdAt: string;
   lastUpdated?: string;
 }

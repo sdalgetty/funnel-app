@@ -120,6 +120,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Return basic user if profile query fails
       return {
         ...authUser,
+        firstName: '',
+        lastName: '',
         name: authUser.user_metadata?.full_name || authUser.email,
         companyName: '',
         subscriptionTier: 'pro', // Set to pro for testing
@@ -361,28 +363,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     console.log('Profile updated successfully, updating local state');
     
-    // Reload the profile from database to ensure consistency
-    const reloadedProfile = await loadUserProfile(user);
-    if (reloadedProfile) {
-      setUser(reloadedProfile);
-      console.log('User profile reloaded after update:', reloadedProfile);
+    // Get fresh auth user and reload profile from database to ensure consistency
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      const reloadedProfile = await loadUserProfile(authUser);
+      if (reloadedProfile) {
+        setUser(reloadedProfile);
+        console.log('User profile reloaded after update:', reloadedProfile);
+      } else {
+        // Fallback: update local state directly if reload fails
+        console.warn('Failed to reload profile, updating local state directly');
+        const updatedFirstName = updates.firstName !== undefined ? (updates.firstName || '') : user.firstName
+        const updatedLastName = updates.lastName !== undefined ? (updates.lastName || '') : user.lastName
+        const updatedName = updates.name !== undefined 
+          ? updates.name 
+          : ((updatedFirstName && updatedLastName) ? `${updatedFirstName} ${updatedLastName}` : (updatedFirstName || updatedLastName || user.name))
+        
+        setUser({
+          ...user,
+          firstName: updatedFirstName || '',
+          lastName: updatedLastName || '',
+          name: updatedName,
+          companyName: updates.companyName !== undefined ? updates.companyName : user.companyName,
+          email: updates.email !== undefined ? updates.email : user.email
+        })
+      }
     } else {
-      // Fallback: update local state directly if reload fails
-      console.warn('Failed to reload profile, updating local state directly');
-      const updatedFirstName = updates.firstName !== undefined ? updates.firstName : user.firstName
-      const updatedLastName = updates.lastName !== undefined ? updates.lastName : user.lastName
-      const updatedName = updates.name !== undefined 
-        ? updates.name 
-        : ((updatedFirstName && updatedLastName) ? `${updatedFirstName} ${updatedLastName}` : (updatedFirstName || updatedLastName || user.name))
-      
-      setUser({
-        ...user,
-        firstName: updatedFirstName,
-        lastName: updatedLastName,
-        name: updatedName,
-        companyName: updates.companyName !== undefined ? updates.companyName : user.companyName,
-        email: updates.email !== undefined ? updates.email : user.email
-      })
+      console.error('Could not get auth user for reload');
     }
   }
 

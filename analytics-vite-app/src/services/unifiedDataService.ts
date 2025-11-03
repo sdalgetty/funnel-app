@@ -876,6 +876,7 @@ export class UnifiedDataService {
           adSpendCents: item.ad_spend_cents,
           spend: item.ad_spend_cents, // Same value, different field name
           leadsGenerated: item.leads_generated,
+          notes: item.notes || undefined,
           createdAt: item.created_at,
           lastUpdated: item.last_updated
         };
@@ -899,7 +900,8 @@ export class UnifiedDataService {
           lead_source_id: adCampaignData.leadSourceId,
           month_year: adCampaignData.monthYear,
           ad_spend_cents: adCampaignData.adSpendCents,
-          leads_generated: adCampaignData.leadsGenerated
+          leads_generated: adCampaignData.leadsGenerated,
+          notes: adCampaignData.notes || null
         })
         .select()
         .single();
@@ -923,6 +925,7 @@ export class UnifiedDataService {
         adSpendCents: data.ad_spend_cents,
         spend: data.ad_spend_cents,
         leadsGenerated: data.leads_generated,
+        notes: data.notes || undefined,
         createdAt: data.created_at,
         lastUpdated: data.last_updated
       };
@@ -942,6 +945,7 @@ export class UnifiedDataService {
       if (updates.adSpendCents !== undefined) updateData.ad_spend_cents = updates.adSpendCents;
       if (updates.leadsGenerated !== undefined) updateData.leads_generated = updates.leadsGenerated;
       if (updates.monthYear !== undefined) updateData.month_year = updates.monthYear;
+      if (updates.notes !== undefined) updateData.notes = updates.notes || null;
 
       const { error } = await supabase
         .from('ad_campaigns')
