@@ -18,6 +18,63 @@ interface RevenueTestTableProps {
 export default function RevenueTestTable({ payments, bookings, serviceTypes }: RevenueTestTableProps) {
   const currentYear = new Date().getFullYear();
   
+  // Debug: Log all Print Sale related data before calculation
+  console.log('=== REVENUE TEST TABLE DEBUG ===');
+  console.log('Current year:', currentYear);
+  console.log('Total payments:', payments.length);
+  console.log('Total bookings:', bookings.length);
+  console.log('Total service types:', serviceTypes.length);
+  
+  // Find Print Sale service type
+  const printSaleServiceType = serviceTypes.find(st => st.name.toLowerCase().includes('print'));
+  if (printSaleServiceType) {
+    console.log('Print Sale service type found:', printSaleServiceType);
+    
+    // Find all bookings for Print Sale
+    const printSaleBookings = bookings.filter(b => b.serviceTypeId === printSaleServiceType.id);
+    console.log('Print Sale bookings:', printSaleBookings.length, printSaleBookings.map(b => ({
+      id: b.id,
+      projectName: b.projectName,
+      bookedRevenue: b.bookedRevenue
+    })));
+    
+    // Find all payments for Print Sale bookings
+    const printSaleBookingIds = printSaleBookings.map(b => b.id);
+    const printSalePayments = payments.filter(p => printSaleBookingIds.includes(p.bookingId));
+    console.log('Print Sale payments:', printSalePayments.length, printSalePayments.map(p => ({
+      id: p.id,
+      bookingId: p.bookingId,
+      amount: p.amount,
+      amountCents: p.amountCents,
+      amountDollars: `$${((p.amount || p.amountCents || 0) / 100).toFixed(2)}`,
+      paymentDate: p.paymentDate,
+      dueDate: p.dueDate,
+      expectedDate: p.expectedDate,
+      paidAt: p.paidAt,
+      status: p.status
+    })));
+    
+    // Calculate what the total should be - check both amount and amountCents
+    const expectedTotalAmount = printSalePayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const expectedTotalCents = printSalePayments.reduce((sum, p) => sum + (p.amountCents || 0), 0);
+    const expectedTotalEither = printSalePayments.reduce((sum, p) => sum + (p.amount || p.amountCents || 0), 0);
+    
+    console.log('Expected Print Sale total calculations:');
+    console.log('  Using amount field only:', expectedTotalAmount, `$${(expectedTotalAmount / 100).toFixed(2)}`);
+    console.log('  Using amountCents field only:', expectedTotalCents, `$${(expectedTotalCents / 100).toFixed(2)}`);
+    console.log('  Using amount || amountCents:', expectedTotalEither, `$${(expectedTotalEither / 100).toFixed(2)}`);
+    
+    // Also check each payment individually
+    printSalePayments.forEach((p, idx) => {
+      console.log(`  Payment ${idx + 1}:`, {
+        amount: p.amount,
+        amountCents: p.amountCents,
+        amountDollars: `$${((p.amount || p.amountCents || 0) / 100).toFixed(2)}`,
+        bookingId: p.bookingId
+      });
+    });
+  }
+  
   // Calculate revenue using the dedicated service
   const revenueResults = calculateCurrentYearRevenueByServiceType(
     payments,
