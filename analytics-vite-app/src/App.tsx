@@ -315,11 +315,9 @@ function AppContent() {
         {currentPage === 'funnel' && <Funnel 
           funnelData={dataManager.funnelData} 
           dataManager={dataManager}
-          salesData={dataManager.bookings.filter(booking => {
-            const serviceType = dataManager.serviceTypes.find(st => st.id === booking.serviceTypeId);
-            return serviceType?.tracksInFunnel === true;
-          })} 
-          paymentsData={dataManager.payments} 
+          salesData={dataManager.bookings}
+          paymentsData={dataManager.payments}
+          serviceTypes={dataManager.serviceTypes}
         />}
         {currentPage === 'calculator' && (
           <FeatureGate feature="sales">

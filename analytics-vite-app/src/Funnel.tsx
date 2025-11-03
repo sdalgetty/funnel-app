@@ -10,6 +10,7 @@ interface FunnelProps {
   dataManager?: any;
   salesData?: Booking[];
   paymentsData?: Payment[];
+  serviceTypes?: any[];
 }
 
 // Helper functions
@@ -28,7 +29,7 @@ const calculateConversionRate = (from: number, to: number) => {
   return ((to / from) * 100).toFixed(1);
 };
 
-export default function Funnel({ funnelData, dataManager, salesData = [], paymentsData = [] }: FunnelProps) {
+export default function Funnel({ funnelData, dataManager, salesData = [], paymentsData = [], serviceTypes = [] }: FunnelProps) {
   console.log('Funnel component loaded!', { funnelData, salesData, paymentsData });
   
   const { user, features } = useAuth();
@@ -50,6 +51,11 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
 
   // Check if user has Pro features (Pro or Trial account)
   const isProAccount = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'trial';
+
+  // Get trackable service type IDs (for closes calculation only)
+  const trackableServiceIds = useMemo(() => {
+    return new Set(serviceTypes.filter((st: any) => st.tracksInFunnel).map((st: any) => st.id));
+  }, [serviceTypes]);
 
   // Calculate dynamic data from sales for Pro accounts
   const calculateDynamicData = useMemo(() => {
@@ -84,35 +90,27 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
     };
 
     // Calculate bookings and closes from sales data
-    try {
-      const debugCounts: Record<number, number> = {};
-      console.groupCollapsed(
-        `Funnel closes calc: year=${selectedYear}, salesData=${Array.isArray(salesData) ? salesData.length : 0}`
-      );
-      salesData.forEach((booking: any) => {
-        const parsed = parseYearMonth(booking?.dateBooked);
-        const serviceTypeId = booking?.serviceTypeId;
-        if (parsed && parsed.year === selectedYear) {
-          monthlyData[parsed.month].bookings += booking.bookedRevenue || 0;
-          monthlyData[parsed.month].closes += 1; // Each booking is a close
-          debugCounts[parsed.month] = (debugCounts[parsed.month] || 0) + 1;
-          console.log(
-            `counted`,
-            { id: booking?.id, projectName: booking?.projectName, dateBooked: booking?.dateBooked, month: parsed.month, year: parsed.year, serviceTypeId }
-          );
-        } else {
-          console.log(`skipped`, { id: booking?.id, projectName: booking?.projectName, dateBooked: booking?.dateBooked, parsed });
-        }
-      });
-      console.log(`monthly close counts`, debugCounts);
-      console.groupEnd();
-    } catch (e) {
-      console.warn('Funnel closes debug logging failed:', e);
-    }
+    // Bookings: ALL bookings regardless of trackInFunnel
+    // Closes: Only bookings with trackable service types
+    salesData.forEach((booking: any) => {
+      const parsed = parseYearMonth(booking?.dateBooked);
+      if (!parsed || parsed.year !== selectedYear) return;
+      
+      const month = parsed.month;
+      const bookedRevenue = booking.bookedRevenue || 0;
+      
+      // Always add to bookings (all bookings count)
+      monthlyData[month].bookings += bookedRevenue;
+      
+      // Only add to closes if service type is trackable
+      if (booking.serviceTypeId && trackableServiceIds.has(booking.serviceTypeId)) {
+        monthlyData[month].closes += 1;
+      }
+    });
 
     // Cash is now manually entered in Funnel, not calculated
     return monthlyData;
-  }, [isProAccount, salesData, paymentsData, selectedYear]);
+  }, [isProAccount, salesData, paymentsData, selectedYear, trackableServiceIds]);
 
   // Handler functions for edit modal
   const handleEditMonth = (month: any) => {
