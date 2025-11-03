@@ -204,6 +204,25 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager }) => {
   // Determine if pace is on track
   const isOnTrack = calculations.paceBookings >= data.bookingsGoal;
 
+  // Show loading state if dataManager is not ready
+  if (!dataManager || dataManager.loading) {
+    return (
+      <div style={{ 
+        padding: '24px', 
+        maxWidth: '1200px', 
+        margin: '0 auto',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '400px'
+      }}>
+        <div style={{ textAlign: 'center', color: '#6b7280' }}>
+          <div style={{ fontSize: '16px', marginBottom: '8px' }}>Loading calculator data...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ marginBottom: '32px' }}>
