@@ -14,6 +14,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
   const { user } = useAuth();
   const [adCampaigns, setAdCampaigns] = useState<AdCampaign[]>([]);
   const [selectedLeadSourceId, setSelectedLeadSourceId] = useState<string>('');
+  const [userManuallySelected, setUserManuallySelected] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<{
     leadSource: LeadSource;
@@ -34,9 +35,15 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
     }
   }, [dataManager?.adCampaigns]);
 
-  // Auto-select the lead source based on existing campaigns
+  // Auto-select the lead source based on existing campaigns (only on initial load or data change, not user selection)
   useEffect(() => {
     if (leadSources.length === 0) return;
+    
+    // Don't auto-select if user has manually selected a lead source
+    if (userManuallySelected) {
+      console.log('Skipping auto-select - user has manually selected:', selectedLeadSourceId);
+      return;
+    }
 
     // Find lead sources that have campaigns (only real campaigns, not defaults)
     const campaignsByLeadSource = new Map<string, AdCampaign[]>();
@@ -50,6 +57,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
 
     console.log('Auto-select lead source:', {
       selectedLeadSourceId,
+      userManuallySelected,
       campaignsByLeadSource: Array.from(campaignsByLeadSource.entries()).map(([id, campaigns]) => ({
         leadSourceId: id,
         leadSourceName: leadSources.find(ls => ls.id === id)?.name,
@@ -78,7 +86,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
       });
 
       if (bestLeadSourceId) {
-        // Always update if we found a better lead source, or if nothing is selected
+        // Only update if nothing is selected yet
         if (!selectedLeadSourceId || selectedLeadSourceId !== bestLeadSourceId) {
           const leadSourceName = leadSources.find(ls => ls.id === bestLeadSourceId)?.name;
           console.log('Auto-selecting lead source:', leadSourceName, bestLeadSourceId);
@@ -93,7 +101,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
       console.log('No campaigns found, selecting first lead source');
       setSelectedLeadSourceId(leadSources[0].id);
     }
-  }, [leadSources, adCampaigns, selectedLeadSourceId, currentYear]);
+  }, [leadSources, adCampaigns, currentYear, userManuallySelected]);
 
   // Helper functions
   const toUSD = (cents: number) => {
@@ -295,7 +303,11 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
           </label>
           <select
             value={selectedLeadSourceId}
-            onChange={(e) => setSelectedLeadSourceId(e.target.value)}
+            onChange={(e) => {
+              setSelectedLeadSourceId(e.target.value);
+              setUserManuallySelected(true);
+              console.log('User manually selected lead source:', e.target.value);
+            }}
             style={{
               width: '100%',
               maxWidth: '400px',
