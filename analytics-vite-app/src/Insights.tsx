@@ -373,20 +373,31 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             
             // Calculate breakdown by lead source
             const breakdownByLeadSource = campaigns.reduce((acc, c) => {
-              const lsName = leadSources.find(ls => ls.id === c.leadSourceId)?.name || 'Unknown';
+              const leadSource = leadSources.find(ls => ls.id === c.leadSourceId);
+              const lsName = leadSource?.name || `[ORPHANED - ID: ${c.leadSourceId || 'null'}]`;
               const spend = c.spend ?? c.adSpendCents ?? 0;
               if (!acc[lsName]) {
-                acc[lsName] = { count: 0, total: 0 };
+                acc[lsName] = { count: 0, total: 0, leadSourceId: c.leadSourceId };
               }
               acc[lsName].count++;
               acc[lsName].total += spend;
               return acc;
-            }, {} as Record<string, { count: number; total: number }>);
+            }, {} as Record<string, { count: number; total: number; leadSourceId: string }>);
             
             console.log('Breakdown by Lead Source:');
             Object.entries(breakdownByLeadSource).forEach(([name, data]) => {
-              console.log(`  ${name}: ${data.count} campaigns, $${(data.total / 100).toFixed(2)}`);
+              console.log(`  ${name}: ${data.count} campaigns, $${(data.total / 100).toFixed(2)} (leadSourceId: ${data.leadSourceId})`);
             });
+            
+            // Check for orphaned campaigns
+            const orphanedCampaigns = campaigns.filter(c => !leadSources.find(ls => ls.id === c.leadSourceId));
+            if (orphanedCampaigns.length > 0) {
+              console.log(`⚠️ Found ${orphanedCampaigns.length} orphaned campaign(s) with missing lead sources:`);
+              orphanedCampaigns.forEach(c => {
+                const spend = c.spend ?? c.adSpendCents ?? 0;
+                console.log(`  - Campaign ID: ${c.id}, leadSourceId: ${c.leadSourceId || 'null'}, Spend: $${(spend / 100).toFixed(2)}`);
+              });
+            }
             
             console.log('Campaigns details:', campaigns.map(c => ({
               id: c.id,
