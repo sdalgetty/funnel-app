@@ -123,11 +123,18 @@ export default function Insights({ dataManager }: { dataManager: any }) {
 
   // Advertising totals (current selected year)
   const advertisingTotals = useMemo(() => {
+    // Check if dataManager has adCampaigns directly (fallback)
+    const campaignsFromManager = dataManager?.adCampaigns || [];
+    const campaignsToUse = adCampaigns.length > 0 ? adCampaigns : campaignsFromManager;
+    
     // Debug logging BEFORE filtering
     console.log('=== INSIGHTS AD SPEND CALCULATION (BEFORE FILTER) ===');
     console.log('Selected year:', selectedYear);
-    console.log('Total campaigns (all years, before filter):', adCampaigns.length);
-    console.log('All campaigns:', adCampaigns.map(c => ({
+    console.log('adCampaigns state length:', adCampaigns.length);
+    console.log('dataManager.adCampaigns length:', campaignsFromManager.length);
+    console.log('Using campaigns from:', adCampaigns.length > 0 ? 'state' : 'dataManager');
+    console.log('Total campaigns (all years, before filter):', campaignsToUse.length);
+    console.log('All campaigns:', campaignsToUse.map(c => ({
       id: c.id,
       leadSourceId: c.leadSourceId,
       year: c.year,
@@ -137,7 +144,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       isDefault: c.id.startsWith('default_')
     })));
     
-    const campaigns = adCampaigns.filter(c => c.year === selectedYear && !c.id.startsWith('default_'))
+    const campaigns = campaignsToUse.filter(c => c.year === selectedYear && !c.id.startsWith('default_'))
     // Use same calculation as Advertising page - prefer spend, fallback to adSpendCents
     const totalAdSpend = campaigns.reduce((s, c) => {
       const spend = c.spend ?? c.adSpendCents ?? 0;
@@ -165,7 +172,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     console.log('=====================================');
     
     // Get lead sources that have ad campaigns
-    const leadSourcesWithAds = new Set(adCampaigns.map(c => c.leadSourceId))
+    const leadSourcesWithAds = new Set(campaignsToUse.map(c => c.leadSourceId))
     const totalBookedFromAds = bookings
       .filter(b => {
         const lsId = b.leadSourceId
@@ -179,7 +186,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? (totalBookedFromAds / totalAdSpend) : null
     const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0
     return { totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
-  }, [adCampaigns, bookings, selectedYear])
+  }, [adCampaigns, dataManager?.adCampaigns, bookings, selectedYear, leadSources])
 
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' })
   const formatNumber = (n: number) => n.toLocaleString()
