@@ -149,6 +149,22 @@ function AppContent() {
           >
             Funnel
           </button>
+          <button
+            onClick={() => setCurrentPage('forecast')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: currentPage === 'forecast' ? '#3b82f6' : '#f3f4f6',
+              color: currentPage === 'forecast' ? 'white' : '#374151',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Forecast
+          </button>
           {features.advertising && (
             <button
               onClick={() => setCurrentPage('advertising')}
@@ -167,22 +183,6 @@ function AppContent() {
               Advertising
             </button>
           )}
-          <button
-            onClick={() => setCurrentPage('forecast')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              backgroundColor: currentPage === 'forecast' ? '#3b82f6' : '#f3f4f6',
-              color: currentPage === 'forecast' ? 'white' : '#374151',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            Forecast
-          </button>
           <button
             onClick={() => setCurrentPage('bookings')}
             style={{
