@@ -383,54 +383,32 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
                       </tr>
                     );
                   })}
+                  {/* Sum Row */}
+                  {(() => {
+                    const totalAdSpend = allMonths.reduce((sum, campaign) => sum + campaign.spend, 0);
+                    const totalLeads = allMonths.reduce((sum, campaign) => sum + campaign.leadsGenerated, 0);
+                    return (
+                      <tr style={{ 
+                        borderTop: '2px solid #d1d5db',
+                        backgroundColor: '#f9fafb',
+                        fontWeight: '600'
+                      }}>
+                        <td style={{ padding: '12px', color: '#1f2937', textAlign: 'left', fontWeight: '600' }}>
+                          Total
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937', fontWeight: '600' }}>
+                          {toUSD(totalAdSpend)}
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937', fontWeight: '600' }}>
+                          {formatNumber(totalLeads)}
+                        </td>
+                        <td style={{ padding: '12px', color: '#1f2937', textAlign: 'left' }}></td>
+                        <td style={{ padding: '12px', color: '#1f2937', textAlign: 'left' }}></td>
+                      </tr>
+                    );
+                  })()}
                 </tbody>
               </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Performance Metrics */}
-      {selectedLeadSource && metrics && (
-        <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
-          <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
-              Performance Metrics - {selectedLeadSource.name} ({currentYear})
-            </h2>
-          </div>
-          
-          <div style={{ padding: '20px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-              <div>
-                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Total Ad Spend</div>
-                <div style={{ fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>{toUSD(metrics.totalAdSpend)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Total Booked from Ads</div>
-                <div style={{ fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>{toUSD(metrics.totalBookedFromAds)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Ad Spend ROI</div>
-                <div style={{ fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>
-                  {metrics.adSpendROI !== null ? `${metrics.adSpendROI.toFixed(1)}%` : 'N/A'}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Avg Booking Amount</div>
-                <div style={{ fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>{toUSD(metrics.averageBookingAmount)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>% of Total Inquiries</div>
-                <div style={{ fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>{metrics.percentOfTotalInquiries.toFixed(1)}%</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Cost Per Inquiry</div>
-                <div style={{ fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>{toUSD(metrics.costPerInquiry)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Cost Per Close</div>
-                <div style={{ fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>{toUSD(metrics.costPerClose)}</div>
-              </div>
             </div>
           </div>
         </div>

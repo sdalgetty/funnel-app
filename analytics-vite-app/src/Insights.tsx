@@ -125,7 +125,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       const lsId = b.leadSourceId
       return leadSourcesWithAds.has(lsId) && b.dateBooked?.startsWith(String(selectedYear))
     }).length
-    const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? (totalBookedFromAds / totalAdSpend) * 100 : null
+    const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? (totalBookedFromAds / totalAdSpend) : null
     const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0
     return { totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
   }, [adCampaigns, bookings, selectedYear])
@@ -267,7 +267,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
         <Cards>
           <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value={toUSD(advertisingTotals.totalAdSpend)} />
           <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value={toUSD(advertisingTotals.totalBookedFromAds)} />
-          <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value={advertisingTotals.overallROI !== null ? `${advertisingTotals.overallROI.toFixed(1)}%` : 'N/A'} />
+          <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value={advertisingTotals.overallROI !== null ? advertisingTotals.overallROI.toFixed(2) : 'N/A'} />
           <Card icon={<Target size={20} color="#8b5cf6" />} label="Cost Per Close" value={toUSD(advertisingTotals.costPerClose)} />
         </Cards>
       </Section>
