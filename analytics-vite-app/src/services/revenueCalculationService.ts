@@ -196,6 +196,12 @@ export function calculateCurrentYearRevenueByServiceType(
     unmatchedJanuaryPayments.slice(0, 10).forEach((u, idx) => {
       const booking = bookings.find(b => b.id === u.payment.bookingId);
       const serviceType = booking ? serviceTypes.find(st => st.id === booking.serviceTypeId) : null;
+      
+      // Parse each date field to see what year we get
+      const parsedPaymentDateYear = u.payment.paymentDate ? extractYearFromDateString(u.payment.paymentDate) : null;
+      const parsedDueDateYear = u.payment.dueDate ? extractYearFromDateString(u.payment.dueDate) : null;
+      const parsedExpectedDateYear = u.payment.expectedDate ? extractYearFromDateString(u.payment.expectedDate) : null;
+      
       console.log(`Unmatched January Payment ${idx + 1}:`, {
         paymentId: u.payment.id,
         bookingId: u.payment.bookingId,
@@ -207,11 +213,24 @@ export function calculateCurrentYearRevenueByServiceType(
         dueDate: u.payment.dueDate,
         expectedDate: u.payment.expectedDate,
         reason: u.reason,
-        // Test what year the date parsing would give
-        parsedYearFromPaymentDate: u.payment.paymentDate ? extractYearFromDateString(u.payment.paymentDate) : null,
-        parsedYearFromDueDate: u.payment.dueDate ? extractYearFromDateString(u.payment.dueDate) : null,
-        parsedYearFromExpectedDate: u.payment.expectedDate ? extractYearFromDateString(u.payment.expectedDate) : null
+        // Show what year each date field would parse to
+        parsedYearFromPaymentDate: parsedPaymentDateYear,
+        parsedYearFromDueDate: parsedDueDateYear,
+        parsedYearFromExpectedDate: parsedExpectedDateYear,
+        // Show which date field would be used
+        wouldUsePaymentDate: parsedPaymentDateYear === year,
+        wouldUseDueDate: !parsedPaymentDateYear && parsedDueDateYear === year,
+        wouldUseExpectedDate: !parsedPaymentDateYear && !parsedDueDateYear && parsedExpectedDateYear === year
       });
+      
+      // If the reason says wrong year but we parsed it as correct year, that's a bug
+      if (u.reason.includes(`Year ${year - 1}`) && (parsedPaymentDateYear === year || parsedDueDateYear === year || parsedExpectedDateYear === year)) {
+        console.warn(`⚠️ POTENTIAL BUG: Payment ${u.payment.id} was marked as wrong year but parsing shows correct year!`, {
+          reason: u.reason,
+          parsedYears: { paymentDate: parsedPaymentDateYear, dueDate: parsedDueDateYear, expectedDate: parsedExpectedDateYear },
+          targetYear: year
+        });
+      }
     });
   }
   
