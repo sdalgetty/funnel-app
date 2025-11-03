@@ -32,7 +32,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
     if (dataManager) {
       setAdCampaigns(dataManager.adCampaigns || []);
     }
-  }, [dataManager]);
+  }, [dataManager?.adCampaigns]);
 
   // Auto-select the first lead source if none selected and we have lead sources
   useEffect(() => {
@@ -87,10 +87,32 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
     const monthYear = `${editingCampaign.year}-${String(editingCampaign.month).padStart(2, '0')}`;
     const adSpendCents = updatedData.spend; // spend is already in cents
 
-    if (editingCampaign.isNew) {
-      // Create new campaign using dataManager
+    // Check if campaign already exists (by looking for non-default ID)
+    const existingCampaign = adCampaigns.find(campaign => 
+      campaign.leadSourceId === selectedLeadSource.id && 
+      campaign.year === editingCampaign.year && 
+      campaign.month === editingCampaign.month &&
+      !campaign.id.startsWith('default_') // Only real campaigns from database
+    );
+
+    if (existingCampaign) {
+      // Update existing campaign
+      if (dataManager?.updateAdCampaign) {
+        const success = await dataManager.updateAdCampaign(existingCampaign.id, {
+          adSpendCents: adSpendCents,
+          spend: adSpendCents,
+          leadsGenerated: updatedData.leadsGenerated,
+          notes: updatedData.notes
+        });
+        if (!success) {
+          console.error('Failed to update ad campaign');
+          return;
+        }
+      }
+    } else {
+      // Create new campaign
       if (dataManager?.createAdCampaign) {
-        await dataManager.createAdCampaign({
+        const newCampaign = await dataManager.createAdCampaign({
           leadSourceId: selectedLeadSource.id,
           year: editingCampaign.year,
           month: editingCampaign.month,
@@ -101,28 +123,18 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
           notes: updatedData.notes,
           lastUpdated: now
         });
-      }
-    } else {
-      // Update existing campaign using dataManager
-      const existingCampaign = adCampaigns.find(campaign => 
-        campaign.leadSourceId === selectedLeadSource.id && 
-        campaign.year === editingCampaign.year && 
-        campaign.month === editingCampaign.month
-      );
-
-      if (existingCampaign && dataManager?.updateAdCampaign) {
-        await dataManager.updateAdCampaign(existingCampaign.id, {
-          adSpendCents: adSpendCents,
-          spend: adSpendCents,
-          leadsGenerated: updatedData.leadsGenerated,
-          notes: updatedData.notes
-        });
+        if (!newCampaign) {
+          console.error('Failed to create ad campaign');
+          return;
+        }
       }
     }
 
-    // Reload data after save
+    // Reload data after save to ensure we have the latest from database
     if (dataManager?.loadAllData) {
       await dataManager.loadAllData();
+      // Wait a bit for state to update
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     handleCloseModal();
@@ -254,7 +266,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
             ))}
           </select>
           <p style={{ color: '#6b7280', margin: '8px 0 0 0', fontSize: '13px', textAlign: 'left' }}>
-            Select the lead source to track advertising for. Most users will only need one ad campaign.
+            Select the lead source to track advertising for.
           </p>
         </div>
       )}
