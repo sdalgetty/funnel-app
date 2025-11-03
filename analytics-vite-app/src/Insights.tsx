@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import Forecast from './Forecast'
 import ForecastModeling from './ForecastModeling'
-import type { FunnelData, Booking, Payment, ServiceType, AdCampaign, AdSource, LeadSource } from './types'
+import type { FunnelData, Booking, Payment, ServiceType, AdCampaign, LeadSource } from './types'
 import { Users, Phone, CheckCircle, DollarSign, TrendingUp, Target, BarChart3 } from 'lucide-react'
 
 export default function Insights({ dataManager }: { dataManager: any }) {
@@ -14,7 +14,6 @@ export default function Insights({ dataManager }: { dataManager: any }) {
   const bookings: Booking[] = dataManager?.bookings || []
   const payments: Payment[] = dataManager?.payments || []
   const serviceTypes: ServiceType[] = dataManager?.serviceTypes || []
-  const adSources: AdSource[] = dataManager?.adSources || []
   const adCampaigns: AdCampaign[] = dataManager?.adCampaigns || []
   const leadSources: LeadSource[] = dataManager?.leadSources || []
 
@@ -114,22 +113,22 @@ export default function Insights({ dataManager }: { dataManager: any }) {
   const advertisingTotals = useMemo(() => {
     const campaigns = adCampaigns.filter(c => c.year === selectedYear)
     const totalAdSpend = campaigns.reduce((s, c) => s + (c.spend || c.adSpendCents || 0), 0)
-    // Map adSource -> leadSource to attribute bookings
-    const adSourceIdToLeadSource = new Map(adSources.map(as => [as.id, as.leadSourceId]))
+    // Get lead sources that have ad campaigns
+    const leadSourcesWithAds = new Set(adCampaigns.map(c => c.leadSourceId))
     const totalBookedFromAds = bookings
       .filter(b => {
         const lsId = b.leadSourceId
-        return Array.from(adSourceIdToLeadSource.values()).includes(lsId) && b.dateBooked?.startsWith(String(selectedYear))
+        return leadSourcesWithAds.has(lsId) && b.dateBooked?.startsWith(String(selectedYear))
       })
       .reduce((s, b) => s + (b.revenue || b.bookedRevenue || 0), 0)
     const closesFromAds = bookings.filter(b => {
       const lsId = b.leadSourceId
-      return Array.from(adSourceIdToLeadSource.values()).includes(lsId) && b.dateBooked?.startsWith(String(selectedYear))
+      return leadSourcesWithAds.has(lsId) && b.dateBooked?.startsWith(String(selectedYear))
     }).length
     const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? (totalBookedFromAds / totalAdSpend) * 100 : null
     const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0
     return { totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
-  }, [adCampaigns, adSources, bookings, selectedYear])
+  }, [adCampaigns, bookings, selectedYear])
 
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' })
   const formatNumber = (n: number) => n.toLocaleString()

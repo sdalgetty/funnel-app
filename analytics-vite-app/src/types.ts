@@ -115,17 +115,12 @@ export interface Payment {
 // ADVERTISING TYPES
 // ============================================================================
 
-export interface AdSource {
-  id: string;
-  name: string;
-  leadSourceId: string; // Reference to LeadSource for ROI tracking
-  isActive: boolean;
-  createdAt: string;
-}
+// AdSource removed - ad campaigns now link directly to LeadSource
+// This simplifies the structure since most users only have one campaign per lead source
 
 export interface AdCampaign {
   id: string;
-  adSourceId: string;
+  leadSourceId: string; // Direct reference to LeadSource
   year: number;
   month: number;
   monthYear: string;

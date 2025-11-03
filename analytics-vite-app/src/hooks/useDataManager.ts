@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { UnifiedDataService } from '../services/unifiedDataService';
-import type { FunnelData, Booking, Payment, ServiceType, LeadSource, AdSource, AdCampaign, ForecastModel } from '../types';
+import type { FunnelData, Booking, Payment, ServiceType, LeadSource, AdCampaign, ForecastModel } from '../types';
 
 export function useDataManager() {
   const { user } = useAuth();
@@ -14,7 +14,6 @@ export function useDataManager() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
   const [leadSources, setLeadSources] = useState<LeadSource[]>([]);
-  const [adSources, setAdSources] = useState<AdSource[]>([]);
   const [adCampaigns, setAdCampaigns] = useState<AdCampaign[]>([]);
 
   // Load all data on mount or user change
@@ -30,13 +29,12 @@ export function useDataManager() {
     try {
       console.log('Loading all data for user:', user.id);
       
-      const [funnelDataResult, bookingsResult, paymentsResult, serviceTypesResult, leadSourcesResult, adSourcesResult, adCampaignsResult] = await Promise.all([
+      const [funnelDataResult, bookingsResult, paymentsResult, serviceTypesResult, leadSourcesResult, adCampaignsResult] = await Promise.all([
         UnifiedDataService.getFunnelData(user.id, new Date().getFullYear()),
         UnifiedDataService.getBookings(user.id),
         UnifiedDataService.getPayments(user.id),
         UnifiedDataService.getServiceTypes(user.id),
         UnifiedDataService.getLeadSources(user.id),
-        UnifiedDataService.getAdSources(user.id),
         UnifiedDataService.getAdCampaigns(user.id)
       ]);
 
@@ -46,7 +44,6 @@ export function useDataManager() {
         payments: paymentsResult.length,
         serviceTypes: serviceTypesResult.length,
         leadSources: leadSourcesResult.length,
-        adSources: adSourcesResult.length,
         adCampaigns: adCampaignsResult.length
       });
 
@@ -55,7 +52,6 @@ export function useDataManager() {
       setPayments(paymentsResult);
       setServiceTypes(serviceTypesResult);
       setLeadSources(leadSourcesResult);
-      setAdSources(adSourcesResult);
       setAdCampaigns(adCampaignsResult);
     } catch (err) {
       console.error('Error loading data:', err);
@@ -322,57 +318,7 @@ export function useDataManager() {
     }
   }, [user?.id]);
 
-  // AdSource operations
-  const createAdSource = useCallback(async (adSourceData: Omit<AdSource, 'id' | 'createdAt'>) => {
-    if (!user?.id) return null;
-    
-    try {
-      const adSource = await UnifiedDataService.createAdSource(user.id, adSourceData);
-      if (adSource) {
-        setAdSources(prev => [...prev, adSource]);
-      }
-      return adSource;
-    } catch (err) {
-      console.error('Error creating ad source:', err);
-      return null;
-    }
-  }, [user?.id]);
-
-  const updateAdSource = useCallback(async (id: string, updates: Partial<AdSource>) => {
-    if (!user?.id) return false;
-    
-    try {
-      const success = await UnifiedDataService.updateAdSource(user.id, id, updates);
-      if (success) {
-        setAdSources(prev => prev.map(adSource => 
-          adSource.id === id ? { ...adSource, ...updates } : adSource
-        ));
-      }
-      return success;
-    } catch (err) {
-      console.error('Error updating ad source:', err);
-      return false;
-    }
-  }, [user?.id]);
-
-  const deleteAdSource = useCallback(async (id: string) => {
-    if (!user?.id) return false;
-    
-    try {
-      const success = await UnifiedDataService.deleteAdSource(user.id, id);
-      if (success) {
-        setAdSources(prev => prev.filter(adSource => adSource.id !== id));
-        // Also remove associated campaigns
-        setAdCampaigns(prev => prev.filter(campaign => campaign.adSourceId !== id));
-      }
-      return success;
-    } catch (err) {
-      console.error('Error deleting ad source:', err);
-      return false;
-    }
-  }, [user?.id]);
-
-  // AdCampaign operations
+  // AdCampaign operations (AdSource removed - campaigns now link directly to LeadSource)
   const createAdCampaign = useCallback(async (adCampaignData: Omit<AdCampaign, 'id' | 'createdAt'>) => {
     if (!user?.id) return null;
     
@@ -454,7 +400,6 @@ export function useDataManager() {
     payments,
     serviceTypes,
     leadSources,
-    adSources,
     adCampaigns,
     
     // Actions
@@ -483,11 +428,6 @@ export function useDataManager() {
     createPayment,
     updatePayment,
     deletePayment,
-    
-    // AdSource operations
-    createAdSource,
-    updateAdSource,
-    deleteAdSource,
     
     // AdCampaign operations
     createAdCampaign,

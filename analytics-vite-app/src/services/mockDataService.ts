@@ -4,7 +4,6 @@ import type {
   LeadSource, 
   Booking, 
   Payment,
-  AdSource,
   AdCampaign
 } from '../types';
 import { 
@@ -13,7 +12,6 @@ import {
   mockLeadSources, 
   mockBookings, 
   mockPayments,
-  mockAdSources,
   mockAdCampaigns
 } from '../mockData';
 
@@ -153,38 +151,7 @@ export class MockDataService {
   }
 
   // ============================================================================
-  // AD SOURCES
-  // ============================================================================
-  
-  static async getAdSources(userId: string): Promise<AdSource[]> {
-    console.log('Using mock ad sources for development');
-    return [...mockAdSources];
-  }
-
-  static async createAdSource(userId: string, adSourceData: Omit<AdSource, 'id' | 'createdAt'>): Promise<AdSource | null> {
-    console.log('Mock create ad source:', adSourceData);
-    const newAdSource: AdSource = {
-      id: `mock_ad_${Date.now()}`,
-      name: adSourceData.name,
-      leadSourceId: adSourceData.leadSourceId,
-      isActive: adSourceData.isActive,
-      createdAt: new Date().toISOString()
-    };
-    return newAdSource;
-  }
-
-  static async updateAdSource(userId: string, id: string, updates: Partial<AdSource>): Promise<boolean> {
-    console.log('Mock update ad source:', id, updates);
-    return true;
-  }
-
-  static async deleteAdSource(userId: string, id: string): Promise<boolean> {
-    console.log('Mock delete ad source:', id);
-    return true;
-  }
-
-  // ============================================================================
-  // AD CAMPAIGNS
+  // AD CAMPAIGNS (AdSource removed - campaigns now link directly to LeadSource)
   // ============================================================================
   
   static async getAdCampaigns(userId: string): Promise<AdCampaign[]> {

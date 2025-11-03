@@ -6,7 +6,6 @@ import type {
   LeadSource, 
   Booking, 
   Payment,
-  AdSource,
   AdCampaign,
   ForecastModel
 } from '../types';
@@ -842,41 +841,7 @@ export class UnifiedDataService {
   }
 
   // ============================================================================
-  // AD SOURCES
-  // ============================================================================
-  
-  static async getAdSources(userId: string): Promise<AdSource[]> {
-    if (!this.isSupabaseConfigured()) {
-      return MockDataService.getAdSources(userId);
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('ad_sources')
-        .select('*')
-        .eq('user_id', userId)
-        .order('name', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching ad sources:', error);
-        return [];
-      }
-
-      return data?.map(item => ({
-        id: item.id,
-        name: item.name,
-        leadSourceId: item.lead_source_id,
-        isActive: true, // Default to true since we don't have this field in DB
-        createdAt: item.created_at
-      })) || [];
-    } catch (error) {
-      console.error('Error fetching ad sources:', error);
-      return [];
-    }
-  }
-
-  // ============================================================================
-  // AD CAMPAIGNS
+  // AD CAMPAIGNS (AdSource removed - campaigns now link directly to LeadSource)
   // ============================================================================
   
   static async getAdCampaigns(userId: string): Promise<AdCampaign[]> {
@@ -904,7 +869,7 @@ export class UnifiedDataService {
         
         return {
           id: item.id,
-          adSourceId: item.ad_source_id,
+          leadSourceId: item.lead_source_id,
           year: year,
           month: month,
           monthYear: item.month_year,
@@ -921,92 +886,6 @@ export class UnifiedDataService {
     }
   }
 
-  static async createAdSource(userId: string, adSourceData: Omit<AdSource, 'id' | 'createdAt'>): Promise<AdSource | null> {
-    if (!this.isSupabaseConfigured()) {
-      return MockDataService.createAdSource(userId, adSourceData);
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('ad_sources')
-        .insert({
-          user_id: userId,
-          name: adSourceData.name,
-          lead_source_id: adSourceData.leadSourceId
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating ad source:', error);
-        return null;
-      }
-
-      return {
-        id: data.id,
-        name: data.name,
-        leadSourceId: data.lead_source_id,
-        isActive: true, // Default to true
-        createdAt: data.created_at
-      };
-    } catch (error) {
-      console.error('Error creating ad source:', error);
-      return null;
-    }
-  }
-
-  static async updateAdSource(userId: string, id: string, updates: Partial<AdSource>): Promise<boolean> {
-    if (!this.isSupabaseConfigured()) {
-      return MockDataService.updateAdSource(userId, id, updates);
-    }
-
-    try {
-      const updateData: any = {};
-      if (updates.name !== undefined) updateData.name = updates.name;
-      if (updates.leadSourceId !== undefined) updateData.lead_source_id = updates.leadSourceId;
-
-      const { error } = await supabase
-        .from('ad_sources')
-        .update(updateData)
-        .eq('id', id)
-        .eq('user_id', userId);
-
-      if (error) {
-        console.error('Error updating ad source:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error updating ad source:', error);
-      return false;
-    }
-  }
-
-  static async deleteAdSource(userId: string, id: string): Promise<boolean> {
-    if (!this.isSupabaseConfigured()) {
-      return MockDataService.deleteAdSource(userId, id);
-    }
-
-    try {
-      const { error } = await supabase
-        .from('ad_sources')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', userId);
-
-      if (error) {
-        console.error('Error deleting ad source:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error deleting ad source:', error);
-      return false;
-    }
-  }
-
   static async createAdCampaign(userId: string, adCampaignData: Omit<AdCampaign, 'id' | 'createdAt'>): Promise<AdCampaign | null> {
     if (!this.isSupabaseConfigured()) {
       return MockDataService.createAdCampaign(userId, adCampaignData);
@@ -1017,7 +896,7 @@ export class UnifiedDataService {
         .from('ad_campaigns')
         .insert({
           user_id: userId,
-          ad_source_id: adCampaignData.adSourceId,
+          lead_source_id: adCampaignData.leadSourceId,
           month_year: adCampaignData.monthYear,
           ad_spend_cents: adCampaignData.adSpendCents,
           leads_generated: adCampaignData.leadsGenerated
@@ -1037,7 +916,7 @@ export class UnifiedDataService {
 
       return {
         id: data.id,
-        adSourceId: data.ad_source_id,
+        leadSourceId: data.lead_source_id,
         year: year,
         month: month,
         monthYear: data.month_year,
