@@ -36,47 +36,61 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
 
   // Auto-select the lead source based on existing campaigns
   useEffect(() => {
-    if (!selectedLeadSourceId && leadSources.length > 0 && adCampaigns.length > 0) {
-      // Find lead sources that have campaigns, prioritized by:
-      // 1. Campaigns from the current year
-      // 2. Most recent campaigns
-      const campaignsByLeadSource = new Map<string, AdCampaign[]>();
-      
-      adCampaigns.forEach(campaign => {
-        if (!campaign.id.startsWith('default_')) { // Only real campaigns
-          const existing = campaignsByLeadSource.get(campaign.leadSourceId) || [];
-          campaignsByLeadSource.set(campaign.leadSourceId, [...existing, campaign]);
+    if (leadSources.length === 0) return;
+
+    // Find lead sources that have campaigns (only real campaigns, not defaults)
+    const campaignsByLeadSource = new Map<string, AdCampaign[]>();
+    
+    adCampaigns.forEach(campaign => {
+      if (!campaign.id.startsWith('default_')) { // Only real campaigns
+        const existing = campaignsByLeadSource.get(campaign.leadSourceId) || [];
+        campaignsByLeadSource.set(campaign.leadSourceId, [...existing, campaign]);
+      }
+    });
+
+    console.log('Auto-select lead source:', {
+      selectedLeadSourceId,
+      campaignsByLeadSource: Array.from(campaignsByLeadSource.entries()).map(([id, campaigns]) => ({
+        leadSourceId: id,
+        leadSourceName: leadSources.find(ls => ls.id === id)?.name,
+        campaignCount: campaigns.length
+      })),
+      totalAdCampaigns: adCampaigns.length
+    });
+
+    // If we have campaigns, find the best lead source
+    if (campaignsByLeadSource.size > 0) {
+      let bestLeadSourceId = '';
+      let bestScore = -1;
+
+      campaignsByLeadSource.forEach((campaigns, leadSourceId) => {
+        // Prioritize current year campaigns
+        const currentYearCampaigns = campaigns.filter(c => c.year === currentYear);
+        const recentCampaigns = currentYearCampaigns.length > 0 ? currentYearCampaigns : campaigns;
+        
+        // Score based on number of campaigns and most recent year
+        const score = recentCampaigns.length * 1000 + (recentCampaigns[0]?.year || 0);
+        
+        if (score > bestScore) {
+          bestScore = score;
+          bestLeadSourceId = leadSourceId;
         }
       });
 
-      if (campaignsByLeadSource.size > 0) {
-        // Find the lead source with the most recent campaigns or current year campaigns
-        let bestLeadSourceId = '';
-        let bestScore = -1;
-
-        campaignsByLeadSource.forEach((campaigns, leadSourceId) => {
-          // Prioritize current year campaigns
-          const currentYearCampaigns = campaigns.filter(c => c.year === currentYear);
-          const recentCampaigns = currentYearCampaigns.length > 0 ? currentYearCampaigns : campaigns;
-          
-          // Score based on number of campaigns and most recent year
-          const score = recentCampaigns.length * 1000 + (recentCampaigns[0]?.year || 0);
-          
-          if (score > bestScore) {
-            bestScore = score;
-            bestLeadSourceId = leadSourceId;
-          }
-        });
-
-        if (bestLeadSourceId) {
+      if (bestLeadSourceId) {
+        // Always update if we found a better lead source, or if nothing is selected
+        if (!selectedLeadSourceId || selectedLeadSourceId !== bestLeadSourceId) {
+          const leadSourceName = leadSources.find(ls => ls.id === bestLeadSourceId)?.name;
+          console.log('Auto-selecting lead source:', leadSourceName, bestLeadSourceId);
           setSelectedLeadSourceId(bestLeadSourceId);
           return;
         }
       }
     }
 
-    // Fallback: select first lead source only if no campaigns exist
-    if (!selectedLeadSourceId && leadSources.length > 0 && adCampaigns.length === 0) {
+    // Fallback: select first lead source only if no campaigns exist and nothing is selected
+    if (!selectedLeadSourceId && adCampaigns.filter(c => !c.id.startsWith('default_')).length === 0) {
+      console.log('No campaigns found, selecting first lead source');
       setSelectedLeadSourceId(leadSources[0].id);
     }
   }, [leadSources, adCampaigns, selectedLeadSourceId, currentYear]);
