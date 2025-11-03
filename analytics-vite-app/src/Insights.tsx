@@ -111,8 +111,27 @@ export default function Insights({ dataManager }: { dataManager: any }) {
 
   // Advertising totals (current selected year)
   const advertisingTotals = useMemo(() => {
-    const campaigns = adCampaigns.filter(c => c.year === selectedYear)
-    const totalAdSpend = campaigns.reduce((s, c) => s + (c.spend || c.adSpendCents || 0), 0)
+    const campaigns = adCampaigns.filter(c => c.year === selectedYear && !c.id.startsWith('default_'))
+    // Use same calculation as Advertising page - prefer spend, fallback to adSpendCents
+    const totalAdSpend = campaigns.reduce((s, c) => {
+      const spend = c.spend ?? c.adSpendCents ?? 0;
+      return s + spend;
+    }, 0)
+    
+    // Debug logging
+    console.log('=== INSIGHTS AD SPEND CALCULATION ===');
+    console.log('Selected year:', selectedYear);
+    console.log('Total campaigns (all years):', adCampaigns.length);
+    console.log('Campaigns for selected year (excluding defaults):', campaigns.length);
+    console.log('Campaigns breakdown by lead source:', campaigns.reduce((acc, c) => {
+      const lsName = leadSources.find(ls => ls.id === c.leadSourceId)?.name || 'Unknown';
+      const spend = c.spend ?? c.adSpendCents ?? 0;
+      acc[lsName] = (acc[lsName] || 0) + spend;
+      return acc;
+    }, {} as Record<string, number>));
+    console.log('Total Ad Spend:', totalAdSpend);
+    console.log('=====================================');
+    
     // Get lead sources that have ad campaigns
     const leadSourcesWithAds = new Set(adCampaigns.map(c => c.leadSourceId))
     const totalBookedFromAds = bookings

@@ -397,8 +397,13 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
                   })}
                   {/* Sum Row */}
                   {(() => {
-                    const totalAdSpend = allMonths.reduce((sum, campaign) => sum + campaign.spend, 0);
-                    const totalLeads = allMonths.reduce((sum, campaign) => sum + campaign.leadsGenerated, 0);
+                    // Only count real campaigns (not defaults) and use same logic as Insights
+                    const realCampaigns = allMonths.filter(c => !c.id.startsWith('default_'));
+                    const totalAdSpend = realCampaigns.reduce((sum, campaign) => {
+                      const spend = campaign.spend ?? campaign.adSpendCents ?? 0;
+                      return sum + spend;
+                    }, 0);
+                    const totalLeads = realCampaigns.reduce((sum, campaign) => sum + campaign.leadsGenerated, 0);
                     return (
                       <tr style={{ 
                         borderTop: '2px solid #d1d5db',
