@@ -225,24 +225,26 @@ const Forecast: React.FC<ForecastProps> = ({
         />
       ) : (
         <div>
-          {/* Trends Header */}
-          <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ 
-              fontSize: '28px', 
-              fontWeight: '700', 
-              margin: '0 0 8px 0', 
-              color: '#1f2937' 
-            }}>
-              Forecast Trends
-            </h1>
-            <p style={{ 
-              color: '#6b7280', 
-              margin: 0, 
-              fontSize: '16px' 
-            }}>
-              Track future trends based on past performance
-            </p>
-          </div>
+          {/* Trends Header - only show if not in showTrendsOnly mode */}
+          {!showTrendsOnly && (
+            <div style={{ marginBottom: '32px' }}>
+              <h1 style={{ 
+                fontSize: '28px', 
+                fontWeight: '700', 
+                margin: '0 0 8px 0', 
+                color: '#1f2937' 
+              }}>
+                Forecast Trends
+              </h1>
+              <p style={{ 
+                color: '#6b7280', 
+                margin: 0, 
+                fontSize: '16px' 
+              }}>
+                Track future trends based on past performance
+              </p>
+            </div>
+          )}
 
       {/* Controls */}
       <div style={{ 
@@ -311,13 +313,14 @@ const Forecast: React.FC<ForecastProps> = ({
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards - 2 rows of 4 cards each */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+        gridTemplateColumns: 'repeat(4, 1fr)', 
         gap: '20px', 
         marginBottom: '32px' 
       }}>
+        {/* Row 1: Average Monthly Metrics */}
         <ForecastCard
           title="Avg Monthly Inquiries"
           value={monthlyAverages.inquiries}
@@ -342,128 +345,40 @@ const Forecast: React.FC<ForecastProps> = ({
           icon={<DollarSign size={20} />}
           color="#8b5cf6"
         />
+        
+        {/* Row 2: Forecast Summary Totals */}
+        <ForecastCard
+          title="Total Inquiries"
+          value={formatNumber(forecastData.reduce((sum, month) => sum + month.inquiries, 0))}
+          icon={<Users size={20} />}
+          color="#3b82f6"
+        />
+        <ForecastCard
+          title="Total Calls"
+          value={formatNumber(forecastData.reduce((sum, month) => sum + month.callsTaken, 0))}
+          icon={<Phone size={20} />}
+          color="#10b981"
+        />
+        <ForecastCard
+          title="Total Closes"
+          value={formatNumber(forecastData.reduce((sum, month) => sum + month.closes, 0))}
+          icon={<CheckCircle size={20} />}
+          color="#f59e0b"
+        />
+        <ForecastCard
+          title="Total Revenue"
+          value={toUSD(forecastData.reduce((sum, month) => sum + month.bookings, 0))}
+          icon={<DollarSign size={20} />}
+          color="#8b5cf6"
+        />
       </div>
 
-      {/* Forecast Table */}
-      <div style={{ 
-        backgroundColor: 'white', 
-        borderRadius: '12px', 
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)', 
-        overflow: 'hidden' 
-      }}>
-        <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb' }}>
-          <h2 style={{ 
-            fontSize: '18px', 
-            fontWeight: '600', 
-            margin: 0, 
-            color: '#1f2937' 
-          }}>
-            {forecastMonths}-Month Forecast
-          </h2>
-          <p style={{ 
-            fontSize: '14px', 
-            color: '#6b7280', 
-            margin: '4px 0 0 0' 
-          }}>
-            Based on {lookbackMonths === -1 ? 'all available' : `past ${lookbackMonths} months`} data
-          </p>
-        </div>
-
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', fontSize: '14px' }}>
-            <thead style={{ backgroundColor: '#f5f5f5' }}>
-              <tr>
-                <Th>Month</Th>
-                <Th align="right">Year</Th>
-                <Th align="right">Inquiries</Th>
-                <Th align="right">Calls Booked</Th>
-                <Th align="right">Calls Taken</Th>
-                <Th align="right">Closes</Th>
-                <Th align="right">Revenue</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {forecastData.map((month, index) => (
-                <tr 
-                  key={`${month.year}-${month.month}`}
-                  style={{ 
-                    borderBottom: '1px solid #eee',
-                    backgroundColor: index % 2 === 0 ? '#fafafa' : '#f5f5f5'
-                  }}
-                >
-                  <Td style={{ fontWeight: '500' }}>{month.month}</Td>
-                  <Td align="right">{month.year}</Td>
-                  <Td align="right">{formatNumber(month.inquiries)}</Td>
-                  <Td align="right">{formatNumber(month.callsBooked)}</Td>
-                  <Td align="right">{formatNumber(month.callsTaken)}</Td>
-                  <Td align="right">{formatNumber(month.closes)}</Td>
-                  <Td align="right">{toUSD(month.bookings)}</Td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Forecast Summary */}
-      <div style={{ 
-        marginTop: '24px', 
-        padding: '20px', 
-        backgroundColor: '#f8fafc', 
-        borderRadius: '8px', 
-        border: '1px solid #e2e8f0' 
-      }}>
-        <h3 style={{ 
-          fontSize: '16px', 
-          fontWeight: '600', 
-          margin: '0 0 12px 0', 
-          color: '#1f2937' 
-        }}>
-          Forecast Summary
-        </h3>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
-          gap: '16px' 
-        }}>
-          <div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
-              Total Inquiries
-            </div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
-              {formatNumber(forecastData.reduce((sum, month) => sum + month.inquiries, 0))}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
-              Total Calls
-            </div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
-              {formatNumber(forecastData.reduce((sum, month) => sum + month.callsTaken, 0))}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
-              Total Closes
-            </div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
-              {formatNumber(forecastData.reduce((sum, month) => sum + month.closes, 0))}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
-              Total Revenue
-            </div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
-              {toUSD(forecastData.reduce((sum, month) => sum + month.bookings, 0))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-          <footer style={{ fontSize: '12px', color: '#666', marginTop: '32px' }}>
-            <p>Forecast is based on monthly averages from the selected base year. Adjust the base year and forecast period to see different projections.</p>
-          </footer>
+          {/* Footer - only show if not in showTrendsOnly mode */}
+          {!showTrendsOnly && (
+            <footer style={{ fontSize: '12px', color: '#666', marginTop: '32px' }}>
+              <p>Forecast is based on monthly averages from the selected base year. Adjust the base year and forecast period to see different projections.</p>
+            </footer>
+          )}
         </div>
       )}
     </div>
