@@ -313,61 +313,38 @@ const Forecast: React.FC<ForecastProps> = ({
         </div>
       </div>
 
-      {/* Summary Cards - 2 rows of 4 cards each */}
+      {/* Summary Cards - single row with monthly averages as subtitles */}
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(4, 1fr)', 
         gap: '20px', 
         marginBottom: '32px' 
       }}>
-        {/* Row 1: Average Monthly Metrics */}
-        <ForecastCard
-          title="Avg Monthly Inquiries"
-          value={monthlyAverages.inquiries}
-          icon={<Users size={20} />}
-          color="#3b82f6"
-        />
-        <ForecastCard
-          title="Avg Monthly Calls"
-          value={monthlyAverages.callsTaken}
-          icon={<Phone size={20} />}
-          color="#10b981"
-        />
-        <ForecastCard
-          title="Avg Monthly Closes"
-          value={monthlyAverages.closes}
-          icon={<CheckCircle size={20} />}
-          color="#f59e0b"
-        />
-        <ForecastCard
-          title="Avg Monthly Revenue"
-          value={toUSD(monthlyAverages.bookings)}
-          icon={<DollarSign size={20} />}
-          color="#8b5cf6"
-        />
-        
-        {/* Row 2: Forecast Summary Totals */}
         <ForecastCard
           title="Total Inquiries"
           value={formatNumber(forecastData.reduce((sum, month) => sum + month.inquiries, 0))}
+          sub={`Avg: ${formatNumber(monthlyAverages.inquiries)}/month`}
           icon={<Users size={20} />}
           color="#3b82f6"
         />
         <ForecastCard
           title="Total Calls"
           value={formatNumber(forecastData.reduce((sum, month) => sum + month.callsTaken, 0))}
+          sub={`Avg: ${formatNumber(monthlyAverages.callsTaken)}/month`}
           icon={<Phone size={20} />}
           color="#10b981"
         />
         <ForecastCard
           title="Total Closes"
           value={formatNumber(forecastData.reduce((sum, month) => sum + month.closes, 0))}
+          sub={`Avg: ${formatNumber(monthlyAverages.closes)}/month`}
           icon={<CheckCircle size={20} />}
           color="#f59e0b"
         />
         <ForecastCard
           title="Total Revenue"
           value={toUSD(forecastData.reduce((sum, month) => sum + month.bookings, 0))}
+          sub={`Avg: ${toUSD(monthlyAverages.bookings)}/month`}
           icon={<DollarSign size={20} />}
           color="#8b5cf6"
         />
@@ -386,11 +363,12 @@ const Forecast: React.FC<ForecastProps> = ({
 };
 
 // UI Components
-function ForecastCard({ title, value, icon, color }: { 
+function ForecastCard({ title, value, icon, color, sub }: { 
   title: string; 
   value: string | number; 
   icon: React.ReactNode; 
   color: string; 
+  sub?: string;
 }) {
   return (
     <div style={{ 
@@ -425,6 +403,11 @@ function ForecastCard({ title, value, icon, color }: {
       <div style={{ fontSize: '24px', fontWeight: '600', color: color }}>
         {value}
       </div>
+      {sub && (
+        <div style={{ marginTop: '4px', fontSize: '12px', color: '#6b7280' }}>
+          {sub}
+        </div>
+      )}
     </div>
   );
 }
