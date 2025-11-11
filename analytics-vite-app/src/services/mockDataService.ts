@@ -25,6 +25,16 @@ export class MockDataService {
     return mockFunnelData.filter(data => data.year === year);
   }
 
+  static async getAllFunnelData(userId: string): Promise<FunnelData[]> {
+    console.log('Using mock funnel data for development (all years)');
+    return [...mockFunnelData].sort((a, b) => {
+      if (a.year === b.year) {
+        return a.month - b.month;
+      }
+      return a.year - b.year;
+    });
+  }
+
   static async saveFunnelData(userId: string, funnelData: FunnelData): Promise<boolean> {
     console.log('Mock save funnel data:', funnelData);
     // In mock mode, we just log the data - it's not persisted

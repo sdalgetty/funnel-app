@@ -30,7 +30,7 @@ export function useDataManager() {
       console.log('Loading all data for user:', user.id);
       
       const [funnelDataResult, bookingsResult, paymentsResult, serviceTypesResult, leadSourcesResult, adCampaignsResult] = await Promise.all([
-        UnifiedDataService.getFunnelData(user.id, new Date().getFullYear()),
+        UnifiedDataService.getAllFunnelData(user.id),
         UnifiedDataService.getBookings(user.id),
         UnifiedDataService.getPayments(user.id),
         UnifiedDataService.getServiceTypes(user.id),

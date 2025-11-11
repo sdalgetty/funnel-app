@@ -61,6 +61,30 @@ export class UnifiedDataService {
   // FUNNEL DATA
   // ============================================================================
   
+  private static transformFunnelRecords(records: any[] | null | undefined): FunnelData[] {
+    if (!records) return [];
+    return records.map(record => ({
+      id: record.id,
+      year: record.year,
+      month: record.month,
+      inquiries: record.inquiries || 0,
+      callsBooked: record.calls_booked || 0,
+      callsTaken: record.calls_taken || 0,
+      closes: record.closes || 0,
+      bookings: record.bookings || 0,
+      cash: record.cash || 0,
+      name: record.name || '',
+      bookingsGoal: record.bookings_goal || 0,
+      inquiryToCall: record.inquiry_to_call || 0,
+      callToBooking: record.call_to_booking || 0,
+      inquiriesYtd: record.inquiries_ytd || 0,
+      callsYtd: record.calls_ytd || 0,
+      bookingsYtd: record.bookings_ytd || 0,
+      notes: record.notes || '',
+      lastUpdated: record.updated_at || new Date().toISOString()
+    }));
+  }
+
   static async getFunnelData(userId: string, year: number): Promise<FunnelData[]> {
     if (!this.isSupabaseConfigured()) {
       return MockDataService.getFunnelData(userId, year);
@@ -84,32 +108,40 @@ export class UnifiedDataService {
         return [];
       }
 
-      // Transform database fields to frontend format
-      const transformedData = (data || []).map(record => ({
-        id: record.id,
-        year: record.year,
-        month: record.month,
-        inquiries: record.inquiries || 0,
-        callsBooked: record.calls_booked || 0,
-        callsTaken: record.calls_taken || 0,
-        closes: record.closes || 0,
-        bookings: record.bookings || 0,
-        cash: record.cash || 0,
-        name: record.name || '',
-        bookingsGoal: record.bookings_goal || 0,
-        inquiryToCall: record.inquiry_to_call || 0,
-        callToBooking: record.call_to_booking || 0,
-        inquiriesYtd: record.inquiries_ytd || 0,
-        callsYtd: record.calls_ytd || 0,
-        bookingsYtd: record.bookings_ytd || 0,
-        notes: record.notes || '',
-        lastUpdated: record.updated_at || new Date().toISOString()
-      }));
-
+      const transformedData = this.transformFunnelRecords(data);
       console.log('Transformed funnel data:', transformedData);
       return transformedData;
     } catch (error) {
       console.error('Error fetching funnel data:', error);
+      return [];
+    }
+  }
+
+  static async getAllFunnelData(userId: string): Promise<FunnelData[]> {
+    if (!this.isSupabaseConfigured()) {
+      return MockDataService.getAllFunnelData(userId);
+    }
+
+    try {
+      console.log('Loading ALL funnel data for user:', userId);
+
+      const { data, error } = await supabase
+        .from('funnels')
+        .select('*')
+        .eq('user_id', userId)
+        .order('year', { ascending: true })
+        .order('month', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching all funnel data:', error);
+        return [];
+      }
+
+      const transformedData = this.transformFunnelRecords(data);
+      console.log('Transformed all funnel data:', transformedData);
+      return transformedData;
+    } catch (error) {
+      console.error('Error fetching all funnel data:', error);
       return [];
     }
   }
