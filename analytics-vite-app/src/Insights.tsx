@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import Forecast from './Forecast'
 import ForecastModeling from './ForecastModeling'
@@ -76,11 +76,10 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     bookings.forEach(b => {
       if (!b?.dateBooked) return
       const year = parseInt(b.dateBooked.split('-')[0], 10)
-      if (Number.isFinite(year)) {
+      if (Number.isFinite(year) && year < currentDateInfo.year) {
         years.add(year)
       }
     })
-    years.add(currentDateInfo.year)
     return Array.from(years).sort((a, b) => b - a)
   }, [bookings, currentDateInfo.year])
 
@@ -96,6 +95,22 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       .filter(option => !baseOptions.some(base => base.key === option.key))
     return [...baseOptions, ...yearOptions]
   }, [yearsWithBookings])
+
+  const validFilterKeys = useMemo(() => new Set(timeFilterOptions.map(option => option.key)), [timeFilterOptions])
+
+  useEffect(() => {
+    setSectionFilters(prev => {
+      let changed = false
+      const next = { ...prev }
+      ;(['salesFunnel', 'leadSources', 'advertising'] as const).forEach(section => {
+        if (!validFilterKeys.has(prev[section])) {
+          next[section] = 'currentYear'
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+  }, [validFilterKeys])
 
   const buildMonthRange = useCallback((filterKey: string): MonthRange => {
     const currentMonthIndex = currentDateInfo.year * 12 + currentDateInfo.month
