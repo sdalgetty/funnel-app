@@ -47,6 +47,7 @@ export interface FunnelData {
   bookingsYtd: number;
   bookingsGoal: number;
   cash: number; // in cents
+  notes?: string | null;
   lastUpdated?: string;
 }
 

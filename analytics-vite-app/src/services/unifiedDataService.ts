@@ -102,6 +102,7 @@ export class UnifiedDataService {
         inquiriesYtd: record.inquiries_ytd || 0,
         callsYtd: record.calls_ytd || 0,
         bookingsYtd: record.bookings_ytd || 0,
+        notes: record.notes || '',
         lastUpdated: record.updated_at || new Date().toISOString()
       }));
 
@@ -171,6 +172,7 @@ export class UnifiedDataService {
       if (funnelData.inquiriesYtd) upsertData.inquiries_ytd = Number(funnelData.inquiriesYtd);
       if (funnelData.callsYtd) upsertData.calls_ytd = Number(funnelData.callsYtd);
       if (funnelData.bookingsYtd) upsertData.bookings_ytd = Number(funnelData.bookingsYtd);
+      if (funnelData.notes !== undefined) upsertData.notes = funnelData.notes || null;
 
       console.log('Upsert data:', upsertData);
       console.log('Data types:', {
@@ -189,7 +191,7 @@ export class UnifiedDataService {
           // Update existing record
           console.log('Updating existing record with id:', recordId);
           const { error: updateError } = await supabase
-            .from('funnels')
+          .from('funnels')
             .update(upsertData)
             .eq('id', recordId);
           error = updateError;
@@ -197,10 +199,10 @@ export class UnifiedDataService {
         } else {
           // Insert new record
           console.log('Inserting new record');
-          const { error: insertError } = await supabase
-            .from('funnels')
-            .insert(upsertData);
-          error = insertError;
+        const { error: insertError } = await supabase
+          .from('funnels')
+          .insert(upsertData);
+        error = insertError;
           console.log('Insert result:', { error });
         }
         
@@ -728,11 +730,11 @@ export class UnifiedDataService {
       const actualPaymentDate = paymentData.expectedDate || paymentData.dueDate;
       
       const insertData: any = {
-        user_id: userId,
-        booking_id: paymentData.bookingId,
-        amount_cents: paymentData.amount,
+          user_id: userId,
+          booking_id: paymentData.bookingId,
+          amount_cents: paymentData.amount,
         payment_method: paymentData.paymentMethod || null,
-        status: paymentData.paidAt ? 'completed' : 'pending',
+          status: paymentData.paidAt ? 'completed' : 'pending',
         notes: paymentData.memo || null,
         expected_date: this.convertMonthYearToDate(paymentData.expectedDate),
         is_expected: paymentData.isExpected || false

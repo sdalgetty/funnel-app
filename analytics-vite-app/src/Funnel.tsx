@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit, Lock, Crown } from "lucide-react";
+import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit, Lock, Crown, StickyNote } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 // Calculator moved to its own top-level page
 import { UnifiedDataService } from "./services/unifiedDataService";
@@ -45,6 +45,10 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
   // Calculator removed from Funnel page; single view only
   const [loading, setLoading] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+  const [notesMonth, setNotesMonth] = useState<FunnelData | null>(null);
+  const [notesDraft, setNotesDraft] = useState("");
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
 
   // Funnel data is provided via props from dataManager, so we don't need to reload it
   // The dataManager handles all data loading centrally
@@ -78,7 +82,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
         const monthNum = parseInt(parts[1], 10);
         if (Number.isFinite(yearNum) && Number.isFinite(monthNum) && monthNum >= 1 && monthNum <= 12) {
           return { year: yearNum, month: monthNum };
-        }
+    }
       }
       // Fallback to Date only if needed
       try {
@@ -101,7 +105,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
       
       // Always add to bookings (all bookings count)
       monthlyData[month].bookings += bookedRevenue;
-      
+
       // Only add to closes if service type is trackable
       if (booking.serviceTypeId && trackableServiceIds.has(booking.serviceTypeId)) {
         monthlyData[month].closes += 1;
@@ -137,8 +141,8 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
     
     // For all accounts, just save what was edited
     const dataToSave = {
-      ...editingMonth,
-      lastUpdated: new Date().toISOString()
+          ...editingMonth,
+          lastUpdated: new Date().toISOString()
     };
     
     console.log('Data to save:', JSON.stringify(dataToSave, null, 2));
@@ -160,14 +164,14 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
         console.log('Using UnifiedDataService.saveFunnelData');
         success = await UnifiedDataService.saveFunnelData(user.id, dataToSave);
         // If no dataManager, reload after save
-        if (success) {
+      if (success) {
           console.log('Reloading page in 300ms');
           setTimeout(() => {
             window.location.reload();
           }, 300);
         }
       }
-      
+        
       console.log('Save result:', success);
       
       if (success) {
@@ -182,6 +186,63 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
       console.error('Save error:', error);
       alert('Failed to save data. Please try again.');
     }
+  };
+
+  const handleOpenNotesModal = (month: FunnelData) => {
+    setNotesMonth(month);
+    setNotesDraft(month.notes || "");
+    setIsNotesModalOpen(true);
+  };
+
+  const persistNotes = async (monthToSave: FunnelData) => {
+    if (!user?.id) return false;
+
+    setIsSavingNotes(true);
+
+    try {
+      let success;
+      if (dataManager?.saveFunnelData) {
+        success = await dataManager.saveFunnelData(monthToSave);
+      } else {
+        success = await UnifiedDataService.saveFunnelData(user.id, monthToSave);
+        if (success) {
+          setTimeout(() => {
+            window.location.reload();
+          }, 300);
+        }
+      }
+
+      if (!success) {
+        console.error('Failed to save notes for month', monthToSave.month);
+        alert('Failed to save notes. Please try again.');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error saving notes:', error);
+      alert('Failed to save notes. Please try again.');
+      return false;
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
+
+  const handleCloseNotesModal = async () => {
+    if (notesMonth) {
+      const existingNotes = notesMonth.notes || "";
+      if (existingNotes !== notesDraft) {
+        const updatedMonth = { ...notesMonth, notes: notesDraft };
+        const success = await persistNotes(updatedMonth);
+        if (!success) {
+          return;
+        }
+        setNotesMonth(updatedMonth);
+      }
+    }
+
+    setIsNotesModalOpen(false);
+    setNotesMonth(null);
   };
 
   // Filter data by selected year
@@ -209,6 +270,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
           closes: dynamicData.closes, // Calculated from sales
           bookings: dynamicData.bookings, // Calculated from sales
           cash: existingData?.cash !== undefined ? existingData.cash : 0, // Cash is manually entered, default to 0
+          notes: existingData?.notes || '',
           lastUpdated: new Date().toISOString()
         };
       } else {
@@ -228,6 +290,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
           closes: 0,
           bookings: 0,
           cash: 0,
+          notes: '',
           lastUpdated: new Date().toISOString()
         };
       }
@@ -402,19 +465,21 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
           <table style={{ width: '100%', fontSize: '14px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f9fafb' }}>
-                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Month</th>
-                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Inquiries</th>
-                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Calls Booked</th>
-                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Calls Taken</th>
-                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Closes</th>
-                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Bookings</th>
-                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Cash</th>
-                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Actions</th>
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151', minWidth: '120px' }}>Month</th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '90px' }}>Inquiries</th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>Calls Booked</th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>Calls Taken</th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '90px' }}>Closes</th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Bookings</th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Cash</th>
+                <th style={{ padding: '12px 6px', textAlign: 'center', fontWeight: '600', color: '#374151', width: '60px' }}>Notes</th>
+                <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600', color: '#374151', minWidth: '110px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredData.map((month, index) => {
                 const monthName = new Date(selectedYear, month.month - 1).toLocaleString('default', { month: 'long' });
+                const hasNotes = !!(month.notes && month.notes.trim().length > 0);
                 return (
                   <tr
                     key={month.id}
@@ -426,25 +491,44 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                     <td style={{ padding: '12px', fontWeight: '500', color: '#1f2937', textAlign: 'left' }}>
                       {monthName}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', color: '#374151' }}>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
                       {formatNumber(month.inquiries)}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', color: '#374151' }}>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
                       {formatNumber(month.callsBooked)}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', color: '#374151' }}>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
                       {formatNumber(month.callsTaken)}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', color: '#374151' }}>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
                       {formatNumber(month.closes)}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', color: '#374151' }}>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
                       {toUSD(month.bookings)}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', color: '#374151' }}>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
                       {toUSD(month.cash)}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'left' }}>
+                    <td style={{ padding: '12px 6px', textAlign: 'center' }}>
+                      <button
+                        onClick={() => handleOpenNotesModal(month)}
+                        style={{
+                          background: hasNotes ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
+                          border: hasNotes ? '1px solid rgba(59, 130, 246, 0.25)' : '1px solid transparent',
+                          borderRadius: '6px',
+                          padding: '4px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'background-color 0.15s ease, border-color 0.15s ease'
+                        }}
+                        title={hasNotes ? 'View notes' : 'Add notes'}
+                      >
+                        <StickyNote size={16} color={hasNotes ? '#2563eb' : '#9ca3af'} />
+                      </button>
+                    </td>
+                    <td style={{ padding: '12px 8px', textAlign: 'left' }}>
                       <button
                         onClick={() => handleEditMonth(month)}
                         style={{
@@ -476,31 +560,142 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 fontWeight: '600'
               }}>
                 <td style={{ padding: '12px', color: '#1f2937', textAlign: 'left' }}>Total</td>
-                <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
+                <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
                   {formatNumber(analyticsMetrics.totalInquiries)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
+                <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
                   {formatNumber(analyticsMetrics.totalCallsBooked)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
+                <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
                   {formatNumber(analyticsMetrics.totalCallsTaken)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
+                <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
                   {formatNumber(analyticsMetrics.totalCloses)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
+                <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
                   {toUSD(analyticsMetrics.totalBookings)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', color: '#1f2937' }}>
+                <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
                   {toUSD(analyticsMetrics.totalCash)}
                 </td>
-                <td style={{ padding: '12px' }}></td>
+                <td style={{ padding: '12px 6px' }}></td>
+                <td style={{ padding: '12px 8px' }}></td>
               </tr>
             </tbody>
           </table>
         </div>
         
       </div>
+
+      {/* Notes Modal */}
+      {isNotesModalOpen && notesMonth && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '90%',
+            maxWidth: '480px',
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            boxShadow: '0 10px 40px rgba(15, 23, 42, 0.12)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
+                  Notes for {new Date(notesMonth.year, notesMonth.month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </h3>
+                <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
+                  Use notes to log marketing changes. Updates save automatically when you close.
+                </p>
+              </div>
+              <button
+                onClick={handleCloseNotesModal}
+                disabled={isSavingNotes}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  lineHeight: 1,
+                  padding: '0 0 0 12px',
+                  opacity: isSavingNotes ? 0.5 : 1
+                }}
+                aria-label="Close notes"
+              >
+                ×
+              </button>
+            </div>
+
+            <textarea
+              value={notesDraft}
+              onChange={(e) => setNotesDraft(e.target.value)}
+              placeholder="Example: Launched new ad creative, adjusted pricing, updated follow-up sequence..."
+              style={{
+                flex: '1',
+                minHeight: '180px',
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #d1d5db',
+                fontSize: '14px',
+                lineHeight: 1.5,
+                resize: 'vertical',
+                color: '#1f2937'
+              }}
+              autoFocus
+            />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button
+                onClick={() => setNotesDraft('')}
+                disabled={isSavingNotes || !(notesDraft && notesDraft.length)}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '6px',
+                  border: '1px solid #e5e7eb',
+                  backgroundColor: 'white',
+                  color: '#1f2937',
+                  fontSize: '13px',
+                  cursor: isSavingNotes || !(notesDraft && notesDraft.length) ? 'not-allowed' : 'pointer',
+                  opacity: isSavingNotes || !(notesDraft && notesDraft.length) ? 0.5 : 1
+                }}
+              >
+                Clear
+              </button>
+              <button
+                onClick={handleCloseNotesModal}
+                disabled={isSavingNotes}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  fontSize: '14px',
+                  cursor: isSavingNotes ? 'not-allowed' : 'pointer',
+                  opacity: isSavingNotes ? 0.7 : 1
+                }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {isEditModalOpen && editingMonth && (() => {
