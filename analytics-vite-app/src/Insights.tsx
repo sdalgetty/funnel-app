@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import Forecast from './Forecast'
 import ForecastModeling from './ForecastModeling'
@@ -6,10 +6,47 @@ import Calculator from './Calculator'
 import type { FunnelData, Booking, Payment, ServiceType, AdCampaign, LeadSource } from './types'
 import { Users, Phone, CheckCircle, DollarSign, TrendingUp, Target, BarChart3 } from 'lucide-react'
 
+type MonthRange = { start: number; end: number }
+type TimeFilterOption = { key: string; label: string }
+
+const monthToIndex = (year: number, month: number) => year * 12 + (month - 1)
+
+const isMonthInRange = (year: number, month: number, range: MonthRange) => {
+  const idx = monthToIndex(year, month)
+  return idx >= range.start && idx <= range.end
+}
+
+const parseDateToMonthIndex = (date: string | undefined) => {
+  if (!date) return null
+  const parts = date.split('-')
+  if (parts.length < 2) return null
+  const year = parseInt(parts[0], 10)
+  const month = parseInt(parts[1], 10)
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return null
+  return monthToIndex(year, month)
+}
+
+const isDateInRange = (date: string | undefined, range: MonthRange) => {
+  const idx = parseDateToMonthIndex(date)
+  if (idx === null) return false
+  return idx >= range.start && idx <= range.end
+}
+
 export default function Insights({ dataManager }: { dataManager: any }) {
   const { user } = useAuth()
-  const currentYear = new Date().getFullYear()
-  const [selectedYear, setSelectedYear] = useState<number>(currentYear)
+  const currentDateInfo = useMemo(() => {
+    const now = new Date()
+    return { year: now.getFullYear(), month: now.getMonth() }
+  }, [])
+  const [sectionFilters, setSectionFilters] = useState<{
+    salesFunnel: string
+    leadSources: string
+    advertising: string
+  }>({
+    salesFunnel: 'currentYear',
+    leadSources: 'currentYear',
+    advertising: 'currentYear'
+  })
 
   const funnelData: FunnelData[] = dataManager?.funnelData || []
   const bookings: Booking[] = dataManager?.bookings || []
@@ -32,84 +69,155 @@ export default function Insights({ dataManager }: { dataManager: any }) {
   console.log('leadSources length:', leadSources.length);
   console.log('================================');
 
-  const yearData = useMemo(() => funnelData.filter(m => m.year === selectedYear), [funnelData, selectedYear])
+  const trackableServiceIds = useMemo(() => new Set(serviceTypes.filter(st => st.tracksInFunnel).map(st => st.id)), [serviceTypes])
 
-  // Dynamic totals (closes and bookings) derived from Sales records
-  // Closes: Only bookings with trackable service types
-  // Bookings: ALL bookings regardless of trackInFunnel
-  const dynamicSalesTotals = useMemo(() => {
-    const trackableServiceIds = new Set(serviceTypes.filter(st => st.tracksInFunnel).map(st => st.id))
-    let closes = 0
-    let bookingsCents = 0
+  const yearsWithBookings = useMemo(() => {
+    const years = new Set<number>()
     bookings.forEach(b => {
       if (!b?.dateBooked) return
-      const [y] = b.dateBooked.split('-')
-      if (parseInt(y, 10) === selectedYear) {
-        // Always add to bookings (all bookings count)
-        bookingsCents += b.bookedRevenue || 0
-        // Only add to closes if service type is trackable
-        if (trackableServiceIds.has(b.serviceTypeId)) {
-          closes += 1
+      const year = parseInt(b.dateBooked.split('-')[0], 10)
+      if (Number.isFinite(year)) {
+        years.add(year)
+      }
+    })
+    years.add(currentDateInfo.year)
+    return Array.from(years).sort((a, b) => b - a)
+  }, [bookings, currentDateInfo.year])
+
+  const timeFilterOptions = useMemo(() => {
+    const baseOptions = [
+      { key: 'currentYear', label: 'Current Year' },
+      { key: 'past12Months', label: 'Past 12 Months' },
+      { key: 'past6Months', label: 'Past 6 Months' },
+      { key: 'past3Months', label: 'Past 3 Months' }
+    ]
+    const yearOptions = yearsWithBookings
+      .map(year => ({ key: `year-${year}`, label: `${year}` }))
+      .filter(option => !baseOptions.some(base => base.key === option.key))
+    return [...baseOptions, ...yearOptions]
+  }, [yearsWithBookings])
+
+  const buildMonthRange = useCallback((filterKey: string): MonthRange => {
+    const currentMonthIndex = currentDateInfo.year * 12 + currentDateInfo.month
+    switch (filterKey) {
+      case 'past12Months': {
+        const start = currentMonthIndex - 11
+        return { start: Math.max(0, start), end: currentMonthIndex }
+      }
+      case 'past6Months': {
+        const start = currentMonthIndex - 5
+        return { start: Math.max(0, start), end: currentMonthIndex }
+      }
+      case 'past3Months': {
+        const start = currentMonthIndex - 2
+        return { start: Math.max(0, start), end: currentMonthIndex }
+      }
+      case 'currentYear':
+        return {
+          start: monthToIndex(currentDateInfo.year, 1),
+          end: monthToIndex(currentDateInfo.year, 12)
         }
+      default:
+        if (filterKey.startsWith('year-')) {
+          const year = parseInt(filterKey.split('-')[1], 10)
+          if (Number.isFinite(year)) {
+            return {
+              start: monthToIndex(year, 1),
+              end: monthToIndex(year, 12)
+            }
+          }
+        }
+        return {
+          start: monthToIndex(currentDateInfo.year, 1),
+          end: monthToIndex(currentDateInfo.year, 12)
+        }
+    }
+  }, [currentDateInfo])
+
+  const handleFilterChange = useCallback((section: 'salesFunnel' | 'leadSources' | 'advertising', value: string) => {
+    setSectionFilters(prev => ({ ...prev, [section]: value }))
+  }, [])
+
+  // SALES FUNNEL
+  const salesFunnelRange = useMemo(() => buildMonthRange(sectionFilters.salesFunnel), [buildMonthRange, sectionFilters.salesFunnel])
+  const salesFunnelMonths = useMemo(
+    () => funnelData.filter(month => isMonthInRange(month.year, month.month, salesFunnelRange)),
+    [funnelData, salesFunnelRange]
+  )
+  const salesFunnelBookings = useMemo(
+    () => bookings.filter(b => isDateInRange(b.dateBooked, salesFunnelRange)),
+    [bookings, salesFunnelRange]
+  )
+  const salesDynamicTotals = useMemo(() => {
+    let closes = 0
+    let bookingsCents = 0
+    salesFunnelBookings.forEach(b => {
+      bookingsCents += b.bookedRevenue || 0
+      if (trackableServiceIds.has(b.serviceTypeId)) {
+        closes += 1
       }
     })
     return { closes, bookingsCents }
-  }, [bookings, serviceTypes, selectedYear])
+  }, [salesFunnelBookings, trackableServiceIds])
 
-  // Sales metrics from funnel data (year totals)
   const salesTotals = useMemo(() => {
-    const totalInquiries = yearData.reduce((s, m) => s + (m.inquiries || 0), 0)
-    // Use dynamic totals for closes and bookings to avoid timezone/calculation issues from stored funnel rows
-    const totalCloses = dynamicSalesTotals.closes
-    const totalBookings = dynamicSalesTotals.bookingsCents
-    const totalCash = yearData.reduce((s, m) => s + (m.cash || 0), 0)
-    const monthsWithData = yearData.filter(m => (m.inquiries||0) > 0 || (m.callsBooked||0) > 0 || (m.callsTaken||0) > 0 || (m.closes||0) > 0 || (m.bookings||0) > 0).length
+    const totalInquiries = salesFunnelMonths.reduce((sum, month) => sum + (month.inquiries || 0), 0)
+    const totalCash = salesFunnelMonths.reduce((sum, month) => sum + (month.cash || 0), 0)
+    const monthsWithData = salesFunnelMonths.filter(month =>
+      (month.inquiries || 0) > 0 ||
+      (month.callsBooked || 0) > 0 ||
+      (month.callsTaken || 0) > 0 ||
+      (month.closes || 0) > 0 ||
+      (month.bookings || 0) > 0
+    ).length
+    const totalCloses = salesDynamicTotals.closes
+    const totalBookings = salesDynamicTotals.bookingsCents
     const avgInquiries = monthsWithData > 0 ? Math.round(totalInquiries / monthsWithData) : 0
     const avgCloses = monthsWithData > 0 ? Math.round(totalCloses / monthsWithData) : 0
     const avgBookings = monthsWithData > 0 ? Math.round(totalBookings / monthsWithData) : 0
     const avgCash = monthsWithData > 0 ? Math.round(totalCash / monthsWithData) : 0
     const inquiryToClose = totalInquiries > 0 ? ((totalCloses / totalInquiries) * 100).toFixed(1) : '0.0'
     return { totalInquiries, totalCloses, totalBookings, totalCash, inquiryToClose, monthsWithData, avgInquiries, avgCloses, avgBookings, avgCash }
-  }, [yearData, dynamicSalesTotals])
+  }, [salesFunnelMonths, salesDynamicTotals])
 
-  // Calls metrics
   const callTotals = useMemo(() => {
-    const totalInquiries = yearData.reduce((s, m) => s + (m.inquiries || 0), 0)
-    const totalCallsBooked = yearData.reduce((s, m) => s + (m.callsBooked || 0), 0)
-    const totalCallsTaken = yearData.reduce((s, m) => s + (m.callsTaken || 0), 0)
-    // Use dynamic closes for accuracy
-    const totalCloses = dynamicSalesTotals.closes
-    const monthsWithData = yearData.filter(m => (m.inquiries||0) > 0 || (m.callsBooked||0) > 0 || (m.callsTaken||0) > 0 || (m.closes||0) > 0 || (m.bookings||0) > 0).length
+    const totalInquiries = salesFunnelMonths.reduce((sum, month) => sum + (month.inquiries || 0), 0)
+    const totalCallsBooked = salesFunnelMonths.reduce((sum, month) => sum + (month.callsBooked || 0), 0)
+    const totalCallsTaken = salesFunnelMonths.reduce((sum, month) => sum + (month.callsTaken || 0), 0)
+    const monthsWithData = salesFunnelMonths.filter(month =>
+      (month.inquiries || 0) > 0 ||
+      (month.callsBooked || 0) > 0 ||
+      (month.callsTaken || 0) > 0 ||
+      (month.closes || 0) > 0 ||
+      (month.bookings || 0) > 0
+    ).length
     const avgCallsBooked = monthsWithData > 0 ? Math.round(totalCallsBooked / monthsWithData) : 0
     const avgCallsTaken = monthsWithData > 0 ? Math.round(totalCallsTaken / monthsWithData) : 0
+    const totalCloses = salesDynamicTotals.closes
     const inquiryToBooked = totalInquiries > 0 ? ((totalCallsBooked / totalInquiries) * 100).toFixed(1) : '0.0'
     const inquiryToTaken = totalInquiries > 0 ? ((totalCallsTaken / totalInquiries) * 100).toFixed(1) : '0.0'
     const showUpRate = totalCallsBooked > 0 ? ((totalCallsTaken / totalCallsBooked) * 100).toFixed(1) : '0.0'
     const takenToClose = totalCallsTaken > 0 ? ((totalCloses / totalCallsTaken) * 100).toFixed(1) : '0.0'
-    // Revenue per call taken uses ALL bookings (not just trackable) divided by callsTaken
-    const totalBookings = dynamicSalesTotals.bookingsCents
-    const revenuePerCallTaken = totalCallsTaken > 0 ? Math.round(totalBookings / totalCallsTaken) : 0
+    const revenuePerCallTaken = totalCallsTaken > 0 ? Math.round(salesDynamicTotals.bookingsCents / totalCallsTaken) : 0
     return { totalCallsBooked, totalCallsTaken, inquiryToBooked, inquiryToTaken, showUpRate, takenToClose, revenuePerCallTaken, avgCallsBooked, avgCallsTaken }
-  }, [yearData, dynamicSalesTotals])
+  }, [salesFunnelMonths, salesDynamicTotals])
 
-  // Lead Sources (bookings filtered to service types that track in funnel)
+  // LEAD SOURCES
+  const leadSourcesRange = useMemo(() => buildMonthRange(sectionFilters.leadSources), [buildMonthRange, sectionFilters.leadSources])
+  const leadSourceBookings = useMemo(
+    () => bookings.filter(b => trackableServiceIds.has(b.serviceTypeId) && isDateInRange(b.dateBooked, leadSourcesRange)),
+    [bookings, leadSourcesRange, trackableServiceIds]
+  )
   const leadSourceBreakdown = useMemo(() => {
-    const trackableServiceIds = new Set(serviceTypes.filter(st => st.tracksInFunnel).map(st => st.id))
-    // Filter bookings by selected year and trackable service types
-    const inYear = bookings.filter(b => {
-      if (!b.dateBooked) return false
-      const [y] = b.dateBooked.split('-')
-      return parseInt(y, 10) === selectedYear && trackableServiceIds.has(b.serviceTypeId)
-    })
     const byCount: Record<string, number> = {}
     const byRevenue: Record<string, number> = {}
-    inYear.forEach(b => {
-      const ls = b.leadSourceId
-      byCount[ls] = (byCount[ls] || 0) + 1
-      byRevenue[ls] = (byRevenue[ls] || 0) + (b.bookedRevenue || 0)
+    leadSourceBookings.forEach(b => {
+      const lsId = b.leadSourceId
+      byCount[lsId] = (byCount[lsId] || 0) + 1
+      byRevenue[lsId] = (byRevenue[lsId] || 0) + (b.bookedRevenue || 0)
     })
-    const totalCount = Object.values(byCount).reduce((s, n) => s + n, 0)
-    const totalRevenue = Object.values(byRevenue).reduce((s, n) => s + n, 0)
+    const totalCount = Object.values(byCount).reduce((sum, value) => sum + value, 0)
+    const totalRevenue = Object.values(byRevenue).reduce((sum, value) => sum + value, 0)
     const items = Object.keys(byCount).map(lsId => {
       const name = leadSources.find(l => l.id === lsId)?.name || 'Unknown'
       const count = byCount[lsId] || 0
@@ -118,130 +226,69 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       const pctRevenue = totalRevenue > 0 ? Math.round((revenue / totalRevenue) * 100) : 0
       return { id: lsId, name, count, revenue, pctCount, pctRevenue }
     })
-    // Sorted views
     const byCountDesc = [...items].sort((a, b) => b.count - a.count)
     const byRevenueDesc = [...items].sort((a, b) => b.revenue - a.revenue)
     return { items, totalCount, totalRevenue, byCountDesc, byRevenueDesc }
-  }, [bookings, leadSources, selectedYear, serviceTypes])
+  }, [leadSourceBookings, leadSources])
 
-  // Advertising totals (current selected year)
-  const advertisingTotals = useMemo(() => {
-    // Early return if dataManager is not ready or has no data yet
+  // ADVERTISING
+  const advertisingRange = useMemo(() => buildMonthRange(sectionFilters.advertising), [buildMonthRange, sectionFilters.advertising])
+  const filteredAdCampaigns = useMemo(
+    () => adCampaigns.filter(c => !c.id.startsWith('default_') && isMonthInRange(c.year, c.month, advertisingRange)),
+    [adCampaigns, advertisingRange]
+  )
+  const dedupedAdCampaigns = useMemo(() => {
+    const seenKeys = new Set<string>()
+    const campaigns: AdCampaign[] = []
+    filteredAdCampaigns.forEach(campaign => {
+      const key = `${campaign.leadSourceId}_${campaign.year}_${campaign.month}`
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key)
+        campaigns.push(campaign)
+      }
+    })
+    return campaigns
+  }, [filteredAdCampaigns])
+  const advertisingBookings = useMemo(
+    () => bookings.filter(b => isDateInRange(b.dateBooked, advertisingRange)),
+    [bookings, advertisingRange]
+  )
+  const advertisingLeadSourceIds = useMemo(() => {
+    const ids = new Set<string>()
+    dedupedAdCampaigns.forEach(c => ids.add(c.leadSourceId))
+    return ids
+  }, [dedupedAdCampaigns])
+  const advertisingTotals = useMemo<{
+    totalAdSpend: number
+    totalBookedFromAds: number
+    overallROI: number | null
+    costPerClose: number
+  }>(() => {
     if (!dataManager || dataManager.loading) {
-      console.log('=== INSIGHTS AD SPEND CALCULATION - SKIPPING (dataManager loading) ===');
-      console.log('dataManager exists:', !!dataManager);
-      console.log('dataManager.loading:', dataManager?.loading);
-      return { totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 };
+      return { totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 }
     }
-    
-    // Use dataManager.adCampaigns directly to avoid stale closure issues
-    const campaignsFromManager = dataManager.adCampaigns || [];
-    
-    // Check if we have actual campaigns (not just empty array)
-    if (campaignsFromManager.length === 0) {
-      console.log('=== INSIGHTS AD SPEND CALCULATION - SKIPPING (no campaigns) ===');
-      console.log('dataManager.adCampaigns length:', campaignsFromManager.length);
-      return { totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 };
+    if (dedupedAdCampaigns.length === 0) {
+      return { totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 }
     }
-    
-    // Debug logging BEFORE filtering
-    console.log('=== INSIGHTS AD SPEND CALCULATION (BEFORE FILTER) ===');
-    console.log('useMemo running at:', new Date().toISOString());
-    console.log('dataManager object keys:', Object.keys(dataManager));
-    console.log('dataManager?.adCampaigns reference:', dataManager.adCampaigns);
-    console.log('dataManager.bookings length:', dataManager.bookings?.length || 0);
-    console.log('dataManager.payments length:', dataManager.payments?.length || 0);
-    console.log('dataManager.adCampaigns length:', dataManager.adCampaigns?.length || 0);
-    console.log('Selected year:', selectedYear);
-    console.log('campaignsFromManager length:', campaignsFromManager.length);
-    console.log('Total campaigns (all years, before filter):', campaignsFromManager.length);
-    console.log('All campaigns:', campaignsFromManager.map(c => ({
-      id: c.id,
-      leadSourceId: c.leadSourceId,
-      year: c.year,
-      month: c.month,
-      spend: c.spend,
-      adSpendCents: c.adSpendCents,
-      isDefault: c.id.startsWith('default_')
-    })));
-    
-    const campaigns = campaignsFromManager.filter(c => c.year === selectedYear && !c.id.startsWith('default_'))
-    // Use same calculation as Advertising page - prefer spend, fallback to adSpendCents
-    const totalAdSpend = campaigns.reduce((s, c) => {
-      const spend = c.spend ?? c.adSpendCents ?? 0;
-      return s + spend;
+    const totalAdSpend = dedupedAdCampaigns.reduce((sum, campaign) => {
+      const spend = campaign.spend ?? campaign.adSpendCents ?? 0
+      return sum + spend
     }, 0)
-    
-    // Debug logging AFTER filtering
-    console.log('=== INSIGHTS AD SPEND CALCULATION (AFTER FILTER) ===');
-    console.log('Campaigns for selected year (excluding defaults):', campaigns.length);
-    console.log('Filtered campaigns (full array):', campaigns);
-    console.log('Filtered campaigns (details):', campaigns.map(c => ({
-      id: c.id,
-      leadSourceId: c.leadSourceId,
-      leadSourceName: leadSources.find(ls => ls.id === c.leadSourceId)?.name || 'Unknown',
-      year: c.year,
-      month: c.month,
-      spend: c.spend,
-      adSpendCents: c.adSpendCents,
-      spendValue: c.spend ?? c.adSpendCents ?? 0
-    })));
-    const breakdown = campaigns.reduce((acc, c) => {
-      const lsName = leadSources.find(ls => ls.id === c.leadSourceId)?.name || 'Unknown';
-      const spend = c.spend ?? c.adSpendCents ?? 0;
-      acc[lsName] = (acc[lsName] || 0) + spend;
-      return acc;
-    }, {} as Record<string, number>);
-    console.log('Campaigns breakdown by lead source:', breakdown);
-    console.log('Breakdown entries:', Object.entries(breakdown));
-    console.log('Total Ad Spend (calculated):', totalAdSpend);
-    console.log('Total Ad Spend (cents):', totalAdSpend);
-    console.log('Total Ad Spend (dollars):', totalAdSpend / 100);
-    console.log('=====================================');
-    
-    // Get lead sources that have ad campaigns
-    const leadSourcesWithAds = new Set(campaignsFromManager.map(c => c.leadSourceId))
-    const totalBookedFromAds = bookings
-      .filter(b => {
-        const lsId = b.leadSourceId
-        return leadSourcesWithAds.has(lsId) && b.dateBooked?.startsWith(String(selectedYear))
-      })
-      .reduce((s, b) => s + (b.revenue || b.bookedRevenue || 0), 0)
-    const closesFromAds = bookings.filter(b => {
-      const lsId = b.leadSourceId
-      return leadSourcesWithAds.has(lsId) && b.dateBooked?.startsWith(String(selectedYear))
-    }).length
-    const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? (totalBookedFromAds / totalAdSpend) : null
+    const bookingsFromAds = advertisingBookings.filter(b => advertisingLeadSourceIds.has(b.leadSourceId))
+    const totalBookedFromAds = bookingsFromAds.reduce((sum, booking) => sum + (booking.revenue || booking.bookedRevenue || 0), 0)
+    const closesFromAds = bookingsFromAds.length
+    const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? totalBookedFromAds / totalAdSpend : null
     const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0
     return { totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
-  }, [dataManager, dataManager?.loading, dataManager?.adCampaigns, bookings, selectedYear, leadSources])
+  }, [dataManager, dataManager?.loading, dedupedAdCampaigns, advertisingBookings, advertisingLeadSourceIds])
 
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' })
   const formatNumber = (n: number) => n.toLocaleString()
-
-  const availableYears = useMemo(() => {
-    const years = new Set<number>()
-    funnelData.forEach(m => years.add(m.year))
-    const arr = Array.from(years).sort((a, b) => b - a)
-    return arr.length ? arr : [currentYear]
-  }, [funnelData, currentYear])
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 style={{ fontSize: '28px', fontWeight: 700, margin: 0, color: '#1f2937' }}>Insights</h1>
-        <div>
-          <label style={{ marginRight: 8, fontSize: 14, color: '#374151' }}>Year</label>
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 8, background: 'white' }}
-          >
-            {availableYears.map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-        </div>
       </div>
 
       {/* CALCULATOR */}
@@ -250,7 +297,16 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       </Section>
 
       {/* SALES FUNNEL */}
-      <Section title="Sales Funnel">
+      <Section
+        title="Sales Funnel"
+        actions={
+          <TimeFilterSelect
+            value={sectionFilters.salesFunnel}
+            onChange={(value) => handleFilterChange('salesFunnel', value)}
+            options={timeFilterOptions}
+          />
+        }
+      >
         <Cards>
           {/* Ordered cards */}
           <Card icon={<Users size={20} color="#3b82f6" />} label="Inquiries" value={formatNumber(salesTotals.totalInquiries)} sub={`Avg: ${formatNumber(salesTotals.avgInquiries)}/month`} />
@@ -305,7 +361,16 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       </Section>
 
       {/* LEAD SOURCES */}
-      <Section title="Lead Sources">
+      <Section
+        title="Lead Sources"
+        actions={
+          <TimeFilterSelect
+            value={sectionFilters.leadSources}
+            onChange={(value) => handleFilterChange('leadSources', value)}
+            options={timeFilterOptions}
+          />
+        }
+      >
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
             <h3 style={{ margin: '0 0 12px 0', fontSize: 14, color: '#374151' }}>Bookings by Lead Source</h3>
@@ -354,85 +419,56 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       </Section>
 
       {/* ADVERTISING */}
-      <Section title="Advertising">
+      <Section
+        title="Advertising"
+        actions={
+          <TimeFilterSelect
+            value={sectionFilters.advertising}
+            onChange={(value) => handleFilterChange('advertising', value)}
+            options={timeFilterOptions}
+          />
+        }
+      >
         <Cards>
-          {(() => {
-            // Simple direct calculation matching Advertising page sum row logic
-            // Wait for dataManager to be ready and have campaigns
-            if (!dataManager || dataManager.loading || !dataManager.adCampaigns || dataManager.adCampaigns.length === 0) {
-              // Return zeros while loading
-              return (
-                <>
-                  <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value="$0.00" />
-                  <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value="$0.00" />
-                  <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value="N/A" />
-                  <Card icon={<Target size={20} color="#8b5cf6" />} label="Cost Per Close" value="$0.00" />
-                </>
-              );
-            }
-            
-            // Get all campaigns for selected year, exclude defaults, sum across all lead sources
-            const allCampaigns = dataManager.adCampaigns;
-            const filteredCampaigns = allCampaigns.filter(
-              c => c.year === selectedYear && !c.id.startsWith('default_')
-            );
-            
-            // Deduplicate campaigns (same leadSourceId, year, month) - keep the first one
-            const seenKeys = new Set<string>();
-            const campaigns: typeof filteredCampaigns = [];
-            
-            filteredCampaigns.forEach(c => {
-              const key = `${c.leadSourceId}_${c.year}_${c.month}`;
-              if (!seenKeys.has(key)) {
-                seenKeys.add(key);
-                campaigns.push(c);
-              }
-            });
-            
-            const totalAdSpend = campaigns.reduce((sum, c) => {
-              const spend = c.spend ?? c.adSpendCents ?? 0;
-              return sum + spend;
-            }, 0);
-            
-            // Get lead sources that have ad campaigns
-            const leadSourcesWithAds = new Set(allCampaigns.map(c => c.leadSourceId));
-            const totalBookedFromAds = (dataManager.bookings || [])
-              .filter(b => {
-                const lsId = b.leadSourceId;
-                return leadSourcesWithAds.has(lsId) && b.dateBooked?.startsWith(String(selectedYear));
-              })
-              .reduce((s, b) => s + (b.revenue || b.bookedRevenue || 0), 0);
-            
-            const closesFromAds = (dataManager.bookings || []).filter(b => {
-              const lsId = b.leadSourceId;
-              return leadSourcesWithAds.has(lsId) && b.dateBooked?.startsWith(String(selectedYear));
-            }).length;
-            
-            const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? (totalBookedFromAds / totalAdSpend) : null;
-            const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0;
-            
-            return (
-              <>
-                <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value={toUSD(totalAdSpend)} />
-                <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value={toUSD(totalBookedFromAds)} />
-                <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value={overallROI !== null ? overallROI.toFixed(2) : 'N/A'} />
-                <Card icon={<Target size={20} color="#8b5cf6" />} label="Cost Per Close" value={toUSD(costPerClose)} />
-              </>
-            );
-          })()}
+          <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value={toUSD(advertisingTotals.totalAdSpend)} />
+          <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value={toUSD(advertisingTotals.totalBookedFromAds)} />
+          <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value={advertisingTotals.overallROI !== null ? advertisingTotals.overallROI.toFixed(2) : 'N/A'} />
+          <Card icon={<Target size={20} color="#8b5cf6" />} label="Cost Per Close" value={toUSD(advertisingTotals.costPerClose)} />
         </Cards>
       </Section>
     </div>
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, actions, children }: { title: string; actions?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 32 }}>
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0, color: '#1f2937', textAlign: 'left' }}>{title}</h2>
+        {actions ? (
+          <div style={{ flexShrink: 0 }}>{actions}</div>
+        ) : null}
       </div>
       {children}
+    </div>
+  )
+}
+
+function TimeFilterSelect({ value, onChange, options }: { value: string; onChange: (value: string) => void; options: TimeFilterOption[] }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <label style={{ fontSize: 12, color: '#6b7280' }}>Time Range</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, background: 'white', fontSize: 13 }}
+      >
+        {options.map(option => (
+          <option key={option.key} value={option.key}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     </div>
   )
 }
