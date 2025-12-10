@@ -2,7 +2,9 @@
 // AUTHENTICATION TYPES
 // ============================================================================
 
-import type { SubscriptionTier, SubscriptionStatus } from './index';
+// Subscription types - defined inline to avoid circular dependency
+export type SubscriptionTier = 'free' | 'pro';
+export type SubscriptionStatus = 'active' | 'trial' | 'expired' | 'cancelled';
 
 /**
  * Authenticated user with profile data

@@ -1,3 +1,9 @@
 // Re-export types from auth module
-export type { AuthUser, Session, SubscriptionFeatures } from './auth'
+export type { 
+  AuthUser, 
+  Session, 
+  SubscriptionFeatures,
+  SubscriptionTier,
+  SubscriptionStatus
+} from './auth'
 
