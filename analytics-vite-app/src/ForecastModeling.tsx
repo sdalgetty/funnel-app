@@ -70,49 +70,20 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
           setActiveModel(active);
           setViewingModel(active); // Default to viewing the active model
         } else {
-          // Create default model if none exist
-          const currentYear = new Date().getFullYear();
-          const defaultModel: ForecastModel = {
-            id: `model_${Date.now()}`,
-            name: `${currentYear} Model`,
-            year: currentYear,
-          isActive: true,
-            modelType: 'forecast',
-            serviceTypes: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          };
-          setModels([defaultModel]);
-          setActiveModel(defaultModel);
-          setViewingModel(defaultModel); // Default to viewing the active model
-          // Save the default model and update with real ID
-          const savedDefaultModel = await UnifiedDataService.saveForecastModel(userId, defaultModel, isViewOnly);
-          if (savedDefaultModel) {
-            setModels([savedDefaultModel]);
-            setActiveModel(savedDefaultModel);
-            setViewingModel(savedDefaultModel);
-          }
+          // No models exist - start with empty state
+          setModels([]);
+          setActiveModel(null);
+          setViewingModel(null);
         }
       } catch (error) {
         logger.error('Error loading forecast models:', error);
-        // Fallback to default model
-        const currentYear = new Date().getFullYear();
-        const defaultModel: ForecastModel = {
-          id: `model_${Date.now()}`,
-          name: `${currentYear} Model`,
-          year: currentYear,
-          isActive: true,
-          modelType: 'forecast',
-          serviceTypes: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        setModels([defaultModel]);
-        setActiveModel(defaultModel);
-        setViewingModel(defaultModel);
+        // On error, start with empty state
+        setModels([]);
+        setActiveModel(null);
+        setViewingModel(null);
       } finally {
         setLoadingModels(false);
-    }
+      }
     };
 
     loadModels();
@@ -386,7 +357,60 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   if (showTrackerOnly) {
   return (
       <div style={{ padding: '0', maxWidth: '100%', margin: '0' }}>
-        {activeModel && (
+        {!activeModel && !loadingModels ? (
+          // Empty state when no active model
+          <div style={{ 
+            backgroundColor: 'white', 
+            borderRadius: '12px', 
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)', 
+            padding: '60px 20px',
+            textAlign: 'center'
+          }}>
+            <div style={{ 
+              fontSize: '20px', 
+              fontWeight: '600',
+              color: '#1f2937',
+              marginBottom: '16px',
+              lineHeight: '1.5'
+            }}>
+              Build and activate a Forecast Model to track your sales progress in real time
+            </div>
+            <button
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('navigateToPage', {
+                  detail: { action: 'view-forecast' }
+                }));
+              }}
+              style={{
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '12px 24px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s',
+                boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#2563eb';
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.4)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#3b82f6';
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.3)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              Create Forecast Model
+            </button>
+          </div>
+        ) : activeModel && (
           <div style={{ 
             backgroundColor: 'white', 
             borderRadius: '12px', 
@@ -465,16 +489,53 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                   {performanceMetrics.length === 0 ? (
                     <tr>
                       <td colSpan={6} style={{ 
-                        textAlign: 'left', 
-                        padding: '40px 20px',
-                        color: '#6b7280',
-                        fontStyle: 'italic'
+                        textAlign: 'center', 
+                        padding: '60px 20px',
+                        color: '#374151'
                       }}>
-                        <div style={{ marginBottom: '8px', fontSize: '16px' }}>📊</div>
-                        <div>No service types in this model</div>
-                        <div style={{ fontSize: '12px', marginTop: '4px' }}>
-                          Edit the model on the Forecast page to add service types and goals
+                        <div style={{ 
+                          fontSize: '20px', 
+                          fontWeight: '600',
+                          color: '#1f2937',
+                          marginBottom: '16px',
+                          lineHeight: '1.5'
+                        }}>
+                          Build and activate a Forecast Model to track your sales progress in real time
                         </div>
+                        <button
+                          onClick={() => {
+                            window.dispatchEvent(new CustomEvent('navigateToPage', {
+                              detail: { action: 'view-forecast' }
+                            }));
+                          }}
+                          style={{
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '12px 24px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#2563eb';
+                            e.currentTarget.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.4)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#3b82f6';
+                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.3)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                          }}
+                        >
+                          Create Forecast Model
+                        </button>
                       </td>
                     </tr>
                   ) : (
@@ -781,6 +842,57 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       )}
 
       {/* Performance Tracker - Show for viewingModel (or activeModel if no viewingModel) */}
+      {/* Show empty state if no model exists */}
+      {!hideTracker && !displayModel && !loadingModels && (
+        <div style={{ 
+          backgroundColor: 'white', 
+          borderRadius: '12px', 
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)', 
+          padding: '60px 20px',
+          textAlign: 'center',
+          marginBottom: '24px'
+        }}>
+          <div style={{ 
+            fontSize: '20px', 
+            fontWeight: '600',
+            color: '#1f2937',
+            marginBottom: '16px',
+            lineHeight: '1.5'
+          }}>
+            Build and activate a Forecast Model to track your sales progress in real time
+          </div>
+          <button
+            onClick={() => setShowModelModal(true)}
+            style={{
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 24px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s',
+              boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#2563eb';
+              e.currentTarget.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.4)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#3b82f6';
+              e.currentTarget.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.3)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            Create Forecast Model
+          </button>
+        </div>
+      )}
       {!hideTracker && displayModel && (
         <div style={{ 
           backgroundColor: 'white', 
@@ -871,16 +983,53 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                 {performanceMetrics.length === 0 ? (
                   <tr>
                     <td colSpan={6} style={{ 
-                      textAlign: 'left', 
-                      padding: '40px 20px',
-                      color: '#6b7280',
-                      fontStyle: 'italic'
+                      textAlign: 'center', 
+                      padding: '60px 20px',
+                      color: '#374151'
                     }}>
-                      <div style={{ marginBottom: '8px', fontSize: '16px' }}>📊</div>
-                      <div>No service types in this model</div>
-                      <div style={{ fontSize: '12px', marginTop: '4px' }}>
-                        Edit the model to add service types and forecast goals
+                      <div style={{ 
+                        fontSize: '20px', 
+                        fontWeight: '600',
+                        color: '#1f2937',
+                        marginBottom: '16px',
+                        lineHeight: '1.5'
+                      }}>
+                        Build and activate a Forecast Model to track your sales progress in real time
                       </div>
+                      <button
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('navigateToPage', {
+                            detail: { action: 'view-forecast' }
+                          }));
+                        }}
+                        style={{
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '12px 24px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          transition: 'all 0.2s',
+                          boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#2563eb';
+                          e.currentTarget.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.4)';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#3b82f6';
+                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.3)';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        Create Forecast Model
+                      </button>
                     </td>
                   </tr>
                 ) : (
