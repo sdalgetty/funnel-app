@@ -291,8 +291,9 @@ export default function CSVImportModal({
                 </div>
               </div>
 
-              {/* Only show service types/lead sources for Booked Client report (has bookings), not Leads report */}
-              {pageType === 'sales' && preview.bookings.length > 0 && preview.serviceTypes.length > existingServiceTypes.length && (
+              {/* Only show service types/lead sources for Booked Client report (sales page), not Leads report */}
+              {/* Show whenever new service types/lead sources will be created, regardless of bookings */}
+              {pageType === 'sales' && preview.serviceTypes.length > existingServiceTypes.length && (
                 <div style={{ padding: '12px', backgroundColor: '#fffbeb', borderRadius: '6px', border: '1px solid #fde68a' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <FileText size={16} color="#d97706" />
@@ -306,7 +307,7 @@ export default function CSVImportModal({
                 </div>
               )}
 
-              {pageType === 'sales' && preview.bookings.length > 0 && preview.leadSources.length > existingLeadSources.length && (
+              {pageType === 'sales' && preview.leadSources.length > existingLeadSources.length && (
                 <div style={{ padding: '12px', backgroundColor: '#fffbeb', borderRadius: '6px', border: '1px solid #fde68a' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <FileText size={16} color="#d97706" />
