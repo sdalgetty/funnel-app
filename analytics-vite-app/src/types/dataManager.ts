@@ -29,7 +29,7 @@ export interface DataManager {
 
   // Funnel operations
   saveFunnelData: (funnelData: FunnelData) => Promise<boolean>;
-  getAllFunnelData: () => Promise<void>;
+  loadAllData: () => Promise<void>; // Reloads all data including funnel data
 
   // Booking operations
   createBooking: (booking: Omit<Booking, 'id' | 'createdAt' | 'payments'>) => Promise<boolean>;

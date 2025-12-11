@@ -1265,8 +1265,8 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
               }
 
               // Reload data if using data manager
-              if (dataManager) {
-                await dataManager.getAllFunnelData();
+              if (dataManager && dataManager.loadAllData) {
+                await dataManager.loadAllData();
               }
 
               setShowCSVImport(false);
