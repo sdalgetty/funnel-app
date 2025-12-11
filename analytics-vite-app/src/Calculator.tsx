@@ -19,8 +19,8 @@ interface CalculatorProps {
 
 const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false }) => {
   const { user } = useAuth();
-  const currentYear = new Date().getFullYear();
-
+    const currentYear = new Date().getFullYear();
+    
   // Show loading state if dataManager is not ready (check early to prevent errors)
   if (!dataManager || dataManager.loading) {
     return (
@@ -54,7 +54,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
       
       // Get all data for the current year
       const yearData = (funnelData || []).filter((item: any) => item?.year === currentYear);
-      
+    
       // Calculate inquiries and calls from funnel data
       const totalInquiries = yearData.reduce((acc: number, month: any) => acc + (month?.inquiries || 0), 0);
       const totalCallsTaken = yearData.reduce((acc: number, month: any) => acc + (month?.callsTaken || 0), 0);
@@ -117,9 +117,9 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
   useEffect(() => {
     setData(prev => ({
       ...prev,
-      inqYtd: ytdTotals.inquiries,
-      callsYtd: ytdTotals.callsTaken,
-      bookingsYtd: ytdTotals.bookings,
+    inqYtd: ytdTotals.inquiries,
+    callsYtd: ytdTotals.callsTaken,
+    bookingsYtd: ytdTotals.bookings,
     }));
   }, [ytdTotals]);
 

@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
+import { ShareService, type AccountShare } from './services/shareService';
+import { formatPhoneNumber } from './utils/formatters';
+import { validatePhone, validateWebsite } from './utils/validation';
 import { 
   User, 
   Mail, 
@@ -19,10 +22,16 @@ import {
   ChevronRight,
   Edit,
   Save,
-  X
+  X,
+  Share2,
+  UserPlus,
+  XCircle,
+  CheckCircle,
+  Clock,
+  Phone
 } from 'lucide-react';
 
-type ProfileSection = 'account' | 'subscription' | 'billing' | 'privacy' | 'support';
+type ProfileSection = 'account' | 'subscription' | 'billing' | 'privacy' | 'support' | 'sharing';
 
 export default function UserProfile() {
   const { user, upgradeToPro, downgradeToFree, updateProfile } = useAuth();
@@ -34,6 +43,10 @@ export default function UserProfile() {
     name: user?.name || '',
     companyName: user?.companyName || '',
     email: user?.email || '',
+    phone: user?.phone || '',
+    website: user?.website || '',
+    crm: user?.crm || 'none',
+    crmOther: user?.crmOther || '',
     timezone: 'America/New_York',
     dateFormat: 'MM/DD/YYYY',
     notifications: {
@@ -42,6 +55,10 @@ export default function UserProfile() {
       marketing: false
     }
   });
+  const [validationErrors, setValidationErrors] = useState<{
+    phone?: string[];
+    website?: string[];
+  }>({});
 
   // Update formData when user changes
   React.useEffect(() => {
@@ -52,6 +69,10 @@ export default function UserProfile() {
         name: user.name || '',
         companyName: user.companyName || '',
         email: user.email || '',
+        phone: user.phone || '',
+        website: user.website || '',
+        crm: user.crm || 'none',
+        crmOther: user.crmOther || '',
         timezone: 'America/New_York',
         dateFormat: 'MM/DD/YYYY',
         notifications: {
@@ -72,7 +93,31 @@ export default function UserProfile() {
   }
 
   const handleSave = async () => {
+    // Validate phone and website
+    const phoneValidation = validatePhone(formData.phone);
+    const websiteValidation = validateWebsite(formData.website);
+    
+    const errors: { phone?: string[]; website?: string[] } = {};
+    if (!phoneValidation.isValid) {
+      errors.phone = phoneValidation.errors;
+    }
+    if (!websiteValidation.isValid) {
+      errors.website = websiteValidation.errors;
+    }
+
+    // If there are validation errors, show them and don't save
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    // Clear validation errors
+    setValidationErrors({});
+
     try {
+      // Format phone number before saving
+      const formattedPhone = formData.phone ? formatPhoneNumber(formData.phone) : '';
+      
       // Update the user profile with the form data
       await updateProfile({
         firstName: formData.firstName,
@@ -80,6 +125,10 @@ export default function UserProfile() {
         name: formData.name, // Keep full_name for backwards compatibility
         companyName: formData.companyName,
         email: formData.email,
+        phone: formattedPhone,
+        website: formData.website?.trim() || '',
+        crm: formData.crm,
+        crmOther: formData.crm === 'other' ? formData.crmOther?.trim() : undefined,
         // Note: timezone, dateFormat, and notifications would be stored separately in a real app
       });
       setIsEditing(false);
@@ -95,6 +144,8 @@ export default function UserProfile() {
       name: user.name,
       companyName: user.companyName || '',
       email: user.email,
+      phone: user.phone || '',
+      website: user.website || '',
       timezone: 'America/New_York',
       dateFormat: 'MM/DD/YYYY',
       notifications: {
@@ -103,7 +154,18 @@ export default function UserProfile() {
         marketing: false
       }
     });
+    setValidationErrors({});
     setIsEditing(false);
+  };
+
+  const handlePhoneBlur = () => {
+    // Format phone number when user leaves the field
+    if (formData.phone) {
+      const formatted = formatPhoneNumber(formData.phone);
+      if (formatted && formatted !== formData.phone) {
+        setFormData({ ...formData, phone: formatted });
+      }
+    }
   };
 
   const formatDate = (date: Date) => {
@@ -114,28 +176,20 @@ export default function UserProfile() {
     });
   };
 
+  // All users now have Pro access - simplified status
   const getSubscriptionStatusColor = () => {
-    if (user.subscriptionTier === 'pro') {
-      return user.subscriptionStatus === 'trial' ? '#f59e0b' : '#10b981';
-    }
-    return '#6b7280';
+    return '#10b981'; // Always active/green for Pro
   };
 
   const getSubscriptionStatusText = () => {
-    if (user.subscriptionTier === 'pro') {
-      if (user.subscriptionStatus === 'trial' && user.trialEndsAt) {
-        const daysLeft = Math.ceil((user.trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-        return `Trial (${daysLeft} days left)`;
-      }
-      return 'Active';
-    }
-    return 'Free Plan';
+    return 'Active'; // All users have active Pro access
   };
 
   const sections = [
     { id: 'account' as ProfileSection, label: 'Account', icon: User },
     { id: 'subscription' as ProfileSection, label: 'Subscription', icon: Crown },
     { id: 'billing' as ProfileSection, label: 'Billing', icon: CreditCard },
+    { id: 'sharing' as ProfileSection, label: 'Account Sharing', icon: Share2 },
     { id: 'privacy' as ProfileSection, label: 'Privacy', icon: Shield },
     { id: 'support' as ProfileSection, label: 'Support', icon: HelpCircle },
   ];
@@ -260,30 +314,76 @@ export default function UserProfile() {
                 {activeSection === 'account' && 'Manage your personal information and account settings'}
                 {activeSection === 'subscription' && 'View and manage your subscription plan'}
                 {activeSection === 'billing' && 'Manage your billing information and payment methods'}
+                {activeSection === 'sharing' && 'Share your account with guests for view-only access'}
                 {activeSection === 'privacy' && 'Control your privacy settings and data preferences'}
                 {activeSection === 'support' && 'Get help and contact support'}
               </p>
             </div>
             {activeSection === 'account' && (
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 16px',
-                  backgroundColor: isEditing ? '#ef4444' : '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                {isEditing ? <X size={16} /> : <Edit size={16} />}
-                {isEditing ? 'Cancel' : 'Edit'}
-              </button>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={handleSave}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 16px',
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Save size={16} />
+                      Save Changes
+                    </button>
+                    <button
+                      onClick={handleCancel}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 16px',
+                        backgroundColor: '#6b7280',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <X size={16} />
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setIsEditing(!isEditing)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 16px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Edit size={16} />
+                    Edit
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
@@ -297,6 +397,9 @@ export default function UserProfile() {
                 isEditing={isEditing}
                 onSave={handleSave}
                 onCancel={handleCancel}
+                validationErrors={validationErrors}
+                setValidationErrors={setValidationErrors}
+                handlePhoneBlur={handlePhoneBlur}
               />
             )}
 
@@ -310,6 +413,10 @@ export default function UserProfile() {
 
             {activeSection === 'billing' && (
               <BillingSection user={user} />
+            )}
+
+            {activeSection === 'sharing' && (
+              <SharingSection user={user} />
             )}
 
             {activeSection === 'privacy' && (
@@ -333,7 +440,10 @@ function AccountSection({
   setFormData, 
   isEditing, 
   onSave, 
-  onCancel 
+  onCancel,
+  validationErrors,
+  setValidationErrors,
+  handlePhoneBlur
 }: {
   user: any;
   formData: any;
@@ -341,6 +451,9 @@ function AccountSection({
   isEditing: boolean;
   onSave: () => void;
   onCancel: () => void;
+  validationErrors: { phone?: string[]; website?: string[] };
+  setValidationErrors: (errors: { phone?: string[]; website?: string[] }) => void;
+  handlePhoneBlur: () => void;
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -356,49 +469,50 @@ function AccountSection({
           Profile Information
         </h3>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={{ 
-                display: 'block', 
-                fontSize: '14px', 
-                fontWeight: '500', 
-                color: '#374151',
-                marginBottom: '6px',
-                textAlign: 'left'
-              }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '100%' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ minWidth: 0, boxSizing: 'border-box' }}>
+            <label style={{ 
+              display: 'block', 
+              fontSize: '14px', 
+              fontWeight: '500', 
+              color: '#374151',
+              marginBottom: '6px',
+              textAlign: 'left'
+            }}>
                 First Name
-              </label>
-              {isEditing ? (
-                <input
-                  type="text"
+            </label>
+            {isEditing ? (
+              <input
+                type="text"
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: 'white',
-                    textAlign: 'left'
-                  }}
-                />
-              ) : (
-                <div style={{
+                style={{
+                  width: '100%',
                   padding: '10px 12px',
-                  backgroundColor: '#f9fafb',
+                  border: '1px solid #d1d5db',
                   borderRadius: '6px',
                   fontSize: '14px',
-                  color: '#374151',
-                  textAlign: 'left'
-                }}>
+                  backgroundColor: 'white',
+                  textAlign: 'left',
+                  boxSizing: 'border-box'
+                }}
+              />
+            ) : (
+              <div style={{
+                padding: '10px 12px',
+                backgroundColor: '#f9fafb',
+                borderRadius: '6px',
+                fontSize: '14px',
+                color: '#374151',
+                textAlign: 'left'
+              }}>
                   {user.firstName || 'Not set'}
-                </div>
-              )}
+              </div>
+            )}
             </div>
 
-            <div>
+            <div style={{ minWidth: 0, boxSizing: 'border-box' }}>
               <label style={{ 
                 display: 'block', 
                 fontSize: '14px', 
@@ -462,7 +576,8 @@ function AccountSection({
                   borderRadius: '6px',
                   fontSize: '14px',
                   backgroundColor: 'white',
-                  textAlign: 'left'
+                  textAlign: 'left',
+                  boxSizing: 'border-box'
                 }}
               />
             ) : (
@@ -502,7 +617,8 @@ function AccountSection({
                   borderRadius: '6px',
                   fontSize: '14px',
                   backgroundColor: 'white',
-                  textAlign: 'left'
+                  textAlign: 'left',
+                  boxSizing: 'border-box'
                 }}
               />
             ) : (
@@ -519,6 +635,223 @@ function AccountSection({
               }}>
                 <Mail size={16} color="#6b7280" />
                 {user.email}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label style={{ 
+              display: 'block', 
+              fontSize: '14px', 
+              fontWeight: '500', 
+              color: '#374151',
+              marginBottom: '6px',
+              textAlign: 'left'
+            }}>
+              Phone Number
+            </label>
+            {isEditing ? (
+              <div>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => {
+                    setFormData({ ...formData, phone: e.target.value });
+                    // Clear validation error when user types
+                    if (validationErrors.phone) {
+                      setValidationErrors({ ...validationErrors, phone: undefined });
+                    }
+                  }}
+                  onBlur={handlePhoneBlur}
+                  placeholder="703-927-1516 or (703) 927-1516"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: validationErrors.phone ? '1px solid #ef4444' : '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: 'white',
+                    textAlign: 'left',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {validationErrors.phone && validationErrors.phone.length > 0 && (
+                  <div style={{ 
+                    marginTop: '4px', 
+                    fontSize: '12px', 
+                    color: '#ef4444' 
+                  }}>
+                    {validationErrors.phone[0]}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{
+                padding: '10px 12px',
+                backgroundColor: '#f9fafb',
+                borderRadius: '6px',
+                fontSize: '14px',
+                color: '#374151',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                textAlign: 'left'
+              }}>
+                <Phone size={16} color="#6b7280" />
+                {user.phone ? formatPhoneNumber(user.phone) || user.phone : 'Not set'}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label style={{ 
+              display: 'block', 
+              fontSize: '14px', 
+              fontWeight: '500', 
+              color: '#374151',
+              marginBottom: '6px',
+              textAlign: 'left'
+            }}>
+              Website
+            </label>
+            {isEditing ? (
+              <div>
+                <input
+                  type="url"
+                  value={formData.website}
+                  onChange={(e) => {
+                    setFormData({ ...formData, website: e.target.value });
+                    // Clear validation error when user types
+                    if (validationErrors.website) {
+                      setValidationErrors({ ...validationErrors, website: undefined });
+                    }
+                  }}
+                  placeholder="example.com or https://example.com"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: validationErrors.website ? '1px solid #ef4444' : '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: 'white',
+                    textAlign: 'left',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {validationErrors.website && validationErrors.website.length > 0 && (
+                  <div style={{ 
+                    marginTop: '4px', 
+                    fontSize: '12px', 
+                    color: '#ef4444' 
+                  }}>
+                    {validationErrors.website[0]}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{
+                padding: '10px 12px',
+                backgroundColor: '#f9fafb',
+                borderRadius: '6px',
+                fontSize: '14px',
+                color: '#374151',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                textAlign: 'left'
+              }}>
+                <Globe size={16} color="#6b7280" />
+                {user.website ? (
+                  <a href={user.website.startsWith('http') ? user.website : `https://${user.website}`} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'none' }}>
+                    {user.website}
+                  </a>
+                ) : 'Not set'}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label style={{ 
+              display: 'block', 
+              fontSize: '14px', 
+              fontWeight: '500', 
+              color: '#374151',
+              marginBottom: '6px',
+              textAlign: 'left'
+            }}>
+              CRM System
+            </label>
+            {isEditing ? (
+              <div>
+                <select
+                  value={formData.crm}
+                  onChange={(e) => setFormData({ ...formData, crm: e.target.value as typeof formData.crm, crmOther: e.target.value === 'other' ? formData.crmOther : '' })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: 'white',
+                    textAlign: 'left',
+                    boxSizing: 'border-box',
+                    marginBottom: formData.crm === 'other' ? '8px' : '0'
+                  }}
+                >
+                  <option value="none">None / Manual Entry</option>
+                  <option value="honeybook">Honeybook</option>
+                  <option value="dubsado">Dubsado</option>
+                  <option value="17hats">17hats</option>
+                  <option value="studio-ninja">Studio Ninja</option>
+                  <option value="sprout-studio">Sprout Studio</option>
+                  <option value="tave">Táve</option>
+                  <option value="shootq">ShootQ</option>
+                  <option value="pixifi">Pixifi</option>
+                  <option value="aisle-planner">Aisle Planner</option>
+                  <option value="planner-pod">Planner Pod</option>
+                  <option value="other">Other</option>
+                </select>
+                {formData.crm === 'other' && (
+                  <input
+                    type="text"
+                    value={formData.crmOther}
+                    onChange={(e) => setFormData({ ...formData, crmOther: e.target.value })}
+                    placeholder="Enter CRM name"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      backgroundColor: 'white',
+                      textAlign: 'left',
+                      boxSizing: 'border-box',
+                      marginTop: '8px'
+                    }}
+                  />
+                )}
+              </div>
+            ) : (
+              <div style={{
+                padding: '10px 12px',
+                backgroundColor: '#f9fafb',
+                borderRadius: '6px',
+                fontSize: '14px',
+                color: '#374151',
+                textAlign: 'left'
+              }}>
+                {user.crm === 'honeybook' ? 'Honeybook' :
+                 user.crm === 'dubsado' ? 'Dubsado' :
+                 user.crm === '17hats' ? '17hats' :
+                 user.crm === 'studio-ninja' ? 'Studio Ninja' :
+                 user.crm === 'sprout-studio' ? 'Sprout Studio' :
+                 user.crm === 'tave' ? 'Táve' :
+                 user.crm === 'shootq' ? 'ShootQ' :
+                 user.crm === 'pixifi' ? 'Pixifi' :
+                 user.crm === 'aisle-planner' ? 'Aisle Planner' :
+                 user.crm === 'planner-pod' ? 'Planner Pod' :
+                 user.crm === 'other' ? (user.crmOther || 'Other') :
+                 'None / Manual Entry'}
               </div>
             )}
           </div>
@@ -625,7 +958,8 @@ function AccountSection({
                   borderRadius: '6px',
                   fontSize: '14px',
                   backgroundColor: 'white',
-                  textAlign: 'left'
+                  textAlign: 'left',
+                  boxSizing: 'border-box'
                 }}
               >
                 <option value="America/New_York">Eastern Time (ET)</option>
@@ -673,7 +1007,8 @@ function AccountSection({
                   borderRadius: '6px',
                   fontSize: '14px',
                   backgroundColor: 'white',
-                  textAlign: 'left'
+                  textAlign: 'left',
+                  boxSizing: 'border-box'
                 }}
               >
                 <option value="MM/DD/YYYY">MM/DD/YYYY</option>
@@ -696,7 +1031,7 @@ function AccountSection({
         </div>
       </div>
 
-      {/* Save/Cancel Buttons */}
+      {/* Save/Cancel Buttons at Bottom */}
       {isEditing && (
         <div style={{ 
           display: 'flex', 
@@ -710,7 +1045,7 @@ function AccountSection({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '10px 20px',
+              padding: '8px 16px',
               backgroundColor: '#10b981',
               color: 'white',
               border: 'none',
@@ -729,7 +1064,7 @@ function AccountSection({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '10px 20px',
+              padding: '8px 16px',
               backgroundColor: '#6b7280',
               color: 'white',
               border: 'none',
@@ -790,12 +1125,12 @@ function SubscriptionSection({ user, onUpgrade, onDowngrade }: {
           border: '1px solid #e5e7eb',
           borderRadius: '12px',
           padding: '24px',
-          backgroundColor: user.subscriptionTier === 'pro' ? '#fef3c7' : '#f9fafb'
+          backgroundColor: '#fef3c7' // Pro styling for all users
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <Crown 
               size={24} 
-              color={user.subscriptionTier === 'pro' ? '#f59e0b' : '#6b7280'} 
+              color="#f59e0b" 
             />
             <div>
               <h4 style={{ 
@@ -804,7 +1139,7 @@ function SubscriptionSection({ user, onUpgrade, onDowngrade }: {
                 margin: '0 0 4px 0',
                 color: '#1f2937'
               }}>
-                {user.subscriptionTier === 'pro' ? 'Pro Plan' : 'Free Plan'}
+                Pro Plan
               </h4>
               <div style={{
                 display: 'flex',
@@ -832,63 +1167,29 @@ function SubscriptionSection({ user, onUpgrade, onDowngrade }: {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#10b981' }} />
               <span style={{ fontSize: '14px', color: '#374151' }}>
-                {user.subscriptionTier === 'pro' ? 'Unlimited' : 'Limited'} Sales Tracking
+                Unlimited Sales Tracking
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#10b981' }} />
               <span style={{ fontSize: '14px', color: '#374151' }}>
-                {user.subscriptionTier === 'pro' ? 'Advanced' : 'Basic'} Analytics
+                Advanced Analytics
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: user.subscriptionTier === 'pro' ? '#10b981' : '#ef4444' }} />
+              <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#10b981' }} />
               <span style={{ fontSize: '14px', color: '#374151' }}>
-                {user.subscriptionTier === 'pro' ? 'Priority' : 'Standard'} Support
+                Priority Support
               </span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px' }}>
-            {user.subscriptionTier === 'free' ? (
-              <button
-                onClick={onUpgrade}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Upgrade to Pro
-              </button>
-            ) : (
-              <button
-                onClick={onDowngrade}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#ef4444',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Downgrade to Free
-              </button>
-            )}
-          </div>
+          {/* Subscription management removed - all users have Pro access */}
         </div>
       </div>
 
-      {/* Feature Toggles */}
-      {user.subscriptionTier === 'pro' && (
+      {/* Feature Toggles - All users have Pro features */}
+      {(
         <div>
           <h3 style={{ 
             fontSize: '16px', 
@@ -942,8 +1243,8 @@ function SubscriptionSection({ user, onUpgrade, onDowngrade }: {
         </div>
       )}
 
-      {/* Trial Information */}
-      {user.subscriptionTier === 'pro' && user.subscriptionStatus === 'trial' && user.trialEndsAt && (
+      {/* Trial Information - Deprecated (all users have Pro) */}
+      {false && (
         <div style={{
           border: '1px solid #f59e0b',
           borderRadius: '8px',
@@ -1248,6 +1549,365 @@ function SupportSection({ user }: { user: any }) {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Sharing Section Component
+function SharingSection({ user }: { user: any }) {
+  const [shares, setShares] = useState<AccountShare[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviting, setInviting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadShares();
+  }, [user]);
+
+  const loadShares = async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const ownerShares = await ShareService.getOwnerShares(user.id);
+      setShares(ownerShares);
+    } catch (err: any) {
+      console.error('Error loading shares:', err);
+      setError('Failed to load shares');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInvite = async () => {
+    if (!inviteEmail.trim() || !user?.id) return;
+
+    setInviting(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // Check if there's already a pending invitation
+      const existing = await ShareService.getPendingInvitation(
+        user.id,
+        inviteEmail.trim()
+      );
+
+      if (existing) {
+        // Show existing invitation link
+        setSuccess(
+          `An invitation was already sent. Here's the link: ${existing.invitationLink}`
+        );
+        // Copy to clipboard if possible
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(existing.invitationLink);
+          setSuccess(
+            `Invitation link copied to clipboard! Link: ${existing.invitationLink}`
+          );
+        }
+        await loadShares();
+        return;
+      }
+
+      const { share, invitationLink } = await ShareService.inviteGuest(
+        user.id,
+        inviteEmail.trim()
+      );
+
+      // Send invitation email (placeholder)
+      await ShareService.sendInvitationEmail(
+        inviteEmail.trim(),
+        user.name || user.email,
+        invitationLink
+      );
+
+      setSuccess(`Invitation sent to ${inviteEmail.trim()}. Link: ${invitationLink}`);
+      // Copy to clipboard if possible
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(invitationLink);
+        setSuccess(
+          `Invitation link copied to clipboard! Link: ${invitationLink}`
+        );
+      }
+      setInviteEmail('');
+      await loadShares();
+    } catch (err: any) {
+      setError(err.message || 'Failed to send invitation');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleRevoke = async (shareId: string) => {
+    if (!user?.id) return;
+    if (!confirm('Are you sure you want to revoke access for this guest?')) return;
+
+    try {
+      await ShareService.revokeShare(user.id, shareId);
+      setSuccess('Access revoked successfully');
+      await loadShares();
+    } catch (err: any) {
+      setError(err.message || 'Failed to revoke access');
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'accepted':
+        return <CheckCircle size={16} style={{ color: '#10b981' }} />;
+      case 'pending':
+        return <Clock size={16} style={{ color: '#f59e0b' }} />;
+      case 'revoked':
+        return <XCircle size={16} style={{ color: '#ef4444' }} />;
+      default:
+        return null;
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'accepted':
+        return 'Active';
+      case 'pending':
+        return 'Pending';
+      case 'revoked':
+        return 'Revoked';
+      default:
+        return status;
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Invite Guest Section */}
+      <div>
+        <h3 style={{ 
+          fontSize: '16px', 
+          fontWeight: '600', 
+          margin: '0 0 8px 0',
+          color: '#1f2937'
+        }}>
+          Invite a Guest
+        </h3>
+        <p style={{ 
+          fontSize: '14px', 
+          color: '#6b7280', 
+          margin: '0 0 16px 0'
+        }}>
+          Share your account with a coach or mentor. They'll receive an email invitation and can view your data in read-only mode.
+        </p>
+
+        {error && (
+          <div style={{
+            padding: '12px',
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '6px',
+            marginBottom: '16px',
+            color: '#991b1b',
+            fontSize: '14px'
+          }}>
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div style={{
+            padding: '12px',
+            backgroundColor: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: '6px',
+            marginBottom: '16px',
+            color: '#166534',
+            fontSize: '14px'
+          }}>
+            {success}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input
+            type="email"
+            placeholder="Enter guest email address"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleInvite()}
+            style={{
+              flex: 1,
+              padding: '10px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: '14px'
+            }}
+          />
+          <button
+            onClick={handleInvite}
+            disabled={!inviteEmail.trim() || inviting}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 20px',
+              backgroundColor: inviting ? '#9ca3af' : '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: inviting ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            <UserPlus size={16} />
+            {inviting ? 'Sending...' : 'Send Invitation'}
+          </button>
+        </div>
+      </div>
+
+      {/* Active Shares Section */}
+      <div>
+        <h3 style={{ 
+          fontSize: '16px', 
+          fontWeight: '600', 
+          margin: '0 0 16px 0',
+          color: '#1f2937'
+        }}>
+          Shared Accounts
+        </h3>
+
+        {loading ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>
+            Loading...
+          </div>
+        ) : shares.length === 0 ? (
+          <div style={{
+            padding: '24px',
+            backgroundColor: '#f9fafb',
+            borderRadius: '8px',
+            textAlign: 'center',
+            color: '#6b7280'
+          }}>
+            <Share2 size={32} style={{ marginBottom: '8px', opacity: 0.5 }} />
+            <p style={{ margin: 0 }}>No shared accounts yet. Invite a guest to get started.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {shares.map((share) => {
+              const appUrl = window.location.origin;
+              const invitationLink = share.invitationToken 
+                ? `${appUrl}/accept-invite?token=${share.invitationToken}`
+                : null;
+
+              return (
+                <div
+                  key={share.id}
+                  style={{
+                    padding: '16px',
+                    backgroundColor: '#f9fafb',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        {getStatusIcon(share.status)}
+                        <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
+                          {share.guestEmail}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#6b7280' }}>
+                        <span>Status: {getStatusText(share.status)}</span>
+                        <span>Role: {share.role}</span>
+                        {share.acceptedAt && (
+                          <span>Accepted: {new Date(share.acceptedAt).toLocaleDateString()}</span>
+                        )}
+                      </div>
+                    </div>
+                    {share.status === 'accepted' && (
+                      <button
+                        onClick={() => handleRevoke(share.id)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          backgroundColor: 'white',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <XCircle size={14} />
+                        Revoke
+                      </button>
+                    )}
+                  </div>
+                  {share.status === 'pending' && invitationLink && (
+                    <div style={{
+                      padding: '12px',
+                      backgroundColor: 'white',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      fontSize: '12px'
+                    }}>
+                      <div style={{ marginBottom: '8px', color: '#6b7280', fontWeight: '500' }}>
+                        Invitation Link:
+                      </div>
+                      <div style={{
+                        display: 'flex',
+                        gap: '8px',
+                        alignItems: 'center'
+                      }}>
+                        <input
+                          type="text"
+                          value={invitationLink}
+                          readOnly
+                          style={{
+                            flex: 1,
+                            padding: '6px 8px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontFamily: 'monospace',
+                            backgroundColor: '#f9fafb'
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(invitationLink);
+                            setSuccess('Invitation link copied to clipboard!');
+                            setTimeout(() => setSuccess(null), 3000);
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            fontWeight: '500'
+                          }}
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

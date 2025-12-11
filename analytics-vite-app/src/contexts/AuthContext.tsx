@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { UnifiedDataService } from '../services/unifiedDataService'
 import { ShareService } from '../services/shareService'
 import { AdminService, type UserProfile } from '../services/adminService'
-import type { AuthUser, Session, SubscriptionFeatures } from '../types'
+import type { AuthUser, Session, SubscriptionFeatures, CRMType } from '../types'
 import { logger } from '../utils/logger'
 import { TIMEOUTS } from '../constants/app'
 import { identifyUser, trackEvent, resetPostHog } from '../lib/posthog'
@@ -29,7 +29,7 @@ interface AuthContextType {
   startImpersonation: (userId: string) => Promise<void>
   stopImpersonation: () => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, fullName?: string, companyName?: string) => Promise<void>
+  signUp: (email: string, password: string, fullName?: string, companyName?: string, crm?: string, crmOther?: string) => Promise<void>
   signOut: () => Promise<void>
   upgradeToPro: () => Promise<void>
   downgradeToFree: () => Promise<void>
@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const lastActivityTime = useRef<number>(Date.now())
 
   // Helper function to build combined user from auth user and profile data
-  const buildCombinedUser = async (authUser: { id: string; email?: string; created_at: string; user_metadata?: { full_name?: string } }, profileData: { first_name: string | null; last_name: string | null; full_name: string | null; company_name: string | null; phone: string | null; website: string | null; subscription_tier: string; subscription_status: string; trial_ends_at: string | null }): Promise<AuthUser> => {
+  const buildCombinedUser = async (authUser: { id: string; email?: string; created_at: string; user_metadata?: { full_name?: string } }, profileData: { first_name: string | null; last_name: string | null; full_name: string | null; company_name: string | null; phone: string | null; website: string | null; crm: string | null; crm_other: string | null; subscription_tier: string; subscription_status: string; trial_ends_at: string | null }): Promise<AuthUser> => {
     // Explicitly check for null/undefined to avoid falling back to email when name is intentionally empty
     const firstName = profileData.first_name !== null && profileData.first_name !== undefined 
       ? profileData.first_name 
@@ -94,6 +94,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       website: profileData.website !== null && profileData.website !== undefined 
         ? profileData.website 
         : '',
+      crm: (profileData.crm as CRMType | undefined) || undefined,
+      crmOther: profileData.crm_other || undefined,
       subscriptionTier: profileData.subscription_tier || 'pro',
       subscriptionStatus: profileData.subscription_status || 'active',
       createdAt: new Date(authUser.created_at),
@@ -820,7 +822,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const signUp = async (email: string, password: string, fullName?: string, companyName?: string) => {
+  const signUp = async (email: string, password: string, fullName?: string, companyName?: string, crm?: string, crmOther?: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -847,6 +849,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email: email,
           full_name: fullName || null,
           company_name: companyName || null,
+          crm: crm || null,
+          crm_other: crm === 'other' ? (crmOther || null) : null,
           subscription_tier: 'pro',
           subscription_status: 'active'
         })
@@ -970,7 +974,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logger.debug('Updating user profile', { userId: user.id, updates: dbUpdates });
 
       // Select all columns including phone/website (migration should have run)
-      const selectColumns = 'id, email, first_name, last_name, full_name, company_name, phone, website, subscription_tier, subscription_status, created_at, updated_at'
+      const selectColumns = 'id, email, first_name, last_name, full_name, company_name, phone, website, crm, crm_other, subscription_tier, subscription_status, created_at, updated_at'
       
       let { data, error } = await supabase
         .from('user_profiles')
@@ -1002,7 +1006,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           .from('user_profiles')
           .update(dbUpdatesWithoutNewFields)
           .eq('id', user.id)
-          .select('id, email, first_name, last_name, full_name, company_name, subscription_tier, subscription_status, created_at, updated_at')
+          .select('id, email, first_name, last_name, full_name, company_name, crm, crm_other, subscription_tier, subscription_status, created_at, updated_at')
         .single()
         
         data = retryResult.data

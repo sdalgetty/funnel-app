@@ -24,7 +24,7 @@ const Forecast: React.FC<ForecastProps> = ({
 }) => {
   const [viewMode, setViewMode] = useState<'trends' | 'modeling'>(showModelingOnly ? 'modeling' : (showTrendsOnly ? 'trends' : 'trends'));
   const [lookbackMonths, setLookbackMonths] = useState(12);
-  const [forecastMonths, setForecastMonths] = useState(6);
+  const [forecastMonths, setForecastMonths] = useState(12);
 
   // Get trackable service type IDs (for calculating closes/revenue from bookings)
   const trackableServiceIds = useMemo(() => {

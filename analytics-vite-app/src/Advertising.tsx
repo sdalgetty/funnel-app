@@ -8,9 +8,11 @@ interface AdvertisingProps {
   leadSources: LeadSource[];
   funnelData: FunnelData[];
   dataManager?: any;
+  navigationAction?: { page: string; action?: string; month?: { year: number; month: number } } | null;
+  isViewOnly?: boolean;
 }
 
-export default function Advertising({ bookings, leadSources, funnelData, dataManager }: AdvertisingProps) {
+export default function Advertising({ bookings, leadSources, funnelData, dataManager, navigationAction, isViewOnly = false }: AdvertisingProps) {
   const { user } = useAuth();
   const [adCampaigns, setAdCampaigns] = useState<AdCampaign[]>([]);
   const [selectedLeadSourceId, setSelectedLeadSourceId] = useState<string>('');
@@ -26,6 +28,40 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
   } | null>(null);
 
   const currentYear = new Date().getFullYear();
+
+  // Handle navigation action to open edit modal for specific month
+  useEffect(() => {
+    if (navigationAction?.action === 'edit-month' && navigationAction.month && leadSources.length > 0 && adCampaigns.length >= 0) {
+      const { year, month } = navigationAction.month
+      // Find or create campaign for that month with first lead source
+      const monthYear = `${year}-${String(month).padStart(2, '0')}`
+      const existingCampaign = adCampaigns.find(c => c.monthYear === monthYear && c.leadSourceId === leadSources[0].id)
+      
+      setSelectedLeadSourceId(leadSources[0].id)
+      setUserManuallySelected(true)
+      
+      if (existingCampaign) {
+        setEditingCampaign({
+          leadSource: leadSources[0],
+          month: month,
+          year: year,
+          spend: existingCampaign.adSpendCents,
+          leadsGenerated: existingCampaign.leadsGenerated,
+          isNew: false
+        })
+      } else {
+        setEditingCampaign({
+          leadSource: leadSources[0],
+          month: month,
+          year: year,
+          spend: 0,
+          leadsGenerated: 0,
+          isNew: true
+        })
+      }
+      setIsEditModalOpen(true)
+    }
+  }, [navigationAction, leadSources, adCampaigns])
 
   // Load data from data manager
   useEffect(() => {
@@ -370,15 +406,17 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
                           </td>
                           <td style={{ padding: '12px', color: '#1f2937', textAlign: 'left' }}>
                             <button
-                            onClick={() => handleEditCampaign(selectedLeadSource, campaign.month, currentYear, campaign.spend, campaign.leadsGenerated, isDefault)}
+                            onClick={() => !isViewOnly && handleEditCampaign(selectedLeadSource, campaign.month, currentYear, campaign.spend, campaign.leadsGenerated, isDefault)}
+                            disabled={isViewOnly}
                               style={{
                                 padding: '4px 8px',
-                                backgroundColor: '#3b82f6',
-                                color: 'white',
+                                backgroundColor: isViewOnly ? '#e5e7eb' : '#3b82f6',
+                                color: isViewOnly ? '#9ca3af' : 'white',
                                 border: 'none',
                                 borderRadius: '4px',
                                 fontSize: '12px',
-                                cursor: 'pointer'
+                                cursor: isViewOnly ? 'not-allowed' : 'pointer',
+                                opacity: isViewOnly ? 0.5 : 1
                               }}
                             >
                               Edit
@@ -494,6 +532,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
               }}
               onSave={handleSaveCampaign}
               onCancel={handleCloseModal}
+              isViewOnly={isViewOnly}
             />
           </div>
         </div>
@@ -506,11 +545,13 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
 function EditCampaignForm({ 
   initialData, 
   onSave, 
-  onCancel 
+  onCancel,
+  isViewOnly = false
 }: { 
   initialData: { spend: number; leadsGenerated: number };
   onSave: (data: { spend: number; leadsGenerated: number }) => void;
   onCancel: () => void;
+  isViewOnly?: boolean;
 }) {
   const [formData, setFormData] = useState({
     spend: initialData.spend / 100, // Convert from cents to dollars for display
@@ -548,6 +589,7 @@ function EditCampaignForm({
           min="0"
           value={formData.spend}
           onChange={(e) => handleChange('spend', parseFloat(e.target.value) || 0)}
+          disabled={isViewOnly}
           style={{
             width: '100%',
             maxWidth: '100%',
@@ -555,7 +597,9 @@ function EditCampaignForm({
             padding: '8px 12px',
             border: '1px solid #d1d5db',
             borderRadius: '6px',
-            fontSize: '14px'
+            fontSize: '14px',
+            backgroundColor: isViewOnly ? '#f3f4f6' : 'white',
+            cursor: isViewOnly ? 'not-allowed' : 'text'
           }}
           required
         />
@@ -570,6 +614,7 @@ function EditCampaignForm({
           min="0"
           value={formData.leadsGenerated}
           onChange={(e) => handleChange('leadsGenerated', parseInt(e.target.value) || 0)}
+          disabled={isViewOnly}
           style={{
             width: '100%',
             maxWidth: '100%',
@@ -577,7 +622,9 @@ function EditCampaignForm({
             padding: '8px 12px',
             border: '1px solid #d1d5db',
             borderRadius: '6px',
-            fontSize: '14px'
+            fontSize: '14px',
+            backgroundColor: isViewOnly ? '#f3f4f6' : 'white',
+            cursor: isViewOnly ? 'not-allowed' : 'text'
           }}
           required
         />
@@ -601,14 +648,16 @@ function EditCampaignForm({
         </button>
         <button
           type="submit"
+          disabled={isViewOnly}
           style={{
             padding: '8px 16px',
-            backgroundColor: '#3b82f6',
-            color: 'white',
+            backgroundColor: isViewOnly ? '#e5e7eb' : '#3b82f6',
+            color: isViewOnly ? '#9ca3af' : 'white',
             border: 'none',
             borderRadius: '6px',
             fontSize: '14px',
-            cursor: 'pointer'
+            cursor: isViewOnly ? 'not-allowed' : 'pointer',
+            opacity: isViewOnly ? 0.5 : 1
           }}
         >
           Save

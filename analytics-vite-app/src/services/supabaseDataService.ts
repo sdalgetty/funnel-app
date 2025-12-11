@@ -83,9 +83,9 @@ const convertToAdCampaign = (row: any): AdCampaign => ({
 const convertToForecastModel = (row: any): ForecastModel => {
   const params = row.parameters || {};
   return {
-    id: row.id,
-    name: row.name,
-    description: row.description || '',
+  id: row.id,
+  name: row.name,
+  description: row.description || '',
     modelType: row.model_type || 'forecast',
     parameters: params,
     year: params.year || new Date().getFullYear(),

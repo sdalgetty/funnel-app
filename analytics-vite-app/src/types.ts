@@ -48,6 +48,9 @@ export interface FunnelData {
   bookingsGoal: number;
   cash: number; // in cents
   notes?: string | null;
+  closesManual?: boolean; // If true, closes is manually entered
+  bookingsManual?: boolean; // If true, bookings is manually entered
+  cashManual?: boolean; // If true, cash is manually entered
   lastUpdated?: string;
 }
 
@@ -158,6 +161,8 @@ export interface ForecastModel {
 // ============================================================================
 // FEATURE DEFINITIONS
 // ============================================================================
+// NOTE: All new users now receive Pro features by default.
+// This structure is kept for potential future use if we need to re-enable tiered access.
 
 export const SUBSCRIPTION_FEATURES: Record<SubscriptionTier, SubscriptionFeatures> = {
   free: {
@@ -219,7 +224,7 @@ export const MOCK_USERS: User[] = [
 // UTILITY TYPES
 // ============================================================================
 
-export type Page = 'insights' | 'funnel' | 'calculator' | 'advertising' | 'forecast' | 'bookings' | 'profile';
+export type Page = 'insights' | 'funnel' | 'calculator' | 'advertising' | 'forecast' | 'bookings' | 'profile' | 'mockups' | 'admin';
 
 export type SortOrder = 'asc' | 'desc';
 
@@ -227,3 +232,7 @@ export interface Filters {
   serviceTypes: string[];
   search: string;
 }
+
+// Re-export types from other type files
+export type { AuthUser, Session, SubscriptionFeatures } from './types/auth';
+export type { DataManager } from './types/dataManager';

@@ -1,8 +1,10 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, Edit, Trash2, Target, TrendingUp, DollarSign, Calendar, CheckCircle, X } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { UnifiedDataService } from './services/unifiedDataService';
 import { calculateCurrentYearRevenueByServiceType } from './services/revenueCalculationService';
+import { logger } from './utils/logger';
+import { toUSD, formatNumber } from './utils/formatters';
 import type { ServiceType, Booking, Payment, ForecastModel } from './types';
 
 interface ForecastModelingProps {
@@ -22,37 +24,51 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   showTrackerOnly = false,
   hideTracker = false
 }) => {
-  const { user } = useAuth();
+  const { user, effectiveUserId, isViewOnly } = useAuth();
+  
+  // Track if component has mounted to avoid false warnings during initial render
+  const hasMountedRef = useRef(false);
+  const previousDataLengthsRef = useRef({ payments: 0, bookings: 0, serviceTypes: 0 });
   
   // Debug: Log props received
-  console.log('ForecastModeling props:', { 
+  logger.debug('ForecastModeling props', { 
     bookingsCount: bookings?.length || 0, 
     paymentsCount: payments?.length || 0,
     serviceTypesCount: serviceTypes?.length || 0,
     showTrackerOnly 
   });
+  
   const [models, setModels] = useState<ForecastModel[]>([]);
   const [activeModel, setActiveModel] = useState<ForecastModel | null>(null);
+  const [viewingModel, setViewingModel] = useState<ForecastModel | null>(null); // Model being viewed (may not be active)
   const [showModelModal, setShowModelModal] = useState(false);
   const [editingModel, setEditingModel] = useState<ForecastModel | null>(null);
   const [loadingModels, setLoadingModels] = useState(true);
 
+  // Mark component as mounted after initial render
+  useEffect(() => {
+    hasMountedRef.current = true;
+  }, []);
+
   // Load models from database on mount
   useEffect(() => {
     const loadModels = async () => {
-      if (!user?.id) {
+      // Use effectiveUserId (owner's ID when viewing as guest, otherwise user's ID)
+      const userId = effectiveUserId || user?.id;
+      if (!userId) {
         setLoadingModels(false);
         return;
       }
 
       try {
         setLoadingModels(true);
-        const loadedModels = await UnifiedDataService.getForecastModels(user.id);
+        const loadedModels = await UnifiedDataService.getForecastModels(userId);
         
         if (loadedModels.length > 0) {
           setModels(loadedModels);
           const active = loadedModels.find(m => m.isActive) || loadedModels[0];
           setActiveModel(active);
+          setViewingModel(active); // Default to viewing the active model
         } else {
           // Create default model if none exist
           const currentYear = new Date().getFullYear();
@@ -60,23 +76,25 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
             id: `model_${Date.now()}`,
             name: `${currentYear} Model`,
             year: currentYear,
-            isActive: true,
+          isActive: true,
             modelType: 'forecast',
             serviceTypes: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           };
           setModels([defaultModel]);
           setActiveModel(defaultModel);
+          setViewingModel(defaultModel); // Default to viewing the active model
           // Save the default model and update with real ID
-          const savedDefaultModel = await UnifiedDataService.saveForecastModel(user.id, defaultModel);
+          const savedDefaultModel = await UnifiedDataService.saveForecastModel(userId, defaultModel, isViewOnly);
           if (savedDefaultModel) {
             setModels([savedDefaultModel]);
             setActiveModel(savedDefaultModel);
+            setViewingModel(savedDefaultModel);
           }
         }
       } catch (error) {
-        console.error('Error loading forecast models:', error);
+        logger.error('Error loading forecast models:', error);
         // Fallback to default model
         const currentYear = new Date().getFullYear();
         const defaultModel: ForecastModel = {
@@ -91,9 +109,10 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
         };
         setModels([defaultModel]);
         setActiveModel(defaultModel);
+        setViewingModel(defaultModel);
       } finally {
         setLoadingModels(false);
-      }
+    }
     };
 
     loadModels();
@@ -116,15 +135,46 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     const currentYear = new Date().getFullYear();
     const revenueByServiceType: { [key: string]: number } = {};
 
-    console.log('Forecast Tracker - Calculating actual revenue:');
-    console.log('Current calendar year:', currentYear);
-    console.log('Total payments:', payments.length);
-    console.log('Total bookings:', bookings.length);
-    console.log('Total serviceTypes:', serviceTypes.length);
+    logger.debug('Forecast Tracker - Calculating actual revenue', {
+      currentYear,
+      paymentsCount: payments.length,
+      bookingsCount: bookings.length,
+      serviceTypesCount: serviceTypes.length
+    });
+    
+    // Track previous data lengths to detect if data was loaded then disappeared
+    const previousLengths = previousDataLengthsRef.current;
+    const hadDataBefore = previousLengths.payments > 0 || previousLengths.bookings > 0 || previousLengths.serviceTypes > 0;
+    const hasDataNow = payments.length > 0 || bookings.length > 0 || serviceTypes.length > 0;
+    
+    // Update refs
+    previousDataLengthsRef.current = {
+      payments: payments.length,
+      bookings: bookings.length,
+      serviceTypes: serviceTypes.length
+    };
     
     // Early return if no data
     if (payments.length === 0 || bookings.length === 0 || serviceTypes.length === 0) {
-      console.warn('WARNING: Missing data! Payments:', payments.length, 'Bookings:', bookings.length, 'ServiceTypes:', serviceTypes.length);
+      // Only warn if:
+      // 1. Component has mounted (avoid initial render false positive)
+      // 2. Data was previously loaded but now missing (actual problem)
+      // 3. Or if we've been mounted for a while and still no data (likely missing)
+      if (hasMountedRef.current && (hadDataBefore || (hasMountedRef.current && !hasDataNow))) {
+        logger.warn('Missing data for forecast calculation', {
+          payments: payments.length,
+          bookings: bookings.length,
+          serviceTypes: serviceTypes.length,
+          hadDataBefore
+        });
+      } else {
+        // Just debug log during initial load
+        logger.debug('Waiting for data to load', {
+          payments: payments.length,
+          bookings: bookings.length,
+          serviceTypes: serviceTypes.length
+        });
+      }
       return revenueByServiceType;
     }
     
@@ -141,19 +191,21 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       revenueByServiceType[result.serviceTypeId] = result.totalRevenueCents;
     });
     
-    console.log('Final revenueByServiceType from service:', revenueByServiceType);
+    logger.debug('Final revenueByServiceType from service', { revenueByServiceType });
     return revenueByServiceType;
   }, [bookings, payments, serviceTypes]);
 
-  // Calculate performance metrics for active model
+  // Calculate performance metrics for the model being viewed (viewingModel or activeModel)
+  const displayModel = viewingModel || activeModel;
   const performanceMetrics = useMemo(() => {
-    if (!activeModel) return [];
+    if (!displayModel) return [];
 
-    console.log('=== PERFORMANCE METRICS CALCULATION ===');
-    console.log('activeModel.serviceTypes:', activeModel.serviceTypes);
-    console.log('actualRevenueByServiceType:', actualRevenueByServiceType);
+    logger.debug('Performance metrics calculation', {
+      serviceTypesCount: displayModel.serviceTypes.length,
+      revenueByServiceTypeCount: Object.keys(actualRevenueByServiceType).length
+    });
 
-    const metrics = activeModel.serviceTypes.map(modelService => {
+    const metrics = displayModel.serviceTypes.map(modelService => {
       const serviceType = serviceTypes.find(st => st.id === modelService.serviceTypeId);
       const actualRevenue = actualRevenueByServiceType[modelService.serviceTypeId] || 0;
       const forecastGoal = modelService.totalForecast;
@@ -161,7 +213,8 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       const percentOfPlan = forecastGoal > 0 ? Math.round((actualRevenue / forecastGoal) * 100) : 0;
       const pacingDelta = percentOfPlan - yearProgress;
 
-      console.log(`Metric for ${serviceType?.name || 'Unknown'} (${modelService.serviceTypeId}):`, {
+      logger.debug(`Metric for ${serviceType?.name || 'Unknown'}`, {
+        serviceTypeId: modelService.serviceTypeId,
         actualRevenue,
         actualRevenueDollars: `$${(actualRevenue / 100).toFixed(2)}`,
         forecastGoal,
@@ -180,12 +233,14 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       };
     });
     
-    console.log('Final performanceMetrics:', metrics);
     const totalActual = metrics.reduce((sum, m) => sum + m.actualRevenue, 0);
-    console.log(`Total Actual Revenue from metrics: $${(totalActual / 100).toFixed(2)}`);
+    logger.debug('Final performance metrics', {
+      metricsCount: metrics.length,
+      totalActualRevenue: `$${(totalActual / 100).toFixed(2)}`
+    });
     
     return metrics;
-  }, [activeModel, serviceTypes, actualRevenueByServiceType, yearProgress]);
+  }, [displayModel, serviceTypes, actualRevenueByServiceType, yearProgress]);
 
   // Helper functions
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
@@ -193,9 +248,9 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
 
   // Model management functions
   const createModel = async (modelData: Omit<ForecastModel, 'id' | 'createdAt' | 'updatedAt'>) => {
-    console.log('createModel called with:', modelData);
+    logger.debug('createModel called', { modelData });
     if (!user?.id) {
-      console.error('createModel: No user ID');
+      logger.error('createModel: No user ID');
       return;
     }
     
@@ -206,20 +261,22 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       updatedAt: new Date().toISOString(),
     };
     
-    console.log('createModel: Saving new model:', newModel);
+    logger.debug('createModel: Saving new model', { modelId: newModel.id });
     // Save to database and get the saved model with real ID
-    const savedModel = await UnifiedDataService.saveForecastModel(user.id, newModel);
-    console.log('createModel: Save result:', savedModel);
+    const userId = effectiveUserId || user?.id;
+    const savedModel = await UnifiedDataService.saveForecastModel(userId, newModel, isViewOnly);
+    logger.debug('createModel: Save result', { saved: !!savedModel });
     
     if (savedModel) {
       setModels(prev => [...prev, savedModel]);
       if (savedModel.isActive) {
         setActiveModel(savedModel);
+        setViewingModel(savedModel); // View the newly activated model
       }
     } else {
-      console.error('createModel: Save failed, using local state');
+      logger.error('createModel: Save failed, using local state');
       // Fallback to local state if save fails
-      setModels(prev => [...prev, newModel]);
+    setModels(prev => [...prev, newModel]);
     }
   };
 
@@ -229,14 +286,18 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     const updatedModel = { ...modelData, updatedAt: new Date().toISOString() };
     
     // Save to database
-    const savedModel = await UnifiedDataService.saveForecastModel(user.id, updatedModel);
+    const userId = effectiveUserId || user?.id;
+    const savedModel = await UnifiedDataService.saveForecastModel(userId, updatedModel, isViewOnly);
     
     if (savedModel) {
-      setModels(prev => prev.map(model => 
+    setModels(prev => prev.map(model => 
         model.id === modelData.id ? savedModel : model
-      ));
-      if (activeModel?.id === modelData.id) {
+    ));
+    if (activeModel?.id === modelData.id) {
         setActiveModel(savedModel);
+      }
+      if (viewingModel?.id === modelData.id) {
+        setViewingModel(savedModel); // Update viewing model if it was edited
       }
     } else {
       // Fallback to local update if save fails
@@ -246,6 +307,9 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       if (activeModel?.id === modelData.id) {
         setActiveModel(updatedModel);
       }
+      if (viewingModel?.id === modelData.id) {
+        setViewingModel(updatedModel); // Update viewing model if it was edited
+      }
     }
   };
 
@@ -254,13 +318,19 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     
     // Delete from database first
     if (!modelId.startsWith('model_')) {
-      await UnifiedDataService.deleteForecastModel(user.id, modelId);
+      const userId = effectiveUserId || user?.id;
+      await UnifiedDataService.deleteForecastModel(userId, modelId, isViewOnly);
     }
     
     setModels(prev => prev.filter(model => model.id !== modelId));
     if (activeModel?.id === modelId) {
       const remainingModels = models.filter(model => model.id !== modelId);
-      setActiveModel(remainingModels.length > 0 ? remainingModels[0] : null);
+      const newActiveModel = remainingModels.length > 0 ? remainingModels[0] : null;
+      setActiveModel(newActiveModel);
+      setViewingModel(newActiveModel); // View the new active model
+    } else if (viewingModel?.id === modelId) {
+      // If viewing a non-active model that gets deleted, go back to active model
+      setViewingModel(activeModel);
     }
   };
 
@@ -273,10 +343,11 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       updatedAt: new Date().toISOString()
     }));
     
-    // Save all models to update isActive flags
-    const savedModels = await Promise.all(
-      updatedModels.map(m => UnifiedDataService.saveForecastModel(user.id, m))
-    );
+      // Save all models to update isActive flags
+      const userId = effectiveUserId || user?.id;
+      const savedModels = await Promise.all(
+        updatedModels.map(m => UnifiedDataService.saveForecastModel(userId, m, isViewOnly))
+      );
     
     // Update state with saved models (filter out nulls)
     const validModels = savedModels.filter((m): m is ForecastModel => m !== null);
@@ -285,13 +356,15 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       const activeModelData = validModels.find(m => m.id === modelId);
       if (activeModelData) {
         setActiveModel(activeModelData);
+        setViewingModel(activeModelData); // View the newly activated model
       }
     } else {
       // Fallback to local state if save fails
       setModels(updatedModels);
       const model = updatedModels.find(m => m.id === modelId);
-      if (model) {
-        setActiveModel(model);
+    if (model) {
+      setActiveModel(model);
+      setViewingModel(model); // View the newly activated model
       }
     }
   };
@@ -311,7 +384,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
 
   // Tracker-only mode: render just the performance tracker block
   if (showTrackerOnly) {
-    return (
+  return (
       <div style={{ padding: '0', maxWidth: '100%', margin: '0' }}>
         {activeModel && (
           <div style={{ 
@@ -500,7 +573,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
           fontSize: '28px', 
           fontWeight: '700', 
           margin: '0 0 8px 0', 
-          color: '#1f2937'
+          color: '#1f2937' 
         }}>
           Forecast Modeling
         </h1>
@@ -564,13 +637,20 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
             return (
               <div
                 key={model.id}
+                onClick={() => {
+                  // Clicking any model card sets it as the viewing model
+                  // This allows users to click back to the active model if they're viewing another one
+                  setViewingModel(model);
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  backgroundColor: model.isActive ? '#3b82f6' : '#f8fafc',
-                  color: model.isActive ? 'white' : '#374151',
-                  border: model.isActive ? 'none' : '2px solid #6b7280',
+                  backgroundColor: viewingModel?.id === model.id 
+                    ? '#3b82f6' 
+                    : '#f8fafc',
+                  color: viewingModel?.id === model.id ? 'white' : '#374151',
+                  border: viewingModel?.id === model.id ? 'none' : '2px solid #6b7280',
                   borderRadius: '8px',
                   padding: '12px 16px',
                   fontSize: '14px',
@@ -578,7 +658,21 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                   minWidth: '200px',
                   width: '100%',
                   maxWidth: '300px',
-                  boxShadow: model.isActive ? '0 2px 4px rgba(59, 130, 246, 0.3)' : '0 1px 3px rgba(0, 0, 0, 0.1)'
+                  boxShadow: viewingModel?.id === model.id 
+                    ? '0 2px 4px rgba(59, 130, 246, 0.3)' 
+                    : '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (viewingModel?.id !== model.id) {
+                    e.currentTarget.style.backgroundColor = '#e5e7eb';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (viewingModel?.id !== model.id) {
+                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                  }
                 }}
               >
                             {/* Model Info */}
@@ -588,7 +682,10 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                             </div>
                 
                 {/* Action Buttons */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                <div 
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
+                  onClick={(e) => e.stopPropagation()} // Prevent card click when clicking buttons
+                >
                   {!model.isActive ? (
                     <button
                       onClick={() => activateModel(model.id)}
@@ -640,6 +737,14 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                       opacity: 0.7
                     }}
                     title="Edit Model"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '0.7';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
                     <Edit size={14} />
                   </button>
@@ -657,6 +762,14 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                       opacity: 0.7
                     }}
                     title="Delete Model"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '0.7';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -667,8 +780,8 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
         </div>
       )}
 
-      {/* Performance Tracker */}
-      {!hideTracker && activeModel && (
+      {/* Performance Tracker - Show for viewingModel (or activeModel if no viewingModel) */}
+      {!hideTracker && displayModel && (
         <div style={{ 
           backgroundColor: 'white', 
           borderRadius: '12px', 
@@ -692,7 +805,17 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                   color: '#6b7280', 
                   margin: 0 
                 }}>
-                  {activeModel.name}
+                  {displayModel.name}
+                  {!displayModel.isActive && (
+                    <span style={{ 
+                      marginLeft: '8px', 
+                      fontSize: '12px', 
+                      color: '#9ca3af',
+                      fontStyle: 'italic'
+                    }}>
+                      (View Only)
+                    </span>
+                  )}
                 </p>
               </div>
               {(() => {
@@ -705,28 +828,28 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                                 overallPercentOfPlan < 80 ? '#991b1b' : '#92400e';
                 
                 return (
-                  <div style={{
+              <div style={{
                     backgroundColor,
-                    padding: '8px 16px',
-                    borderRadius: '8px',
+                padding: '8px 16px',
+                borderRadius: '8px',
                     textAlign: 'left',
                     border: `1px solid ${overallPercentOfPlan >= 100 ? '#10b981' : overallPercentOfPlan < 80 ? '#ef4444' : '#f59e0b'}`
-                  }}>
-                    <div style={{ 
-                      fontSize: '12px', 
+              }}>
+                <div style={{ 
+                  fontSize: '12px', 
                       color: textColor, 
-                      marginBottom: '2px' 
-                    }}>
+                  marginBottom: '2px' 
+                }}>
                       % of Plan
-                    </div>
-                    <div style={{ 
-                      fontSize: '18px', 
-                      fontWeight: '600', 
+                </div>
+                <div style={{ 
+                  fontSize: '18px', 
+                  fontWeight: '600', 
                       color: textColor
-                    }}>
+                }}>
                       {overallPercentOfPlan}%
-                    </div>
-                  </div>
+                </div>
+              </div>
                 );
               })()}
             </div>
@@ -848,8 +971,8 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
         </div>
       )}
 
-      {/* Model Details */}
-      {activeModel && (
+      {/* Model Details - Show for viewingModel (or activeModel if no viewingModel) */}
+      {displayModel && (
         <div style={{ 
           backgroundColor: 'white', 
           borderRadius: '12px', 
@@ -865,19 +988,29 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                   margin: '0 0 4px 0', 
                   color: '#1f2937' 
                 }}>
-                  {activeModel.name}
+                  {displayModel.name}
                 </h2>
                 <p style={{ 
                   fontSize: '14px', 
                   color: '#6b7280', 
                   margin: 0 
                 }}>
-                  {activeModel.year} • {activeModel.isActive ? 'Active Model' : 'Inactive Model'}
+                  {displayModel.year} • {displayModel.isActive ? 'Active Model' : 'Inactive Model'}
+                  {!displayModel.isActive && viewingModel?.id === displayModel.id && (
+                    <span style={{ 
+                      marginLeft: '8px', 
+                      fontSize: '12px', 
+                      color: '#9ca3af',
+                      fontStyle: 'italic'
+                    }}>
+                      (View Only)
+                    </span>
+                  )}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
-                  onClick={() => setEditingModel(activeModel)}
+                  onClick={() => setEditingModel(displayModel)}
                   style={{
                     backgroundColor: '#f3f4f6',
                     color: '#374151',
@@ -895,7 +1028,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                   Edit
                 </button>
                 <button
-                  onClick={() => deleteModel(activeModel.id)}
+                  onClick={() => deleteModel(displayModel.id)}
                   style={{
                     backgroundColor: '#fef2f2',
                     color: '#dc2626',
@@ -927,7 +1060,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {activeModel.serviceTypes.map((service, index) => {
+                {displayModel.serviceTypes.map((service, index) => {
                   const serviceType = serviceTypes.find(st => st.id === service.serviceTypeId);
                   return (
                     <tr 
@@ -955,7 +1088,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                   <Td align="right" style={{ fontWeight: '700', fontSize: '14px' }}>—</Td>
                   <Td align="right" style={{ fontWeight: '700', fontSize: '14px' }}>—</Td>
                   <Td align="right" style={{ fontWeight: '700', fontSize: '14px' }}>
-                    {toUSD(activeModel.serviceTypes.reduce((sum, s) => sum + s.totalForecast, 0))}
+                    {toUSD(displayModel.serviceTypes.reduce((sum, s) => sum + s.totalForecast, 0))}
                   </Td>
                 </tr>
               </tbody>
@@ -989,9 +1122,6 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       )}
 
 
-      <footer style={{ fontSize: '12px', color: '#666', marginTop: '32px' }}>
-        <p>Forecast models are persistent and shared across sessions. Service types are global and available in the Sales tab.</p>
-      </footer>
     </div>
   );
 };
@@ -1213,7 +1343,7 @@ function ModelModal({
         </div>
 
         <form onSubmit={(e) => {
-          console.log('Form onSubmit triggered!');
+          logger.debug('Form onSubmit triggered');
           handleSubmit(e);
         }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -1512,9 +1642,7 @@ function ModelModal({
               onClick={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('Submit button clicked! e:', e);
-                console.log('formData:', formData);
-                console.log('model:', model);
+                logger.debug('Submit button clicked', { hasFormData: !!formData, hasModel: !!model });
                 await handleSubmit(e as any);
               }}
               style={{

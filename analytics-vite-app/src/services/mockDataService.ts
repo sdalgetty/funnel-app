@@ -50,13 +50,13 @@ export class MockDataService {
     return [...mockServiceTypes];
   }
 
-  static async createServiceType(userId: string, name: string): Promise<ServiceType | null> {
-    console.log('Mock create service type:', name);
+  static async createServiceType(userId: string, name: string, tracksInFunnel: boolean = false): Promise<ServiceType | null> {
+    console.log('Mock create service type:', name, 'tracksInFunnel:', tracksInFunnel);
     const newServiceType: ServiceType = {
       id: `mock_${Date.now()}`,
       name,
       isCustom: true,
-      tracksInFunnel: false
+      tracksInFunnel
     };
     return newServiceType;
   }

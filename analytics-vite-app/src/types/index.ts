@@ -4,6 +4,7 @@ export type {
   Session, 
   SubscriptionFeatures,
   SubscriptionTier,
-  SubscriptionStatus
+  SubscriptionStatus,
+  CRMType
 } from './auth'
 

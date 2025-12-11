@@ -9,6 +9,8 @@ export type SubscriptionStatus = 'active' | 'trial' | 'expired' | 'cancelled';
 /**
  * Authenticated user with profile data
  */
+export type CRMType = 'none' | 'honeybook' | 'dubsado' | '17hats' | 'studio-ninja' | 'sprout-studio' | 'tave' | 'shootq' | 'pixifi' | 'aisle-planner' | 'planner-pod' | 'other';
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -18,6 +20,8 @@ export interface AuthUser {
   companyName: string;
   phone?: string;
   website?: string;
+  crm?: CRMType;
+  crmOther?: string; // Custom CRM name when crm is 'other'
   subscriptionTier: SubscriptionTier;
   subscriptionStatus: SubscriptionStatus;
   createdAt: Date;
