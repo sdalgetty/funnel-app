@@ -2,6 +2,23 @@
   command = "npm run build"
   publish = "dist"
 
+# HTML files should never be cached to prevent stale chunk references
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+
+# index.html specifically - never cache
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+
+# Security headers for all other files
 [[headers]]
   for = "/*"
   [headers.values]
@@ -13,6 +30,7 @@
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
     Cache-Control = "public, max-age=0, must-revalidate"
 
+# Assets with hashes can be cached indefinitely (Vite adds hashes to filenames)
 [[headers]]
   for = "/assets/*"
   [headers.values]
