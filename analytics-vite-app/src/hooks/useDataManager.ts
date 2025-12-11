@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { UnifiedDataService } from '../services/unifiedDataService';
-import type { FunnelData, Booking, Payment, ServiceType, LeadSource, AdSource, AdCampaign, ForecastModel } from '../types';
+import { AdminService } from '../services/adminService';
+import type { FunnelData, Booking, Payment, ServiceType, LeadSource, AdCampaign, ForecastModel, DataManager } from '../types';
+import { logger } from '../utils/logger';
 
-export function useDataManager() {
-  const { user } = useAuth();
+export function useDataManager(): DataManager {
+  const { user, effectiveUserId, isViewOnly, isAdmin, impersonatingUserId, impersonationSessionId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,12 +16,15 @@ export function useDataManager() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
   const [leadSources, setLeadSources] = useState<LeadSource[]>([]);
-  const [adSources, setAdSources] = useState<AdSource[]>([]);
   const [adCampaigns, setAdCampaigns] = useState<AdCampaign[]>([]);
+  const [forecastModels, setForecastModels] = useState<ForecastModel[]>([]);
 
   // Load all data on mount or user change
   const loadAllData = useCallback(async () => {
-    if (!user?.id) {
+    // Use effectiveUserId (owner's ID when viewing as guest, otherwise user's ID)
+    const userId = effectiveUserId || user?.id;
+    
+    if (!userId) {
       setLoading(false);
       return;
     }
@@ -28,26 +33,26 @@ export function useDataManager() {
     setError(null);
 
     try {
-      console.log('Loading all data for user:', user.id);
+      logger.debug('Loading all data for user', { userId, isViewOnly });
       
-      const [funnelDataResult, bookingsResult, paymentsResult, serviceTypesResult, leadSourcesResult, adSourcesResult, adCampaignsResult] = await Promise.all([
-        UnifiedDataService.getFunnelData(user.id, new Date().getFullYear()),
-        UnifiedDataService.getBookings(user.id),
-        UnifiedDataService.getPayments(user.id),
-        UnifiedDataService.getServiceTypes(user.id),
-        UnifiedDataService.getLeadSources(user.id),
-        UnifiedDataService.getAdSources(user.id),
-        UnifiedDataService.getAdCampaigns(user.id)
+      const [funnelDataResult, bookingsResult, paymentsResult, serviceTypesResult, leadSourcesResult, adCampaignsResult, forecastModelsResult] = await Promise.all([
+        UnifiedDataService.getAllFunnelData(userId),
+        UnifiedDataService.getBookings(userId),
+        UnifiedDataService.getPayments(userId),
+        UnifiedDataService.getServiceTypes(userId),
+        UnifiedDataService.getLeadSources(userId),
+        UnifiedDataService.getAdCampaigns(userId),
+        UnifiedDataService.getForecastModels(userId)
       ]);
 
-      console.log('All data loaded successfully:', {
+      logger.debug('All data loaded successfully', {
         funnelData: funnelDataResult.length,
         bookings: bookingsResult.length,
         payments: paymentsResult.length,
         serviceTypes: serviceTypesResult.length,
         leadSources: leadSourcesResult.length,
-        adSources: adSourcesResult.length,
-        adCampaigns: adCampaignsResult.length
+        adCampaigns: adCampaignsResult.length,
+        forecastModels: forecastModelsResult.length
       });
 
       setFunnelData(funnelDataResult);
@@ -55,15 +60,15 @@ export function useDataManager() {
       setPayments(paymentsResult);
       setServiceTypes(serviceTypesResult);
       setLeadSources(leadSourcesResult);
-      setAdSources(adSourcesResult);
       setAdCampaigns(adCampaignsResult);
+      setForecastModels(forecastModelsResult);
     } catch (err) {
-      console.error('Error loading data:', err);
+      logger.error('Error loading data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   // Load data on mount
   useEffect(() => {
@@ -72,68 +77,75 @@ export function useDataManager() {
 
   // Funnel data operations
   const saveFunnelData = useCallback(async (funnelData: FunnelData) => {
-    if (!user?.id) return false;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
     
-    console.log('useDataManager.saveFunnelData called with:', funnelData);
+    logger.debug('useDataManager.saveFunnelData called', { funnelId: funnelData.id, year: funnelData.year, month: funnelData.month });
     
     try {
-      const success = await UnifiedDataService.saveFunnelData(user.id, funnelData);
-      console.log('Save success:', success);
+      const success = await UnifiedDataService.saveFunnelData(userId, funnelData, isViewOnly);
+      
+      // Log action if impersonating
+      if (isAdmin && impersonatingUserId) {
+        await AdminService.logAction('edit_data', impersonatingUserId, {
+          action: 'save_funnel_data',
+          funnel_id: funnelData.id,
+          year: funnelData.year,
+          month: funnelData.month,
+        }, impersonationSessionId || null);
+      }
       
       if (success) {
         setFunnelData(prev => {
-          console.log('Previous funnelData:', prev);
           const existing = prev.find(f => f.year === funnelData.year && f.month === funnelData.month);
-          console.log('Existing found:', existing);
-          
-          const updated = existing
+          return existing
             ? prev.map(f => f.year === funnelData.year && f.month === funnelData.month ? funnelData : f)
             : [...prev, funnelData];
-          
-          console.log('Updated funnelData:', updated);
-          return updated;
         });
       }
       return success;
     } catch (err) {
-      console.error('Error saving funnel data:', err);
+      logger.error('Error saving funnel data:', err);
       return false;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   // Service type operations
   const createServiceType = useCallback(async (name: string) => {
-    if (!user?.id) return null;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return null;
     
     try {
-      const serviceType = await UnifiedDataService.createServiceType(user.id, name);
+      const serviceType = await UnifiedDataService.createServiceType(userId, name, isViewOnly);
       if (serviceType) {
         setServiceTypes(prev => [...prev, serviceType]);
       }
       return serviceType;
     } catch (err) {
-      console.error('Error creating service type:', err);
+      logger.error('Error creating service type:', err);
       return null;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   const updateServiceType = useCallback(async (id: string, name: string) => {
-    if (!user?.id) return false;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
     
     try {
-      const success = await UnifiedDataService.updateServiceType(user.id, id, name);
+      const success = await UnifiedDataService.updateServiceType(userId, id, name, isViewOnly);
       if (success) {
         setServiceTypes(prev => prev.map(st => st.id === id ? { ...st, name } : st));
       }
       return success;
     } catch (err) {
-      console.error('Error updating service type:', err);
+      logger.error('Error updating service type:', err);
       return false;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   const toggleServiceTypeFunnelTracking = useCallback(async (id: string) => {
-    if (!user?.id) return false;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
     
     // Find the current service type to get its current tracksInFunnel value
     const serviceType = serviceTypes.find(st => st.id === id);
@@ -142,7 +154,7 @@ export function useDataManager() {
     const newValue = !serviceType.tracksInFunnel;
     
     try {
-      const success = await UnifiedDataService.updateServiceTypeFunnelTracking(user.id, id, newValue);
+      const success = await UnifiedDataService.updateServiceTypeFunnelTracking(userId, id, newValue, isViewOnly);
       if (success) {
         setServiceTypes(prev => prev.map(st => 
           st.id === id ? { ...st, tracksInFunnel: newValue } : st
@@ -150,16 +162,17 @@ export function useDataManager() {
       }
       return success;
     } catch (err) {
-      console.error('Error toggling service type funnel tracking:', err);
+      logger.error('Error toggling service type funnel tracking:', err);
       return false;
     }
-  }, [user?.id, serviceTypes]);
+  }, [effectiveUserId, user?.id, isViewOnly, serviceTypes]);
 
   const deleteServiceType = useCallback(async (id: string) => {
-    if (!user?.id) return false;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
     
     try {
-      const success = await UnifiedDataService.deleteServiceType(user.id, id);
+      const success = await UnifiedDataService.deleteServiceType(userId, id, isViewOnly);
       if (success) {
         setServiceTypes(prev => prev.filter(st => st.id !== id));
         // Also remove from bookings that use this service type
@@ -169,47 +182,50 @@ export function useDataManager() {
       }
       return success;
     } catch (err) {
-      console.error('Error deleting service type:', err);
+      logger.error('Error deleting service type:', err);
       return false;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   // Lead source operations
   const createLeadSource = useCallback(async (name: string) => {
-    if (!user?.id) return null;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return null;
     
     try {
-      const leadSource = await UnifiedDataService.createLeadSource(user.id, name);
+      const leadSource = await UnifiedDataService.createLeadSource(userId, name, isViewOnly);
       if (leadSource) {
         setLeadSources(prev => [...prev, leadSource]);
       }
       return leadSource;
     } catch (err) {
-      console.error('Error creating lead source:', err);
+      logger.error('Error creating lead source:', err);
       return null;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   const updateLeadSource = useCallback(async (id: string, name: string) => {
-    if (!user?.id) return false;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
     
     try {
-      const success = await UnifiedDataService.updateLeadSource(user.id, id, name);
+      const success = await UnifiedDataService.updateLeadSource(userId, id, name, isViewOnly);
       if (success) {
         setLeadSources(prev => prev.map(ls => ls.id === id ? { ...ls, name } : ls));
       }
       return success;
     } catch (err) {
-      console.error('Error updating lead source:', err);
+      logger.error('Error updating lead source:', err);
       return false;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   const deleteLeadSource = useCallback(async (id: string) => {
-    if (!user?.id) return false;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
     
     try {
-      const success = await UnifiedDataService.deleteLeadSource(user.id, id);
+      const success = await UnifiedDataService.deleteLeadSource(userId, id, isViewOnly);
       if (success) {
         setLeadSources(prev => prev.filter(ls => ls.id !== id));
         // Also remove from bookings that use this lead source
@@ -219,32 +235,54 @@ export function useDataManager() {
       }
       return success;
     } catch (err) {
-      console.error('Error deleting lead source:', err);
+      logger.error('Error deleting lead source:', err);
       return false;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   // Booking operations
   const createBooking = useCallback(async (bookingData: Omit<Booking, 'id' | 'createdAt'>) => {
-    if (!user?.id) return null;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return null;
     
     try {
-      const booking = await UnifiedDataService.createBooking(user.id, bookingData);
+      const booking = await UnifiedDataService.createBooking(userId, bookingData, isViewOnly);
+      
+      // Log action if impersonating
+      if (isAdmin && impersonatingUserId && booking) {
+        await AdminService.logAction('edit_data', impersonatingUserId, {
+          action: 'create_booking',
+          booking_id: booking.id,
+          project_name: bookingData.projectName,
+        }, impersonationSessionId || null);
+      }
+      
       if (booking) {
         setBookings(prev => [...prev, booking]);
       }
       return booking;
     } catch (err) {
-      console.error('Error creating booking:', err);
+      logger.error('Error creating booking:', err);
       return null;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   const updateBooking = useCallback(async (id: string, updates: Partial<Booking>) => {
-    if (!user?.id) return false;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
     
     try {
-      const success = await UnifiedDataService.updateBooking(user.id, id, updates);
+      const success = await UnifiedDataService.updateBooking(userId, id, updates, isViewOnly);
+      
+      // Log action if impersonating
+      if (isAdmin && impersonatingUserId && success) {
+        await AdminService.logAction('edit_data', impersonatingUserId, {
+          action: 'update_booking',
+          booking_id: id,
+          updates: Object.keys(updates),
+        }, impersonationSessionId || null);
+      }
+      
       if (success) {
         setBookings(prev => prev.map(booking => 
           booking.id === id ? { ...booking, ...updates } : booking
@@ -252,16 +290,26 @@ export function useDataManager() {
       }
       return success;
     } catch (err) {
-      console.error('Error updating booking:', err);
+      logger.error('Error updating booking:', err);
       return false;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   const deleteBooking = useCallback(async (id: string) => {
-    if (!user?.id) return false;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
     
     try {
-      const success = await UnifiedDataService.deleteBooking(user.id, id);
+      const success = await UnifiedDataService.deleteBooking(userId, id, isViewOnly);
+      
+      // Log action if impersonating
+      if (isAdmin && impersonatingUserId && success) {
+        await AdminService.logAction('edit_data', impersonatingUserId, {
+          action: 'delete_booking',
+          booking_id: id,
+        }, impersonationSessionId || null);
+      }
+      
       if (success) {
         setBookings(prev => prev.filter(booking => booking.id !== id));
         // Also remove associated payments
@@ -269,32 +317,34 @@ export function useDataManager() {
       }
       return success;
     } catch (err) {
-      console.error('Error deleting booking:', err);
+      logger.error('Error deleting booking:', err);
       return false;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   // Payment operations
   const createPayment = useCallback(async (paymentData: Omit<Payment, 'id' | 'createdAt'>) => {
-    if (!user?.id) return null;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return null;
     
     try {
-      const payment = await UnifiedDataService.createPayment(user.id, paymentData);
+      const payment = await UnifiedDataService.createPayment(userId, paymentData, isViewOnly);
       if (payment) {
         setPayments(prev => [...prev, payment]);
       }
       return payment;
     } catch (err) {
-      console.error('Error creating payment:', err);
+      logger.error('Error creating payment:', err);
       return null;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   const updatePayment = useCallback(async (id: string, updates: Partial<Payment>) => {
-    if (!user?.id) return false;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
     
     try {
-      const success = await UnifiedDataService.updatePayment(user.id, id, updates);
+      const success = await UnifiedDataService.updatePayment(userId, id, updates, isViewOnly);
       if (success) {
         setPayments(prev => prev.map(payment => 
           payment.id === id ? { ...payment, ...updates } : payment
@@ -302,97 +352,50 @@ export function useDataManager() {
       }
       return success;
     } catch (err) {
-      console.error('Error updating payment:', err);
+      logger.error('Error updating payment:', err);
       return false;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   const deletePayment = useCallback(async (id: string) => {
-    if (!user?.id) return false;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
     
     try {
-      const success = await UnifiedDataService.deletePayment(user.id, id);
+      const success = await UnifiedDataService.deletePayment(userId, id, isViewOnly);
       if (success) {
         setPayments(prev => prev.filter(payment => payment.id !== id));
       }
       return success;
     } catch (err) {
-      console.error('Error deleting payment:', err);
+      logger.error('Error deleting payment:', err);
       return false;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
-  // AdSource operations
-  const createAdSource = useCallback(async (adSourceData: Omit<AdSource, 'id' | 'createdAt'>) => {
-    if (!user?.id) return null;
-    
-    try {
-      const adSource = await UnifiedDataService.createAdSource(user.id, adSourceData);
-      if (adSource) {
-        setAdSources(prev => [...prev, adSource]);
-      }
-      return adSource;
-    } catch (err) {
-      console.error('Error creating ad source:', err);
-      return null;
-    }
-  }, [user?.id]);
-
-  const updateAdSource = useCallback(async (id: string, updates: Partial<AdSource>) => {
-    if (!user?.id) return false;
-    
-    try {
-      const success = await UnifiedDataService.updateAdSource(user.id, id, updates);
-      if (success) {
-        setAdSources(prev => prev.map(adSource => 
-          adSource.id === id ? { ...adSource, ...updates } : adSource
-        ));
-      }
-      return success;
-    } catch (err) {
-      console.error('Error updating ad source:', err);
-      return false;
-    }
-  }, [user?.id]);
-
-  const deleteAdSource = useCallback(async (id: string) => {
-    if (!user?.id) return false;
-    
-    try {
-      const success = await UnifiedDataService.deleteAdSource(user.id, id);
-      if (success) {
-        setAdSources(prev => prev.filter(adSource => adSource.id !== id));
-        // Also remove associated campaigns
-        setAdCampaigns(prev => prev.filter(campaign => campaign.adSourceId !== id));
-      }
-      return success;
-    } catch (err) {
-      console.error('Error deleting ad source:', err);
-      return false;
-    }
-  }, [user?.id]);
-
-  // AdCampaign operations
+  // AdCampaign operations (AdSource removed - campaigns now link directly to LeadSource)
   const createAdCampaign = useCallback(async (adCampaignData: Omit<AdCampaign, 'id' | 'createdAt'>) => {
-    if (!user?.id) return null;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return null;
     
     try {
-      const adCampaign = await UnifiedDataService.createAdCampaign(user.id, adCampaignData);
+      const adCampaign = await UnifiedDataService.createAdCampaign(userId, adCampaignData, isViewOnly);
       if (adCampaign) {
         setAdCampaigns(prev => [...prev, adCampaign]);
       }
       return adCampaign;
     } catch (err) {
-      console.error('Error creating ad campaign:', err);
+      logger.error('Error creating ad campaign:', err);
       return null;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   const updateAdCampaign = useCallback(async (id: string, updates: Partial<AdCampaign>) => {
-    if (!user?.id) return false;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
     
     try {
-      const success = await UnifiedDataService.updateAdCampaign(user.id, id, updates);
+      const success = await UnifiedDataService.updateAdCampaign(userId, id, updates, isViewOnly);
       if (success) {
         setAdCampaigns(prev => prev.map(adCampaign => 
           adCampaign.id === id ? { ...adCampaign, ...updates } : adCampaign
@@ -400,50 +403,72 @@ export function useDataManager() {
       }
       return success;
     } catch (err) {
-      console.error('Error updating ad campaign:', err);
+      logger.error('Error updating ad campaign:', err);
       return false;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   const deleteAdCampaign = useCallback(async (id: string) => {
-    if (!user?.id) return false;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
     
     try {
-      const success = await UnifiedDataService.deleteAdCampaign(user.id, id);
+      const success = await UnifiedDataService.deleteAdCampaign(userId, id, isViewOnly);
       if (success) {
         setAdCampaigns(prev => prev.filter(adCampaign => adCampaign.id !== id));
       }
       return success;
     } catch (err) {
-      console.error('Error deleting ad campaign:', err);
+      logger.error('Error deleting ad campaign:', err);
       return false;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   // Forecast Model operations
+  const loadForecastModels = useCallback(async () => {
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return;
+
+    try {
+      const models = await UnifiedDataService.getForecastModels(userId);
+      setForecastModels(models);
+    } catch (err) {
+      logger.error('Error loading forecast models:', err);
+    }
+  }, [effectiveUserId, user?.id]);
+
   const saveForecastModel = useCallback(async (model: ForecastModel) => {
-    if (!user?.id) return false;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
     
     try {
-      const success = await UnifiedDataService.saveForecastModel(user.id, model);
+      const success = await UnifiedDataService.saveForecastModel(userId, model, isViewOnly);
+      if (success) {
+        // Reload forecast models to get updated data
+        await loadForecastModels();
+      }
       return success;
     } catch (err) {
-      console.error('Error saving forecast model:', err);
+      logger.error('Error saving forecast model:', err);
       return false;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly, loadForecastModels]);
 
   const deleteForecastModel = useCallback(async (id: string) => {
-    if (!user?.id) return false;
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
     
     try {
-      const success = await UnifiedDataService.deleteForecastModel(user.id, id);
+      const success = await UnifiedDataService.deleteForecastModel(userId, id, isViewOnly);
+      if (success) {
+        setForecastModels(prev => prev.filter(m => m.id !== id));
+      }
       return success;
     } catch (err) {
-      console.error('Error deleting forecast model:', err);
+      logger.error('Error deleting forecast model:', err);
       return false;
     }
-  }, [user?.id]);
+  }, [effectiveUserId, user?.id, isViewOnly]);
 
   return {
     // State
@@ -454,8 +479,8 @@ export function useDataManager() {
     payments,
     serviceTypes,
     leadSources,
-    adSources,
     adCampaigns,
+    forecastModels,
     
     // Actions
     loadAllData,
@@ -484,11 +509,6 @@ export function useDataManager() {
     updatePayment,
     deletePayment,
     
-    // AdSource operations
-    createAdSource,
-    updateAdSource,
-    deleteAdSource,
-    
     // AdCampaign operations
     createAdCampaign,
     updateAdCampaign,
@@ -497,4 +517,6 @@ export function useDataManager() {
     // Forecast Model operations
     saveForecastModel,
     deleteForecastModel,
+    loadForecastModels,
   };
+}

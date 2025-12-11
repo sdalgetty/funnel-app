@@ -24,7 +24,12 @@ const Forecast: React.FC<ForecastProps> = ({
 }) => {
   const [viewMode, setViewMode] = useState<'trends' | 'modeling'>(showModelingOnly ? 'modeling' : (showTrendsOnly ? 'trends' : 'trends'));
   const [lookbackMonths, setLookbackMonths] = useState(12);
-  const [forecastMonths, setForecastMonths] = useState(6);
+  const [forecastMonths, setForecastMonths] = useState(12);
+
+  // Get trackable service type IDs (for calculating closes/revenue from bookings)
+  const trackableServiceIds = useMemo(() => {
+    return new Set(serviceTypes.filter(st => st.tracksInFunnel).map(st => st.id));
+  }, [serviceTypes]);
 
   // Get historical data for lookback period
   const historicalData = useMemo(() => {
@@ -42,6 +47,43 @@ const Forecast: React.FC<ForecastProps> = ({
     });
   }, [funnelData, lookbackMonths]);
 
+  // Calculate closes and revenue from actual bookings data for lookback period
+  const bookingsData = useMemo(() => {
+    const now = new Date();
+    const cutoffDate = lookbackMonths === -1 
+      ? null 
+      : new Date(now.getFullYear(), now.getMonth() - lookbackMonths, 1);
+    
+    let totalCloses = 0;
+    let totalRevenue = 0;
+    const monthMap = new Map<string, { closes: number; revenue: number }>();
+    
+    bookings.forEach(booking => {
+      if (!booking?.dateBooked) return;
+      if (!trackableServiceIds.has(booking.serviceTypeId)) return;
+      
+      // Parse dateBooked (YYYY-MM-DD or YYYY-MM)
+      const [year, month] = booking.dateBooked.split('-');
+      const bookingDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      
+      // Check if within lookback period
+      if (cutoffDate && bookingDate < cutoffDate) return;
+      
+      const monthKey = `${year}-${month.padStart(2, '0')}`;
+      if (!monthMap.has(monthKey)) {
+        monthMap.set(monthKey, { closes: 0, revenue: 0 });
+      }
+      
+      const monthData = monthMap.get(monthKey)!;
+      monthData.closes += 1;
+      monthData.revenue += booking.bookedRevenue || 0;
+      totalCloses += 1;
+      totalRevenue += booking.bookedRevenue || 0;
+    });
+    
+    return { totalCloses, totalRevenue, monthMap, monthsCount: monthMap.size };
+  }, [bookings, trackableServiceIds, lookbackMonths]);
+
   // Calculate averages from historical data
   const averages = useMemo(() => {
     if (historicalData.length === 0) {
@@ -54,28 +96,42 @@ const Forecast: React.FC<ForecastProps> = ({
       };
     }
 
+    // Use funnelData for inquiries, calls (these are accurate)
+    // Use bookingsData for closes and revenue (more accurate than stored funnelData)
     return historicalData.reduce((acc, month) => ({
-      inquiries: acc.inquiries + month.inquiries,
-      callsBooked: acc.callsBooked + month.callsBooked,
-      callsTaken: acc.callsTaken + month.callsTaken,
-      closes: acc.closes + month.closes,
-      bookings: acc.bookings + month.bookings,
+      inquiries: acc.inquiries + (month.inquiries || 0),
+      callsBooked: acc.callsBooked + (month.callsBooked || 0),
+      callsTaken: acc.callsTaken + (month.callsTaken || 0),
+      closes: acc.closes + (month.closes || 0), // Will be replaced by bookingsData
+      bookings: acc.bookings + (month.bookings || 0), // Will be replaced by bookingsData
     }), { inquiries: 0, callsBooked: 0, callsTaken: 0, closes: 0, bookings: 0 });
-  }, [historicalData]);
+  }, [historicalData, bookingsData]);
 
   // Calculate monthly averages
   const monthlyAverages = useMemo(() => {
     const monthsWithData = historicalData.length;
-    if (monthsWithData === 0) return averages;
+    if (monthsWithData === 0) {
+      return {
+        inquiries: 0,
+        callsBooked: 0,
+        callsTaken: 0,
+        closes: 0,
+        bookings: 0,
+      };
+    }
+
+    // Use bookingsData months count for closes/revenue if available
+    const closesMonthsCount = bookingsData.monthsCount > 0 ? bookingsData.monthsCount : monthsWithData;
+    const revenueMonthsCount = bookingsData.monthsCount > 0 ? bookingsData.monthsCount : monthsWithData;
 
     return {
       inquiries: Math.round(averages.inquiries / monthsWithData),
       callsBooked: Math.round(averages.callsBooked / monthsWithData),
       callsTaken: Math.round(averages.callsTaken / monthsWithData),
-      closes: Math.round(averages.closes / monthsWithData),
-      bookings: Math.round(averages.bookings / monthsWithData),
+      closes: closesMonthsCount > 0 ? Math.round(bookingsData.totalCloses / closesMonthsCount) : 0,
+      bookings: revenueMonthsCount > 0 ? Math.round(bookingsData.totalRevenue / revenueMonthsCount) : 0,
     };
-  }, [averages, historicalData.length]);
+  }, [averages, historicalData.length, bookingsData]);
 
   // Generate forecast data
   const forecastData = useMemo(() => {
@@ -169,24 +225,26 @@ const Forecast: React.FC<ForecastProps> = ({
         />
       ) : (
         <div>
-          {/* Trends Header */}
-          <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ 
-              fontSize: '28px', 
-              fontWeight: '700', 
-              margin: '0 0 8px 0', 
-              color: '#1f2937' 
-            }}>
-              Forecast Trends
-            </h1>
-            <p style={{ 
-              color: '#6b7280', 
-              margin: 0, 
-              fontSize: '16px' 
-            }}>
-              Track future trends based on past performance
-            </p>
-          </div>
+          {/* Trends Header - only show if not in showTrendsOnly mode */}
+          {!showTrendsOnly && (
+            <div style={{ marginBottom: '32px' }}>
+              <h1 style={{ 
+                fontSize: '28px', 
+                fontWeight: '700', 
+                margin: '0 0 8px 0', 
+                color: '#1f2937' 
+              }}>
+                Forecast Trends
+              </h1>
+              <p style={{ 
+                color: '#6b7280', 
+                margin: 0, 
+                fontSize: '16px' 
+              }}>
+                Track future trends based on past performance
+              </p>
+            </div>
+          )}
 
       {/* Controls */}
       <div style={{ 
@@ -255,159 +313,49 @@ const Forecast: React.FC<ForecastProps> = ({
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards - single row with monthly averages as subtitles */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+        gridTemplateColumns: 'repeat(4, 1fr)', 
         gap: '20px', 
         marginBottom: '32px' 
       }}>
         <ForecastCard
-          title="Avg Monthly Inquiries"
-          value={monthlyAverages.inquiries}
+          title="Total Inquiries"
+          value={formatNumber(forecastData.reduce((sum, month) => sum + month.inquiries, 0))}
+          sub={`Avg: ${formatNumber(monthlyAverages.inquiries)}/month`}
           icon={<Users size={20} />}
           color="#3b82f6"
         />
         <ForecastCard
-          title="Avg Monthly Calls"
-          value={monthlyAverages.callsTaken}
+          title="Total Calls"
+          value={formatNumber(forecastData.reduce((sum, month) => sum + month.callsTaken, 0))}
+          sub={`Avg: ${formatNumber(monthlyAverages.callsTaken)}/month`}
           icon={<Phone size={20} />}
           color="#10b981"
         />
         <ForecastCard
-          title="Avg Monthly Closes"
-          value={monthlyAverages.closes}
+          title="Total Closes"
+          value={formatNumber(forecastData.reduce((sum, month) => sum + month.closes, 0))}
+          sub={`Avg: ${formatNumber(monthlyAverages.closes)}/month`}
           icon={<CheckCircle size={20} />}
           color="#f59e0b"
         />
         <ForecastCard
-          title="Avg Monthly Revenue"
-          value={toUSD(monthlyAverages.bookings)}
+          title="Total Revenue"
+          value={toUSD(forecastData.reduce((sum, month) => sum + month.bookings, 0))}
+          sub={`Avg: ${toUSD(monthlyAverages.bookings)}/month`}
           icon={<DollarSign size={20} />}
           color="#8b5cf6"
         />
       </div>
 
-      {/* Forecast Table */}
-      <div style={{ 
-        backgroundColor: 'white', 
-        borderRadius: '12px', 
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)', 
-        overflow: 'hidden' 
-      }}>
-        <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb' }}>
-          <h2 style={{ 
-            fontSize: '18px', 
-            fontWeight: '600', 
-            margin: 0, 
-            color: '#1f2937' 
-          }}>
-            {forecastMonths}-Month Forecast
-          </h2>
-          <p style={{ 
-            fontSize: '14px', 
-            color: '#6b7280', 
-            margin: '4px 0 0 0' 
-          }}>
-            Based on {lookbackMonths === -1 ? 'all available' : `past ${lookbackMonths} months`} data
-          </p>
-        </div>
-
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', fontSize: '14px' }}>
-            <thead style={{ backgroundColor: '#f5f5f5' }}>
-              <tr>
-                <Th>Month</Th>
-                <Th align="right">Year</Th>
-                <Th align="right">Inquiries</Th>
-                <Th align="right">Calls Booked</Th>
-                <Th align="right">Calls Taken</Th>
-                <Th align="right">Closes</Th>
-                <Th align="right">Revenue</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {forecastData.map((month, index) => (
-                <tr 
-                  key={`${month.year}-${month.month}`}
-                  style={{ 
-                    borderBottom: '1px solid #eee',
-                    backgroundColor: index % 2 === 0 ? '#fafafa' : '#f5f5f5'
-                  }}
-                >
-                  <Td style={{ fontWeight: '500' }}>{month.month}</Td>
-                  <Td align="right">{month.year}</Td>
-                  <Td align="right">{formatNumber(month.inquiries)}</Td>
-                  <Td align="right">{formatNumber(month.callsBooked)}</Td>
-                  <Td align="right">{formatNumber(month.callsTaken)}</Td>
-                  <Td align="right">{formatNumber(month.closes)}</Td>
-                  <Td align="right">{toUSD(month.bookings)}</Td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Forecast Summary */}
-      <div style={{ 
-        marginTop: '24px', 
-        padding: '20px', 
-        backgroundColor: '#f8fafc', 
-        borderRadius: '8px', 
-        border: '1px solid #e2e8f0' 
-      }}>
-        <h3 style={{ 
-          fontSize: '16px', 
-          fontWeight: '600', 
-          margin: '0 0 12px 0', 
-          color: '#1f2937' 
-        }}>
-          Forecast Summary
-        </h3>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
-          gap: '16px' 
-        }}>
-          <div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
-              Total Inquiries
-            </div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
-              {formatNumber(forecastData.reduce((sum, month) => sum + month.inquiries, 0))}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
-              Total Calls
-            </div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
-              {formatNumber(forecastData.reduce((sum, month) => sum + month.callsTaken, 0))}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
-              Total Closes
-            </div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
-              {formatNumber(forecastData.reduce((sum, month) => sum + month.closes, 0))}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
-              Total Revenue
-            </div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
-              {toUSD(forecastData.reduce((sum, month) => sum + month.bookings, 0))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-          <footer style={{ fontSize: '12px', color: '#666', marginTop: '32px' }}>
-            <p>Forecast is based on monthly averages from the selected base year. Adjust the base year and forecast period to see different projections.</p>
-          </footer>
+          {/* Footer - only show if not in showTrendsOnly mode */}
+          {!showTrendsOnly && (
+            <footer style={{ fontSize: '12px', color: '#666', marginTop: '32px' }}>
+              <p>Forecast is based on monthly averages from the selected base year. Adjust the base year and forecast period to see different projections.</p>
+            </footer>
+          )}
         </div>
       )}
     </div>
@@ -415,11 +363,12 @@ const Forecast: React.FC<ForecastProps> = ({
 };
 
 // UI Components
-function ForecastCard({ title, value, icon, color }: { 
+function ForecastCard({ title, value, icon, color, sub }: { 
   title: string; 
   value: string | number; 
   icon: React.ReactNode; 
   color: string; 
+  sub?: string;
 }) {
   return (
     <div style={{ 
@@ -454,6 +403,11 @@ function ForecastCard({ title, value, icon, color }: {
       <div style={{ fontSize: '24px', fontWeight: '600', color: color }}>
         {value}
       </div>
+      {sub && (
+        <div style={{ marginTop: '4px', fontSize: '12px', color: '#6b7280' }}>
+          {sub}
+        </div>
+      )}
     </div>
   );
 }

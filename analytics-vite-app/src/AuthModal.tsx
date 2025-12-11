@@ -14,7 +14,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('free');
+  // All new users now receive Pro by default
+  const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('pro');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -207,55 +208,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
             </div>
           </div>
 
-          {mode === 'signup' && (
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '12px', color: '#374151' }}>
-                Choose Plan
-              </label>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <label style={{ flex: 1, cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    name="tier"
-                    value="free"
-                    checked={selectedTier === 'free'}
-                    onChange={(e) => setSelectedTier(e.target.value as SubscriptionTier)}
-                    style={{ marginRight: '8px' }}
-                  />
-                  <div style={{
-                    padding: '16px',
-                    border: selectedTier === 'free' ? '2px solid #3b82f6' : '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    textAlign: 'center',
-                    backgroundColor: selectedTier === 'free' ? '#eff6ff' : 'white',
-                  }}>
-                    <div style={{ fontWeight: '600', marginBottom: '4px' }}>Free</div>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>Calculator + Funnel</div>
-                  </div>
-                </label>
-                <label style={{ flex: 1, cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    name="tier"
-                    value="pro"
-                    checked={selectedTier === 'pro'}
-                    onChange={(e) => setSelectedTier(e.target.value as SubscriptionTier)}
-                    style={{ marginRight: '8px' }}
-                  />
-                  <div style={{
-                    padding: '16px',
-                    border: selectedTier === 'pro' ? '2px solid #3b82f6' : '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    textAlign: 'center',
-                    backgroundColor: selectedTier === 'pro' ? '#eff6ff' : 'white',
-                  }}>
-                    <div style={{ fontWeight: '600', marginBottom: '4px' }}>Pro</div>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>All Features</div>
-                  </div>
-                </label>
-              </div>
-            </div>
-          )}
+          {/* Plan selection removed - all new users receive Pro access by default */}
 
           <button
             type="submit"

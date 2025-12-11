@@ -103,6 +103,47 @@ Will integrate with Supabase Authentication:
 - Session management
 - Row Level Security
 
+## 📊 Analytics (PostHog)
+
+The app uses [PostHog](https://posthog.com) for product analytics and user behavior tracking.
+
+### **Environment Variables**
+
+Add these to your `.env` file:
+
+```bash
+# PostHog Analytics (optional - app works without it)
+VITE_POSTHOG_KEY=your_posthog_project_api_key
+VITE_POSTHOG_HOST=https://us.i.posthog.com  # Optional, defaults to US instance
+```
+
+### **What's Tracked**
+
+- **Authentication Events**: Sign in, sign up, sign out
+- **Page Views**: Automatic tracking when navigating between pages
+- **User Identification**: Users are identified with their profile data
+- **Custom Events**: Available via `usePostHog()` hook
+
+### **Usage in Code**
+
+```typescript
+import { usePostHog, usePageView } from './hooks/usePostHog'
+
+// Track page views
+usePageView('funnel', { additional: 'data' })
+
+// Track custom events
+const { track } = usePostHog()
+track('button_clicked', { button_name: 'save' })
+```
+
+### **Privacy**
+
+- Respects Do Not Track (DNT) browser settings
+- Session recording disabled by default
+- Autocapture disabled in development
+- All tracking is opt-in via environment variables
+
 ## 📊 Data Model
 
 ### **Key Entities**

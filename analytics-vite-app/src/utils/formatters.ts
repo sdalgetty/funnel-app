@@ -81,21 +81,31 @@ export function formatROI(roi: number | null): string {
 
 /**
  * Format ISO date string to readable format
- * @param dateString - ISO date string
- * @returns Formatted date (e.g., "Jan 15, 2025")
+ * @param dateString - ISO date string (YYYY-MM-DD format)
+ * @returns Formatted date (e.g., "Jan 15, 2025" or "MM/DD/YYYY" for simple format)
  */
-export function formatDate(dateString: string): string {
-  if (!dateString) return 'N/A';
+export function formatDate(dateString: string, format: 'short' | 'long' = 'long'): string {
+  if (!dateString) return '—';
   
   try {
-    const date = new Date(dateString);
+    // Parse as local date to avoid timezone conversion issues
+    const [year, month, day] = dateString.split('-');
+    if (!year || !month || !day) return '—';
+    
+    if (format === 'short') {
+      // Simple MM/DD/YYYY format (used in BookingsAndBillings)
+      return `${month}/${day}/${year}`;
+    }
+    
+    // Long format: "Jan 15, 2025"
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     return date.toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'short', 
       day: 'numeric' 
     });
   } catch (error) {
-    return 'Invalid Date';
+    return '—';
   }
 }
 
@@ -209,5 +219,43 @@ export function calculateAverage(total: number, count: number): number {
     return 0;
   }
   return total / count;
+}
+
+// ============================================================================
+// PHONE NUMBER FORMATTING
+// ============================================================================
+
+/**
+ * Format phone number to universal format (XXX-XXX-XXXX)
+ * Handles various input formats:
+ * - 7039271516 -> 703-927-1516
+ * - 703-927-1516 -> 703-927-1516
+ * - (703) 927-1516 -> 703-927-1516
+ * - 703.927.1516 -> 703-927-1516
+ * - +1 703 927 1516 -> 703-927-1516
+ * @param phone - Phone number in any format
+ * @returns Formatted phone number (XXX-XXX-XXXX) or empty string if invalid
+ */
+export function formatPhoneNumber(phone: string | null | undefined): string {
+  if (!phone || typeof phone !== 'string') {
+    return '';
+  }
+
+  // Remove all non-digit characters
+  const digitsOnly = phone.replace(/\D/g, '');
+
+  // Handle US phone numbers (10 digits) or with country code (11 digits starting with 1)
+  let cleaned = digitsOnly;
+  if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
+    cleaned = digitsOnly.substring(1); // Remove leading 1
+  }
+
+  // Must be exactly 10 digits
+  if (cleaned.length !== 10) {
+    return phone; // Return original if not valid format
+  }
+
+  // Format as XXX-XXX-XXXX
+  return `${cleaned.substring(0, 3)}-${cleaned.substring(3, 6)}-${cleaned.substring(6)}`;
 }
 

@@ -8,6 +8,7 @@ export type FunnelData = {
   callsTaken: number;
   closes: number;
   bookings: number;
+  notes?: string;
   lastUpdated?: string;
 };
 

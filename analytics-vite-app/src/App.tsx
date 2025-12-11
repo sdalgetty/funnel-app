@@ -1,43 +1,87 @@
-import { useState, useEffect } from 'react'
-import BookingsAndBillingsPOC from './BookingsAndBillings'
-import Insights from './Insights'
-import Funnel from './Funnel'
-import Calculator from './Calculator'
-import Forecast from './Forecast'
-import UserProfile from './UserProfile'
-import Advertising from './Advertising'
-import AuthModal from './AuthModal'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import FeatureGate from './FeatureGate'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { useDataManager } from './hooks/useDataManager'
 import LoginForm from './components/LoginForm'
 import TestConnection from './components/TestConnection'
+import AcceptInvitation from './components/AcceptInvitation'
 import { UpgradePrompt } from './FeatureGate'
-import { User, Crown, LogOut, Settings } from 'lucide-react'
+import { User, Crown, LogOut, Settings, Shield } from 'lucide-react'
 import type { Page } from './types'
+import AdminDashboard from './components/AdminDashboard'
+import { usePageView } from './hooks/usePostHog'
 import './App.css'
 
+// Lazy load heavy components for code splitting
+const BookingsAndBillingsPOC = lazy(() => import('./BookingsAndBillings'))
+const Insights = lazy(() => import('./Insights'))
+const Funnel = lazy(() => import('./Funnel'))
+const Calculator = lazy(() => import('./Calculator'))
+const Forecast = lazy(() => import('./Forecast'))
+const UserProfile = lazy(() => import('./UserProfile'))
+const Advertising = lazy(() => import('./Advertising'))
+const AuthModal = lazy(() => import('./AuthModal'))
+
 function AppContent() {
-  console.log('AppContent component loaded!');
-  
-  const { user, signOut, loading, features } = useAuth()
+  const { user, signOut, loading, features, viewingAsGuest, sharedAccountOwnerId, switchToOwnAccount, isViewOnly, effectiveUserId, isAdmin, impersonatingUserId, impersonatingUser, stopImpersonation } = useAuth()
   const dataManager = useDataManager()
+  const [ownerCompanyName, setOwnerCompanyName] = useState<string | null>(null)
   
-  // Make data manager available globally for components that need it
+  // Load owner's company name when viewing as guest
   useEffect(() => {
-    (window as any).dataManager = dataManager;
-    console.log('Data manager set globally (v2):', dataManager);
-  }, [dataManager]);
+    const loadOwnerInfo = async () => {
+      if (viewingAsGuest && sharedAccountOwnerId) {
+        try {
+          const { supabase } = await import('./lib/supabase')
+          const { data, error } = await supabase
+            .from('user_profiles')
+            .select('company_name, full_name, email')
+            .eq('id', sharedAccountOwnerId)
+            .maybeSingle()
+          
+          if (!error && data) {
+            setOwnerCompanyName(data.company_name || data.full_name || data.email || 'Unknown Account')
+          }
+        } catch (error) {
+          console.error('Error loading owner info:', error)
+        }
+      } else {
+        setOwnerCompanyName(null)
+      }
+    }
+    loadOwnerInfo()
+  }, [viewingAsGuest, sharedAccountOwnerId])
   
-  console.log('App auth state:', { 
-    user: user ? { id: user.id, email: user.email, subscriptionTier: user.subscriptionTier } : null, 
-    loading, 
-    features 
-  });
+  // Check if we're on the invitation acceptance page
+  const urlParams = new URLSearchParams(window.location.search)
+  const isAcceptInvitationPage = urlParams.has('token') && window.location.pathname === '/accept-invite'
+  
+  // Note: Removed global window.dataManager assignment - use React Context or props instead
+  // Components should access dataManager via props or a DataManagerContext if needed
   
   const [currentPage, setCurrentPage] = useState<Page>('insights')
+  
+  // Track page views with PostHog
+  usePageView(currentPage, {
+    user_id: user?.id,
+    is_admin: isAdmin,
+    viewing_as_guest: viewingAsGuest,
+  })
+  
+  // Check if we're on admin route
+  useEffect(() => {
+    if (window.location.pathname === '/admin' && isAdmin) {
+      setCurrentPage('admin')
+    }
+  }, [isAdmin])
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  // Navigation state for opening modals/actions in other tabs
+  const [navigationAction, setNavigationAction] = useState<{
+    page: Page
+    action?: string
+    month?: { year: number; month: number }
+  } | null>(null)
 
   // Device detection
   useEffect(() => {
@@ -50,6 +94,50 @@ function AppContent() {
     
     return () => window.removeEventListener('resize', checkDevice)
   }, [])
+
+  // Handle navigation events from WelcomeAndTasks component
+  useEffect(() => {
+    const handleNavigate = (event: CustomEvent) => {
+      const { action, month } = event.detail
+      
+      switch (action) {
+        case 'add-booking':
+          setCurrentPage('bookings')
+          // Store action to open modal
+          setNavigationAction({ page: 'bookings', action: 'add-booking' })
+          // Clear after a delay to allow component to mount and process
+          setTimeout(() => setNavigationAction(null), 500)
+          break
+        case 'edit-funnel':
+          setCurrentPage('funnel')
+          setNavigationAction({ page: 'funnel', action: 'edit-month', month })
+          setTimeout(() => setNavigationAction(null), 100)
+          break
+        case 'view-sales':
+          setCurrentPage('bookings')
+          setNavigationAction({ page: 'bookings', action: 'filter-month', month })
+          setTimeout(() => setNavigationAction(null), 100)
+          break
+        case 'edit-advertising':
+          setCurrentPage('advertising')
+          setNavigationAction({ page: 'advertising', action: 'edit-month', month })
+          setTimeout(() => setNavigationAction(null), 100)
+          break
+        case 'view-forecast':
+          setCurrentPage('forecast')
+          break
+      }
+    }
+
+    window.addEventListener('navigateToPage', handleNavigate as EventListener)
+    return () => window.removeEventListener('navigateToPage', handleNavigate as EventListener)
+  }, [])
+
+  // Show invitation acceptance page if on /accept-invite route
+  const isOnAcceptInvitePath = window.location.pathname === '/accept-invite'
+  if (isOnAcceptInvitePath) {
+    return <AcceptInvitation />
+  }
 
   // Show loading spinner while checking authentication
   if (loading) {
@@ -68,6 +156,7 @@ function AppContent() {
 
   // Show login form if not authenticated
   if (!user) {
+    // Show login form (token will be handled by LoginForm and AuthContext)
     return (
       <div>
         <LoginForm />
@@ -99,6 +188,77 @@ function AppContent() {
         </div>
       )}
 
+      {/* Impersonation Banner (Admin Mode) */}
+      {impersonatingUserId && (
+        <div style={{
+          backgroundColor: '#dbeafe',
+          borderBottom: '1px solid #3b82f6',
+          padding: '12px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: isMobile ? '48px' : '0',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Shield size={18} style={{ color: '#1e40af' }} />
+            <span style={{ fontSize: '14px', fontWeight: '500', color: '#1e40af' }}>
+              🔧 <strong>Admin Mode:</strong> Impersonating <strong>{impersonatingUser?.full_name || impersonatingUser?.email || 'User'}</strong>
+            </span>
+          </div>
+          <button
+            onClick={stopImpersonation}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: 'white',
+              border: '1px solid #3b82f6',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: '500',
+              color: '#1e40af',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Return to Admin
+          </button>
+        </div>
+      )}
+
+      {/* View-Only Mode Banner */}
+      {viewingAsGuest && !impersonatingUserId && (
+        <div style={{
+          backgroundColor: '#fef3c7',
+          borderBottom: '1px solid #f59e0b',
+          padding: '12px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: isMobile ? '48px' : '0',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '14px', fontWeight: '500', color: '#92400e' }}>
+              👁️ You're viewing <strong>{ownerCompanyName || 'this account'}</strong> in read-only mode
+            </span>
+          </div>
+          <button
+            onClick={switchToOwnAccount}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: 'white',
+              border: '1px solid #f59e0b',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: '500',
+              color: '#92400e',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Switch to My Account
+          </button>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav style={{ 
         backgroundColor: 'white', 
@@ -107,7 +267,7 @@ function AppContent() {
         display: 'flex',
         gap: '16px',
         alignItems: 'center',
-        marginTop: isMobile ? '48px' : '0',
+        marginTop: (viewingAsGuest || impersonatingUserId) ? '0' : (isMobile ? '48px' : '0'),
         width: '100%',
         maxWidth: '100vw',
         boxSizing: 'border-box'
@@ -150,20 +310,20 @@ function AppContent() {
             Funnel
           </button>
           <button
-            onClick={() => setCurrentPage('calculator')}
+            onClick={() => setCurrentPage('forecast')}
             style={{
               padding: '8px 16px',
               borderRadius: '6px',
               border: 'none',
-              backgroundColor: currentPage === 'calculator' ? '#3b82f6' : '#f3f4f6',
-              color: currentPage === 'calculator' ? 'white' : '#374151',
+              backgroundColor: currentPage === 'forecast' ? '#3b82f6' : '#f3f4f6',
+              color: currentPage === 'forecast' ? 'white' : '#374151',
               fontSize: '14px',
               fontWeight: '500',
               cursor: 'pointer',
               transition: 'all 0.2s'
             }}
           >
-            Calculator
+            Forecast
           </button>
           {features.advertising && (
             <button
@@ -184,22 +344,6 @@ function AppContent() {
             </button>
           )}
           <button
-            onClick={() => setCurrentPage('forecast')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              backgroundColor: currentPage === 'forecast' ? '#3b82f6' : '#f3f4f6',
-              color: currentPage === 'forecast' ? 'white' : '#374151',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            Forecast
-          </button>
-          <button
             onClick={() => setCurrentPage('bookings')}
             style={{
               padding: '8px 16px',
@@ -215,6 +359,31 @@ function AppContent() {
           >
             Sales
           </button>
+          {isAdmin && (
+            <button
+              onClick={() => {
+                setCurrentPage('admin')
+                window.history.pushState({}, '', '/admin')
+              }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: currentPage === 'admin' ? '#3b82f6' : '#f3f4f6',
+                color: currentPage === 'admin' ? 'white' : '#374151',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <Shield size={16} />
+              Admin
+            </button>
+          )}
           <button
             onClick={() => setCurrentPage('profile')}
             style={{
@@ -248,13 +417,13 @@ function AppContent() {
                   gap: '4px',
                   padding: '4px 8px',
                   borderRadius: '4px',
-                  backgroundColor: user.subscriptionTier === 'pro' ? '#fef3c7' : '#f3f4f6',
+                  backgroundColor: '#fef3c7',
                   fontSize: '12px',
                   fontWeight: '500',
-                  color: user.subscriptionTier === 'pro' ? '#92400e' : '#6b7280'
+                  color: '#92400e'
                 }}>
                   <Crown size={12} />
-                  {user.subscriptionTier === 'pro' ? 'Pro' : 'Free'}
+                  Pro
                 </div>
                 <span style={{ fontSize: '14px', color: '#374151' }}>
                   {user.name}
@@ -307,55 +476,57 @@ function AppContent() {
 
       {/* Page Content */}
       <div style={{ padding: '0' }}>
-        {currentPage === 'insights' && (
-          <Insights 
+        <Suspense fallback={<div style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>Loading...</div>}>
+          {currentPage === 'insights' && (
+            <Insights 
+              dataManager={dataManager}
+            />
+          )}
+          {currentPage === 'funnel' && <Funnel 
+            funnelData={dataManager.funnelData} 
             dataManager={dataManager}
-          />
-        )}
-        {currentPage === 'funnel' && <Funnel 
-          funnelData={dataManager.funnelData} 
-          dataManager={dataManager}
-          salesData={dataManager.bookings.filter(booking => {
-            const serviceType = dataManager.serviceTypes.find(st => st.id === booking.serviceTypeId);
-            return serviceType?.tracksInFunnel === true;
-          })} 
-          paymentsData={dataManager.payments} 
-        />}
-        {currentPage === 'calculator' && (
-          <FeatureGate feature="sales">
-            <Calculator />
-          </FeatureGate>
-        )}
-        {currentPage === 'advertising' && (
-          <FeatureGate feature="advertising">
-            <Advertising 
-              bookings={dataManager.bookings} 
-              leadSources={dataManager.leadSources} 
-              funnelData={dataManager.funnelData}
-              dataManager={dataManager}
-            />
-          </FeatureGate>
-        )}
-        {currentPage === 'forecast' && (
-          <FeatureGate feature="forecast">
-            <Forecast 
-              funnelData={dataManager.funnelData} 
-              serviceTypes={dataManager.serviceTypes} 
-              setServiceTypes={() => {}} // Handled by data manager
-              bookings={dataManager.bookings} 
-              payments={dataManager.payments}
-              showModelingOnly
-            />
-          </FeatureGate>
-        )}
-        {currentPage === 'bookings' && (
-          <FeatureGate feature="sales">
-            <BookingsAndBillingsPOC 
-              dataManager={dataManager}
-            />
-          </FeatureGate>
-        )}
-        {currentPage === 'profile' && <UserProfile />}
+            salesData={dataManager.bookings}
+            paymentsData={dataManager.payments} 
+            serviceTypes={dataManager.serviceTypes}
+            navigationAction={navigationAction}
+            isViewOnly={isViewOnly}
+          />}
+          {currentPage === 'forecast' && (
+            <FeatureGate feature="forecast">
+              <Forecast 
+                funnelData={dataManager.funnelData} 
+                serviceTypes={dataManager.serviceTypes} 
+                setServiceTypes={() => {}} // Handled by data manager
+                bookings={dataManager.bookings} 
+                payments={dataManager.payments}
+                showModelingOnly
+              />
+            </FeatureGate>
+          )}
+          {currentPage === 'advertising' && (
+            <FeatureGate feature="advertising">
+              <Advertising 
+                bookings={dataManager.bookings} 
+                leadSources={dataManager.leadSources} 
+                funnelData={dataManager.funnelData}
+                dataManager={dataManager}
+                navigationAction={navigationAction}
+                isViewOnly={isViewOnly}
+              />
+            </FeatureGate>
+          )}
+          {currentPage === 'bookings' && (
+            <FeatureGate feature="sales">
+              <BookingsAndBillingsPOC 
+                dataManager={dataManager}
+                navigationAction={navigationAction}
+                isViewOnly={isViewOnly}
+              />
+            </FeatureGate>
+          )}
+          {currentPage === 'admin' && <AdminDashboard />}
+          {currentPage === 'profile' && <UserProfile />}
+        </Suspense>
       </div>
 
       {/* Auth Modal */}

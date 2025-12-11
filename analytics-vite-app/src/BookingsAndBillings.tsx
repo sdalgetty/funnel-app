@@ -1,8 +1,11 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Plus, Trash2, CalendarDays, DollarSign, Download, Edit, X, Edit3, Check } from "lucide-react";
+import { Plus, Trash2, CalendarDays, DollarSign, Download, Edit, X, Edit3, Check, Upload } from "lucide-react";
 import type { ServiceType, LeadSource, Booking, Payment } from './types';
 import { UnifiedDataService } from './services/unifiedDataService';
 import { useAuth } from './contexts/AuthContext';
+import { toUSD, formatDate } from './utils/formatters';
+import CSVImportModal from './components/CSVImportModal';
+import type { ImportResult } from './services/honeybookImporter';
 
 // Empty data for new users - they should start fresh
 const defaultServiceTypes: ServiceType[] = [];
@@ -17,23 +20,18 @@ const mockBookings: Booking[] = [];
 const mockPayments: Payment[] = [];
 
 // Helpers
-const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 
-// Helper to format dates without timezone issues
-const formatDate = (dateString: string) => {
-  if (!dateString) return '—';
-  // Parse the date string as local date to avoid timezone conversion issues
-  const [year, month, day] = dateString.split('-');
-  const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-  return localDate.toLocaleDateString();
-};
+// Format date helper (using short format for BookingsAndBillings)
+const formatBookingDate = (dateString: string) => formatDate(dateString, 'short');
 
 interface BookingsAndBillingsProps {
   dataManager?: any;
+  navigationAction?: { page: string; action?: string; month?: { year: number; month: number } } | null;
+  isViewOnly?: boolean;
 }
 
-export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBillingsProps) {
+export default function BookingsAndBillingsPOC({ dataManager, navigationAction, isViewOnly = false }: BookingsAndBillingsProps) {
   const { user } = useAuth();
   
   // Use data manager if available, otherwise fallback to local state
@@ -43,6 +41,32 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
   const leadSources = dataManager?.leadSources || defaultLeadSources;
   const loading = dataManager?.loading || false;
   const [showAddBooking, setShowAddBooking] = useState(false);
+  const [showCSVImport, setShowCSVImport] = useState(false);
+  
+  // Helper to get disabled button styles
+  const getDisabledButtonStyle = (baseStyle: any) => {
+    if (!isViewOnly) return baseStyle;
+    return {
+      ...baseStyle,
+      opacity: 0.5,
+      cursor: 'not-allowed',
+      backgroundColor: baseStyle.backgroundColor || '#e5e7eb',
+      color: baseStyle.color || '#9ca3af',
+      borderColor: baseStyle.borderColor || '#d1d5db'
+    };
+  };
+
+  // Handle navigation action to open add booking modal or filter by month
+  useEffect(() => {
+    if (navigationAction?.action === 'add-booking') {
+      setShowAddBooking(true)
+    } else if (navigationAction?.action === 'filter-month' && navigationAction.month) {
+      // Filter bookings by month - this would need to be implemented in the component
+      // For now, we'll just navigate to the page and the user can filter manually
+      // Note: Month filtering can be implemented when needed
+      // See: https://github.com/your-org/funnel-app/issues/XXX (create issue when implementing)
+    }
+  }, [navigationAction])
   const [showServiceTypes, setShowServiceTypes] = useState(false);
   const [showLeadSources, setShowLeadSources] = useState(false);
   const [showLeadSourceDropdown, setShowLeadSourceDropdown] = useState(false);
@@ -62,6 +86,10 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
   });
   const [sortBy, setSortBy] = useState<keyof Booking>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
 
   // Data is now managed by the parent component's data manager
 
@@ -110,6 +138,21 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
 
     return filtered;
   }, [bookings, serviceTypes, filters, sortBy, sortOrder]);
+
+  // Paginated bookings (only show current page)
+  const paginatedBookings = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return filteredAndSortedBookings.slice(start, end);
+  }, [filteredAndSortedBookings, currentPage, itemsPerPage]);
+
+  // Calculate total pages
+  const totalPages = Math.ceil(filteredAndSortedBookings.length / itemsPerPage);
+
+  // Reset to page 1 when filters or sorting change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters.serviceTypes, filters.leadSources, filters.search, sortBy, sortOrder]);
 
   // Summary metrics
   const totals = useMemo(() => {
@@ -170,6 +213,108 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
       } catch (error) {
         console.error('Error creating payment:', error);
       }
+    }
+  };
+
+  // Handle CSV import
+  const handleCSVImport = async (result: ImportResult) => {
+    if (!user?.id) {
+      console.error('User not logged in');
+      return;
+    }
+
+    try {
+      // Import service types first
+      for (const serviceType of result.serviceTypes) {
+        if (!serviceTypes.find(st => st.id === serviceType.id)) {
+          if (dataManager) {
+            await dataManager.createServiceType(serviceType.name, serviceType.description);
+          } else {
+            await UnifiedDataService.createServiceType(user.id, serviceType.name, serviceType.description);
+          }
+        }
+      }
+
+      // Import lead sources
+      for (const leadSource of result.leadSources) {
+        if (!leadSources.find(ls => ls.id === leadSource.id)) {
+          if (dataManager) {
+            await dataManager.createLeadSource(leadSource.name, leadSource.description);
+          } else {
+            await UnifiedDataService.createLeadSource(user.id, leadSource.name, leadSource.description);
+          }
+        }
+      }
+
+      // Import bookings
+      for (const booking of result.bookings) {
+        if (dataManager) {
+          await dataManager.createBooking(booking);
+        } else {
+          await UnifiedDataService.createBooking(user.id, booking);
+        }
+      }
+
+      // Import funnel data (merge with existing data to preserve inquiries from Leads report)
+      if (dataManager && dataManager.funnelData) {
+        // Merge with existing funnel data
+        for (const newFunnelData of result.funnelData) {
+          // Find existing funnel data for this year/month
+          const existing = dataManager.funnelData.find(
+            f => f.year === newFunnelData.year && f.month === newFunnelData.month
+          );
+          
+          if (existing) {
+            // Merge: preserve inquiries (from Leads report), update closes/bookings (from Booked Client report)
+            const merged: typeof newFunnelData = {
+              ...existing,
+              closes: newFunnelData.closes > 0 ? newFunnelData.closes : existing.closes,
+              bookings: newFunnelData.bookings > 0 ? newFunnelData.bookings : existing.bookings,
+              // Only update inquiries if the new data has inquiries (from Leads report)
+              inquiries: newFunnelData.inquiries > 0 ? newFunnelData.inquiries : existing.inquiries,
+            };
+            await dataManager.saveFunnelData(merged);
+          } else {
+            // No existing data, save as-is
+            await dataManager.saveFunnelData(newFunnelData);
+          }
+        }
+      } else if (user?.id) {
+        // Load existing funnel data to merge
+        const existingFunnelData = await UnifiedDataService.getAllFunnelData(user.id);
+        
+        for (const newFunnelData of result.funnelData) {
+          // Find existing funnel data for this year/month
+          const existing = existingFunnelData.find(
+            f => f.year === newFunnelData.year && f.month === newFunnelData.month
+          );
+          
+          if (existing) {
+            // Merge: preserve inquiries (from Leads report), update closes/bookings (from Booked Client report)
+            const merged: typeof newFunnelData = {
+              ...existing,
+              closes: newFunnelData.closes > 0 ? newFunnelData.closes : existing.closes,
+              bookings: newFunnelData.bookings > 0 ? newFunnelData.bookings : existing.bookings,
+              // Only update inquiries if the new data has inquiries (from Leads report)
+              inquiries: newFunnelData.inquiries > 0 ? newFunnelData.inquiries : existing.inquiries,
+            };
+            await UnifiedDataService.saveFunnelData(user.id, merged);
+          } else {
+            // No existing data, save as-is
+            await UnifiedDataService.saveFunnelData(user.id, newFunnelData);
+          }
+        }
+      }
+
+      // Reload data if using data manager
+      if (dataManager) {
+        await dataManager.getAllFunnelData();
+      }
+
+      console.log('CSV import completed successfully');
+    } catch (error) {
+      console.error('Error importing CSV data:', error);
+      throw error;
     }
   };
 
@@ -527,8 +672,9 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
       {/* Action buttons */}
       <section style={{ marginBottom: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
         <button
-          onClick={() => setShowAddBooking(true)}
-          style={{
+          onClick={() => !isViewOnly && setShowAddBooking(true)}
+          disabled={isViewOnly}
+          style={getDisabledButtonStyle({
             background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
             color: 'white',
             border: 'none',
@@ -542,22 +688,63 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
             gap: '8px',
             boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
             transition: 'all 0.2s'
-          }}
+          })}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.boxShadow = '0 4px 6px rgba(37, 99, 235, 0.4)';
+            if (!isViewOnly) {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 6px rgba(37, 99, 235, 0.4)';
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 2px 4px rgba(37, 99, 235, 0.3)';
+            if (!isViewOnly) {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 4px rgba(37, 99, 235, 0.3)';
+            }
           }}
         >
           <Plus size={16} />
           Add New Booking
         </button>
+        {user?.crm === 'honeybook' && (
+          <button
+            onClick={() => !isViewOnly && setShowCSVImport(true)}
+            disabled={isViewOnly}
+            style={getDisabledButtonStyle({
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 18px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)',
+              transition: 'all 0.2s'
+            })}
+          onMouseEnter={(e) => {
+            if (!isViewOnly) {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 6px rgba(16, 185, 129, 0.4)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isViewOnly) {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+            }
+            }}
+          >
+            <Upload size={16} />
+            Import from CSV
+          </button>
+        )}
         <button
-          onClick={() => setShowServiceTypes(true)}
-          style={{
+          onClick={() => !isViewOnly && setShowServiceTypes(true)}
+          disabled={isViewOnly}
+          style={getDisabledButtonStyle({
             backgroundColor: 'white',
             color: '#374151',
             border: '2px solid #d1d5db',
@@ -570,14 +757,18 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
             alignItems: 'center',
             gap: '8px',
             transition: 'all 0.2s'
-          }}
+          })}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#9ca3af';
-            e.currentTarget.style.backgroundColor = '#f9fafb';
+            if (!isViewOnly) {
+              e.currentTarget.style.borderColor = '#9ca3af';
+              e.currentTarget.style.backgroundColor = '#f9fafb';
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = '#d1d5db';
-            e.currentTarget.style.backgroundColor = 'white';
+            if (!isViewOnly) {
+              e.currentTarget.style.borderColor = '#d1d5db';
+              e.currentTarget.style.backgroundColor = 'white';
+            }
           }}
         >
           <Edit size={16} />
@@ -585,8 +776,9 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
         </button>
         
         <button
-          onClick={() => setShowLeadSources(true)}
-          style={{
+          onClick={() => !isViewOnly && setShowLeadSources(true)}
+          disabled={isViewOnly}
+          style={getDisabledButtonStyle({
             backgroundColor: 'white',
             color: '#374151',
             border: '2px solid #d1d5db',
@@ -599,7 +791,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
             alignItems: 'center',
             gap: '8px',
             transition: 'all 0.2s'
-          }}
+          })}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = '#9ca3af';
             e.currentTarget.style.backgroundColor = '#f9fafb';
@@ -641,7 +833,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
               }}
             />
           </div>
-
+          
           {/* Lead Source Filter */}
           
           
@@ -837,7 +1029,7 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
               </div>
             )}
           </div>
-
+          
           <div style={{ minWidth: '200px' }}>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
               Sort by
@@ -889,6 +1081,20 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
           onAdd={addBooking}
           onClose={() => setShowAddBooking(false)}
           dataManager={dataManager}
+          isViewOnly={isViewOnly}
+        />
+      )}
+
+      {/* CSV Import Modal */}
+      {showCSVImport && user && (
+        <CSVImportModal
+          isOpen={showCSVImport}
+          onClose={() => setShowCSVImport(false)}
+          onImport={handleCSVImport}
+          existingServiceTypes={serviceTypes}
+          existingLeadSources={leadSources}
+          userId={user.id}
+          pageType="sales"
         />
       )}
 
@@ -961,7 +1167,16 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
               </tr>
             </thead>
             <tbody>
-              {filteredAndSortedBookings.map((booking, index) => {
+              {paginatedBookings.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                    {filteredAndSortedBookings.length === 0 
+                      ? 'No bookings found. Click "Add New Booking" to get started.'
+                      : 'No bookings match your current filters.'}
+                  </td>
+                </tr>
+              ) : (
+                paginatedBookings.map((booking, index) => {
                 const serviceType = serviceTypes.find(st => st.id === booking.serviceTypeId);
                 const leadSource = leadSources.find(ls => ls.id === booking.leadSourceId);
                 const bookingPayments = payments.filter(p => p.bookingId === booking.id);
@@ -998,32 +1213,33 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
                         </span>
                       )}
                     </Td>
-                    <Td>{formatDate(booking.dateInquired)}</Td>
-                    <Td>{formatDate(booking.dateBooked)}</Td>
-                    <Td>{formatDate(booking.projectDate)}</Td>
+                    <Td>{formatBookingDate(booking.dateInquired)}</Td>
+                    <Td>{formatBookingDate(booking.dateBooked)}</Td>
+                    <Td>{formatBookingDate(booking.projectDate)}</Td>
                     <Td align="right">
                       <div style={{ fontWeight: '500' }}>{toUSD(booking.bookedRevenue)}</div>
                     </Td>
                     <Td>
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          style={{
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            padding: '6px 12px',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                          onClick={() => setEditingBooking(booking)}
-                        >
-                          <Edit size={12} />
-                          Edit
-                        </button>
+                      <button
+                        disabled={isViewOnly}
+                        style={getDisabledButtonStyle({
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        })}
+                        onClick={() => !isViewOnly && setEditingBooking(booking)}
+                      >
+                        <Edit size={12} />
+                        Edit
+                      </button>
                         <button
                           style={{
                             backgroundColor: '#ef4444',
@@ -1037,7 +1253,8 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
                             alignItems: 'center',
                             gap: '4px'
                           }}
-                          onClick={() => deleteBooking(booking.id)}
+                          onClick={() => !isViewOnly && deleteBooking(booking.id)}
+                          disabled={isViewOnly}
                         >
                           <Trash2 size={12} />
                           Delete
@@ -1046,10 +1263,72 @@ export default function BookingsAndBillingsPOC({ dataManager }: BookingsAndBilli
                     </Td>
                   </tr>
                 );
-              })}
+              })
+              )}
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {filteredAndSortedBookings.length > itemsPerPage && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '16px 24px',
+            borderTop: '1px solid #e5e7eb',
+            backgroundColor: '#f9fafb'
+          }}>
+            <div style={{ fontSize: '14px', color: '#6b7280' }}>
+              Showing {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedBookings.length)} of {filteredAndSortedBookings.length} bookings
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  backgroundColor: currentPage === 1 ? '#f3f4f6' : 'white',
+                  color: currentPage === 1 ? '#9ca3af' : '#374151',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Previous
+              </button>
+              <div style={{ 
+                fontSize: '14px', 
+                color: '#374151',
+                padding: '0 12px',
+                minWidth: '100px',
+                textAlign: 'center'
+              }}>
+                Page {currentPage} of {totalPages}
+              </div>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  backgroundColor: currentPage === totalPages ? '#f3f4f6' : 'white',
+                  color: currentPage === totalPages ? '#9ca3af' : '#374151',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Delete Service Type Confirmation Modal */}
@@ -1340,12 +1619,13 @@ function Td({ children, align = 'left' }: { children: React.ReactNode; align?: '
 }
 
 // Add Booking Modal - Completely Clean (v3)
-function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManager }: {
+function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManager, isViewOnly = false }: {
   serviceTypes: ServiceType[];
   leadSources: LeadSource[];
   onAdd: (booking: Omit<Booking, 'id' | 'createdAt'>) => Promise<Booking | null> | void;
   onClose: () => void;
   dataManager?: any;
+  isViewOnly?: boolean;
 }) {
   const [formData, setFormData] = useState({
     projectName: '',
@@ -2085,11 +2365,10 @@ function ServiceTypesModal({ serviceTypes, onAdd, onRemove, onUpdate, onToggleFu
           textAlign: 'left'
         }}>
           <div style={{ marginBottom: '8px' }}>
-            <strong>Funnel Tracking:</strong> Service types marked as "Track in Funnel" will be included in your funnel analytics for Closes, Bookings and Cash. 
-            Uncheck for any Sales that you do not want to track in your Sales Funnel.
+            <strong>Track in Funnel:</strong> Service Types marked as "Track in Funnel" will be included in your Funnel calculation for Closes.
           </div>
           <div>
-            <strong>Deletion:</strong> Deleting a service type will remove it from any existing bookings that use it. 
+            <strong>Delete:</strong> Deleting a service type will remove it from any existing bookings that use it. 
             The booking data will be preserved, but the service type association will be lost.
           </div>
         </div>
@@ -2356,8 +2635,7 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onClose }: {
           textAlign: 'left'
         }}>
           <div>
-            <strong>Lead Sources:</strong> Lead sources help you track where your bookings come from. 
-            You can add, edit, and delete lead sources. Changes will reset when you reload the app.
+            <strong>Lead Sources:</strong> Lead sources help you track where your bookings come from. They can also be used to track Advertising ROI.
           </div>
         </div>
 

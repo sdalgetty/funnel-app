@@ -4,7 +4,6 @@ import type {
   LeadSource, 
   Booking, 
   Payment,
-  AdSource,
   AdCampaign
 } from '../types';
 import { 
@@ -13,7 +12,6 @@ import {
   mockLeadSources, 
   mockBookings, 
   mockPayments,
-  mockAdSources,
   mockAdCampaigns
 } from '../mockData';
 
@@ -25,6 +23,16 @@ export class MockDataService {
   static async getFunnelData(userId: string, year: number): Promise<FunnelData[]> {
     console.log('Using mock funnel data for development');
     return mockFunnelData.filter(data => data.year === year);
+  }
+
+  static async getAllFunnelData(userId: string): Promise<FunnelData[]> {
+    console.log('Using mock funnel data for development (all years)');
+    return [...mockFunnelData].sort((a, b) => {
+      if (a.year === b.year) {
+        return a.month - b.month;
+      }
+      return a.year - b.year;
+    });
   }
 
   static async saveFunnelData(userId: string, funnelData: FunnelData): Promise<boolean> {
@@ -42,13 +50,13 @@ export class MockDataService {
     return [...mockServiceTypes];
   }
 
-  static async createServiceType(userId: string, name: string): Promise<ServiceType | null> {
-    console.log('Mock create service type:', name);
+  static async createServiceType(userId: string, name: string, tracksInFunnel: boolean = false): Promise<ServiceType | null> {
+    console.log('Mock create service type:', name, 'tracksInFunnel:', tracksInFunnel);
     const newServiceType: ServiceType = {
       id: `mock_${Date.now()}`,
       name,
       isCustom: true,
-      tracksInFunnel: false
+      tracksInFunnel
     };
     return newServiceType;
   }
@@ -153,38 +161,7 @@ export class MockDataService {
   }
 
   // ============================================================================
-  // AD SOURCES
-  // ============================================================================
-  
-  static async getAdSources(userId: string): Promise<AdSource[]> {
-    console.log('Using mock ad sources for development');
-    return [...mockAdSources];
-  }
-
-  static async createAdSource(userId: string, adSourceData: Omit<AdSource, 'id' | 'createdAt'>): Promise<AdSource | null> {
-    console.log('Mock create ad source:', adSourceData);
-    const newAdSource: AdSource = {
-      id: `mock_ad_${Date.now()}`,
-      name: adSourceData.name,
-      leadSourceId: adSourceData.leadSourceId,
-      isActive: adSourceData.isActive,
-      createdAt: new Date().toISOString()
-    };
-    return newAdSource;
-  }
-
-  static async updateAdSource(userId: string, id: string, updates: Partial<AdSource>): Promise<boolean> {
-    console.log('Mock update ad source:', id, updates);
-    return true;
-  }
-
-  static async deleteAdSource(userId: string, id: string): Promise<boolean> {
-    console.log('Mock delete ad source:', id);
-    return true;
-  }
-
-  // ============================================================================
-  // AD CAMPAIGNS
+  // AD CAMPAIGNS (AdSource removed - campaigns now link directly to LeadSource)
   // ============================================================================
   
   static async getAdCampaigns(userId: string): Promise<AdCampaign[]> {

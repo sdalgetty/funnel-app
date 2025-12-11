@@ -47,6 +47,10 @@ export interface FunnelData {
   bookingsYtd: number;
   bookingsGoal: number;
   cash: number; // in cents
+  notes?: string | null;
+  closesManual?: boolean; // If true, closes is manually entered
+  bookingsManual?: boolean; // If true, bookings is manually entered
+  cashManual?: boolean; // If true, cash is manually entered
   lastUpdated?: string;
 }
 
@@ -115,23 +119,19 @@ export interface Payment {
 // ADVERTISING TYPES
 // ============================================================================
 
-export interface AdSource {
-  id: string;
-  name: string;
-  leadSourceId: string; // Reference to LeadSource for ROI tracking
-  isActive: boolean;
-  createdAt: string;
-}
+// AdSource removed - ad campaigns now link directly to LeadSource
+// This simplifies the structure since most users only have one campaign per lead source
 
 export interface AdCampaign {
   id: string;
-  adSourceId: string;
+  leadSourceId: string; // Direct reference to LeadSource
   year: number;
   month: number;
   monthYear: string;
   adSpendCents: number; // in cents
   spend: number; // in cents
   leadsGenerated: number;
+  notes?: string; // Notes about what changed month to month
   createdAt: string;
   lastUpdated?: string;
 }
@@ -161,6 +161,8 @@ export interface ForecastModel {
 // ============================================================================
 // FEATURE DEFINITIONS
 // ============================================================================
+// NOTE: All new users now receive Pro features by default.
+// This structure is kept for potential future use if we need to re-enable tiered access.
 
 export const SUBSCRIPTION_FEATURES: Record<SubscriptionTier, SubscriptionFeatures> = {
   free: {
@@ -222,7 +224,7 @@ export const MOCK_USERS: User[] = [
 // UTILITY TYPES
 // ============================================================================
 
-export type Page = 'insights' | 'funnel' | 'calculator' | 'advertising' | 'forecast' | 'bookings' | 'profile';
+export type Page = 'insights' | 'funnel' | 'calculator' | 'advertising' | 'forecast' | 'bookings' | 'profile' | 'mockups' | 'admin';
 
 export type SortOrder = 'asc' | 'desc';
 
@@ -230,3 +232,7 @@ export interface Filters {
   serviceTypes: string[];
   search: string;
 }
+
+// Re-export types from other type files
+export type { AuthUser, Session, SubscriptionFeatures } from './types/auth';
+export type { DataManager } from './types/dataManager';
