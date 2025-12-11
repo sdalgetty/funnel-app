@@ -358,10 +358,16 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
       // Show success message with deduplication info
       const importedItems = [];
       if (result.bookings.length > 0) {
-        const message = skippedCount > 0
-          ? `${importedCount} new booking(s) imported, ${skippedCount} duplicate(s) skipped`
-          : `${importedCount} booking(s) imported`;
-        importedItems.push(message);
+        // Special case: all data was duplicates
+        if (importedCount === 0 && skippedCount > 0) {
+          importedItems.push('No duplicate data imported. All uploaded data already exists');
+        } else if (importedCount > 0 && skippedCount > 0) {
+          // Some new data, some duplicates
+          importedItems.push(`Successfully imported ${importedCount} new booking(s), ${skippedCount} duplicate(s) skipped`);
+        } else if (importedCount > 0) {
+          // All new data, no duplicates
+          importedItems.push(`${importedCount} booking(s) imported`);
+        }
       }
       if (result.funnelData.length > 0) importedItems.push(`${result.funnelData.length} months of funnel data`);
       if (importedItems.length > 0) {
