@@ -252,13 +252,49 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
         }
       }
 
-      // Import bookings
+      // Import bookings with deduplication
+      // Check existing bookings to prevent duplicates
+      const existingBookings = dataManager?.bookings || (user?.id ? await UnifiedDataService.getBookings(user.id) : []);
+      
+      // Create a set of existing booking keys: projectName + dateBooked
+      const existingBookingKeys = new Set(
+        existingBookings
+          .filter(b => b.projectName && b.dateBooked)
+          .map(b => `${b.projectName.toLowerCase().trim()}-${b.dateBooked}`)
+      );
+      
+      let skippedCount = 0;
+      let importedCount = 0;
+      
       for (const booking of result.bookings) {
+        // Create deduplication key: projectName + dateBooked
+        const bookingKey = booking.projectName && booking.dateBooked
+          ? `${booking.projectName.toLowerCase().trim()}-${booking.dateBooked}`
+          : null;
+        
+        // Skip if this booking already exists
+        if (bookingKey && existingBookingKeys.has(bookingKey)) {
+          skippedCount++;
+          continue;
+        }
+        
+        // Create the booking
         if (dataManager) {
           await dataManager.createBooking(booking);
         } else {
           await UnifiedDataService.createBooking(user.id, booking);
         }
+        importedCount++;
+        
+        // Add to existing set to prevent duplicates within the same import
+        if (bookingKey) {
+          existingBookingKeys.add(bookingKey);
+        }
+      }
+      
+      // Show warning if duplicates were skipped
+      if (skippedCount > 0) {
+        console.warn(`Skipped ${skippedCount} duplicate booking(s) that already exist`);
       }
 
       // Import funnel data (merge with existing data to preserve inquiries from Leads report)
@@ -319,9 +355,14 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
 
       console.log('CSV import completed successfully');
       
-      // Show success message
+      // Show success message with deduplication info
       const importedItems = [];
-      if (result.bookings.length > 0) importedItems.push(`${result.bookings.length} bookings`);
+      if (result.bookings.length > 0) {
+        const message = skippedCount > 0
+          ? `${importedCount} new booking(s) imported, ${skippedCount} duplicate(s) skipped`
+          : `${importedCount} booking(s) imported`;
+        importedItems.push(message);
+      }
       if (result.funnelData.length > 0) importedItems.push(`${result.funnelData.length} months of funnel data`);
       if (importedItems.length > 0) {
         alert(`Successfully imported ${importedItems.join(' and ')}!`);
