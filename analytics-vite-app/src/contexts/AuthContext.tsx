@@ -6,6 +6,7 @@ import { AdminService, type UserProfile } from '../services/adminService'
 import type { AuthUser, Session, SubscriptionFeatures } from '../types'
 import { logger } from '../utils/logger'
 import { TIMEOUTS } from '../constants/app'
+import { identifyUser, trackEvent, resetPostHog } from '../lib/posthog'
 
 interface AuthContextType {
   user: AuthUser | null
@@ -574,6 +575,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.log('Profile loaded in background:', userWithProfile);
             setUser(userWithProfile);
             
+            // Identify user in PostHog
+            identifyUser(userWithProfile.id, {
+              email: userWithProfile.email,
+              full_name: userWithProfile.name,
+              company_name: userWithProfile.companyName,
+              subscription_tier: userWithProfile.subscriptionTier,
+              subscription_status: userWithProfile.subscriptionStatus,
+            });
+            
             // Check for pending invitation and restore guest viewing state
             await checkPendingInvitation(session.user)
             await restoreGuestViewingState(session.user)
@@ -738,6 +748,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.log('Profile loaded in background:', userWithProfile);
             setUser(userWithProfile);
             
+            // Identify user in PostHog
+            identifyUser(userWithProfile.id, {
+              email: userWithProfile.email,
+              full_name: userWithProfile.name,
+              company_name: userWithProfile.companyName,
+              subscription_tier: userWithProfile.subscriptionTier,
+              subscription_status: userWithProfile.subscriptionStatus,
+            });
+            
             // Check for pending invitation first (before restoring state)
             // This handles new signups with invitations
             await checkPendingInvitation(session.user)
@@ -787,9 +806,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error) {
         logger.error('SignIn error:', error);
         setLoading(false);
+        trackEvent('sign_in_failed', { email, error: error.message });
         throw error;
       }
       logger.debug('SignIn successful');
+      trackEvent('sign_in', { email });
       // Don't set loading to false here - let the auth state change handler do it
       // This prevents the form from clearing before the redirect happens
     } catch (error) {
@@ -809,7 +830,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         },
       },
     })
-    if (error) throw error
+    if (error) {
+      trackEvent('sign_up_failed', { email, error: error.message });
+      throw error;
+    }
+
+    // Track successful signup
+    trackEvent('sign_up', { email, hasFullName: !!fullName, hasCompanyName: !!companyName });
 
     // Create user profile after successful signup
     if (data.user) {
@@ -835,6 +862,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const userWithProfile = await loadUserProfile(data.user)
         setUser(userWithProfile)
         
+        // Identify user in PostHog
+        identifyUser(data.user.id, {
+          email: email,
+          full_name: fullName,
+          company_name: companyName,
+          subscription_tier: 'pro',
+        });
+        
         // Check for pending invitation (user might have signed up via invitation link)
         // Call immediately - the invitation check will handle the async operations
         logger.debug('SignUp completed, checking for pending invitation...')
@@ -845,6 +880,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const signOut = async () => {
+    // Track sign out
+    trackEvent('sign_out');
+    
     // End impersonation if active
     if (impersonatingUserId) {
       await stopImpersonation()
@@ -852,6 +890,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const { error } = await supabase.auth.signOut()
     if (error) throw error
+    
+    // Reset PostHog (clear user identification)
+    resetPostHog();
     
     // Clear guest viewing state
     setViewingAsGuest(false)
