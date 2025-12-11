@@ -313,8 +313,8 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
       }
 
       // Reload data if using data manager
-      if (dataManager) {
-        await dataManager.getAllFunnelData();
+      if (dataManager && dataManager.loadAllData) {
+        await dataManager.loadAllData();
       }
 
       console.log('CSV import completed successfully');
