@@ -69,15 +69,9 @@ export function importBookingsFromCSV(
   // Log which columns were found
   logger.debug('Honeybook column mapping:', columnMap);
 
-  // Create service types and lead sources as we encounter them
-  const serviceTypeMap = new Map<string, string>(); // name -> id
-  const leadSourceMap = new Map<string, string>(); // name -> id
-
-  existingServiceTypes.forEach(st => serviceTypeMap.set(st.name.toLowerCase(), st.id));
-  existingLeadSources.forEach(ls => leadSourceMap.set(ls.name.toLowerCase(), ls.id));
-
-  let serviceTypeCounter = existingServiceTypes.length;
-  let leadSourceCounter = existingLeadSources.length;
+  // Leads Report: Do NOT create service types or lead sources
+  // These should be managed manually by the user since they can be very custom/nuanced
+  // We only use existing ones if needed for funnel data calculations
 
   // Process each row
   rows.forEach((row, index) => {
@@ -94,87 +88,9 @@ export function importBookingsFromCSV(
         ? row[columnMap.clientName].trim()
         : projectName.trim(); // Fallback to project name
 
-      // Get or create service type
-      let serviceTypeId = '';
-      if (columnMap.serviceType && row[columnMap.serviceType]) {
-        const serviceTypeName = row[columnMap.serviceType].trim();
-        if (serviceTypeName) {
-          const lowerName = serviceTypeName.toLowerCase();
-          if (!serviceTypeMap.has(lowerName)) {
-            // Create new service type
-            const newId = `imported-st-${Date.now()}-${serviceTypeCounter++}`;
-            result.serviceTypes.push({
-              id: newId,
-              name: serviceTypeName,
-              description: `Imported from Honeybook`,
-              isCustom: true,
-            });
-            serviceTypeMap.set(lowerName, newId);
-          }
-          serviceTypeId = serviceTypeMap.get(lowerName)!;
-        }
-      }
-
-      // Default service type if none found
-      if (!serviceTypeId && result.serviceTypes.length > 0) {
-        serviceTypeId = result.serviceTypes[0].id;
-      } else if (!serviceTypeId) {
-        // Create a default service type
-        const defaultId = `imported-st-default-${Date.now()}`;
-        result.serviceTypes.push({
-          id: defaultId,
-          name: 'General Service',
-          description: 'Default service type for imported bookings',
-          isCustom: true,
-        });
-        serviceTypeId = defaultId;
-      }
-
-      // Get or create lead source (combine Lead Source + Lead Source Open Text if available)
-      let leadSourceId = '';
-      let leadSourceName = '';
-      if (columnMap.leadSource && row[columnMap.leadSource]) {
-        leadSourceName = row[columnMap.leadSource].trim();
-        
-        // Combine with open text if available (e.g., "Vendor Referral" + "Veronica - Estate at Bluemont")
-        if (columnMap.leadSourceOpenText && row[columnMap.leadSourceOpenText] && row[columnMap.leadSourceOpenText].trim()) {
-          const openText = row[columnMap.leadSourceOpenText].trim();
-          if (openText && openText !== '""') {
-            leadSourceName = `${leadSourceName} - ${openText}`;
-          }
-        }
-        
-        if (leadSourceName) {
-          const lowerName = leadSourceName.toLowerCase();
-          if (!leadSourceMap.has(lowerName)) {
-            // Create new lead source
-            const newId = `imported-ls-${Date.now()}-${leadSourceCounter++}`;
-            result.leadSources.push({
-              id: newId,
-              name: leadSourceName,
-              description: `Imported from Honeybook`,
-              isCustom: true,
-            });
-            leadSourceMap.set(lowerName, newId);
-          }
-          leadSourceId = leadSourceMap.get(lowerName)!;
-        }
-      }
-
-      // Default lead source if none found
-      if (!leadSourceId && result.leadSources.length > 0) {
-        leadSourceId = result.leadSources[0].id;
-      } else if (!leadSourceId) {
-        // Create a default lead source
-        const defaultId = `imported-ls-default-${Date.now()}`;
-        result.leadSources.push({
-          id: defaultId,
-          name: 'Direct',
-          description: 'Default lead source for imported bookings',
-          isCustom: true,
-        });
-        leadSourceId = defaultId;
-      }
+      // Leads Report: Skip service types and lead sources
+      // These are not needed for funnel data (inquiries/closes count)
+      // Users should manage these manually since they can be very custom/nuanced
 
       // Parse dates
       // Lead Created Date = inquiry date (required for funnel)
@@ -306,7 +222,7 @@ export function generateFunnelDataFromLeadsReport(
       bookingsYtd: 0, // Will be calculated after all months are imported
       bookingsGoal: 0,
       cash: 0,
-      notes: 'Imported from Honeybook',
+      notes: undefined, // Don't add import notes - notes field is for marketing strategy changes
       closesManual: false,
       bookingsManual: false,
       cashManual: false,

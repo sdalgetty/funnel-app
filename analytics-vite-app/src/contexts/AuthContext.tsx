@@ -970,6 +970,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Include phone/website in updates if provided
     if (updates.phone !== undefined) dbUpdates.phone = updates.phone || null
     if (updates.website !== undefined) dbUpdates.website = updates.website || null
+    // Include CRM fields in updates if provided
+    if (updates.crm !== undefined) dbUpdates.crm = updates.crm || null
+    if (updates.crmOther !== undefined) dbUpdates.crm_other = updates.crmOther || null
 
       logger.debug('Updating user profile', { userId: user.id, updates: dbUpdates });
 
@@ -1001,6 +1004,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const lastName = updates.lastName !== undefined ? updates.lastName : user.lastName || ''
           dbUpdatesWithoutNewFields.full_name = (firstName && lastName) ? `${firstName} ${lastName}` : (firstName || lastName || null)
         }
+        
+        // Include CRM fields in retry if they were in the original update
+        if (updates.crm !== undefined) dbUpdatesWithoutNewFields.crm = updates.crm || null
+        if (updates.crmOther !== undefined) dbUpdatesWithoutNewFields.crm_other = updates.crmOther || null
         
         const retryResult = await supabase
           .from('user_profiles')
@@ -1038,6 +1045,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const updatedCompanyName = data.company_name !== null && data.company_name !== undefined ? data.company_name : '';
     const updatedPhone = data.phone !== null && data.phone !== undefined ? data.phone : '';
     const updatedWebsite = data.website !== null && data.website !== undefined ? data.website : '';
+    const updatedCrm = (data.crm as CRMType | undefined) || undefined;
+    const updatedCrmOther = data.crm_other !== null && data.crm_other !== undefined ? data.crm_other : undefined;
     
     // Update local state immediately with the data returned from the update
     const updatedUser = {
@@ -1048,7 +1057,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       companyName: updatedCompanyName,
       email: data.email !== undefined ? data.email : user.email,
       phone: updatedPhone,
-      website: updatedWebsite
+      website: updatedWebsite,
+      crm: updatedCrm,
+      crmOther: updatedCrmOther
     };
     
     logger.debug('Updating user state', {
