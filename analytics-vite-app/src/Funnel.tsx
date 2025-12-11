@@ -1219,27 +1219,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
             if (!user?.id) return;
 
             try {
-              // Import service types first
-              for (const serviceType of result.serviceTypes) {
-                if (!serviceTypes.find(st => st.id === serviceType.id)) {
-                  if (dataManager) {
-                    await dataManager.createServiceType(serviceType.name, serviceType.description);
-                  } else {
-                    await UnifiedDataService.createServiceType(user.id, serviceType.name, serviceType.description);
-                  }
-                }
-              }
-
-              // Import lead sources
-              for (const leadSource of result.leadSources) {
-                if (!leadSources.find(ls => ls.id === leadSource.id)) {
-                  if (dataManager) {
-                    await dataManager.createLeadSource(leadSource.name, leadSource.description);
-                  } else {
-                    await UnifiedDataService.createLeadSource(user.id, leadSource.name, leadSource.description);
-                  }
-                }
-              }
+              // Leads Report: Do NOT import service types or lead sources
+              // These should be managed manually by the user since they can be very custom/nuanced
+              // We only import funnel data (inquiries and closes count)
 
               // Import funnel data (merge with existing data)
               if (dataManager && dataManager.funnelData) {
@@ -1288,10 +1270,14 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
               }
 
               setShowCSVImport(false);
+              // Show success message
+              alert(`Successfully imported ${result.funnelData.length} months of funnel data!`);
               window.location.reload(); // Refresh to show updated data
             } catch (error) {
               console.error('Error importing CSV data:', error);
-              alert('Failed to import data. Please try again.');
+              const errorMessage = error instanceof Error ? error.message : 'Failed to import data. Please try again.';
+              alert(`Import error: ${errorMessage}`);
+              throw error; // Re-throw so the modal can handle it
             }
           }}
           existingServiceTypes={serviceTypes}

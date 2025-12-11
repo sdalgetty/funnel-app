@@ -264,17 +264,20 @@ export default function CSVImportModal({
             <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>Import Preview</h3>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <CheckCircle size={16} color="#16a34a" />
-                  <strong style={{ fontSize: '14px', color: '#16a34a' }}>
-                    {preview.bookings.length} Bookings
-                  </strong>
+              {/* Only show bookings count for Booked Client report, not Leads report */}
+              {preview.bookings.length > 0 && (
+                <div style={{ padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <CheckCircle size={16} color="#16a34a" />
+                    <strong style={{ fontSize: '14px', color: '#16a34a' }}>
+                      {preview.bookings.length} Bookings
+                    </strong>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#15803d', marginLeft: '24px' }}>
+                    Ready to import
+                  </div>
                 </div>
-                <div style={{ fontSize: '12px', color: '#15803d', marginLeft: '24px' }}>
-                  Ready to import
-                </div>
-              </div>
+              )}
 
               <div style={{ padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -288,7 +291,8 @@ export default function CSVImportModal({
                 </div>
               </div>
 
-              {preview.serviceTypes.length > existingServiceTypes.length && (
+              {/* Only show service types/lead sources for Booked Client report (has bookings), not Leads report */}
+              {pageType === 'sales' && preview.bookings.length > 0 && preview.serviceTypes.length > existingServiceTypes.length && (
                 <div style={{ padding: '12px', backgroundColor: '#fffbeb', borderRadius: '6px', border: '1px solid #fde68a' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <FileText size={16} color="#d97706" />
@@ -302,7 +306,7 @@ export default function CSVImportModal({
                 </div>
               )}
 
-              {preview.leadSources.length > existingLeadSources.length && (
+              {pageType === 'sales' && preview.bookings.length > 0 && preview.leadSources.length > existingLeadSources.length && (
                 <div style={{ padding: '12px', backgroundColor: '#fffbeb', borderRadius: '6px', border: '1px solid #fde68a' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <FileText size={16} color="#d97706" />

@@ -293,7 +293,7 @@ function generateFunnelDataFromBookedClients(bookings: Booking[]): FunnelData[] 
       bookingsYtd: 0, // Will be calculated below
       bookingsGoal: 0,
       cash: 0,
-      notes: 'Imported from Honeybook Booked Client report (closes and bookings only)',
+      notes: undefined, // Don't add import notes - notes field is for marketing strategy changes
       closesManual: false,
       bookingsManual: false,
       cashManual: false,

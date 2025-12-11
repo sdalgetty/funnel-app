@@ -224,24 +224,30 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
     }
 
     try {
-      // Import service types first
-      for (const serviceType of result.serviceTypes) {
-        if (!serviceTypes.find(st => st.id === serviceType.id)) {
-          if (dataManager) {
-            await dataManager.createServiceType(serviceType.name, serviceType.description);
-          } else {
-            await UnifiedDataService.createServiceType(user.id, serviceType.name, serviceType.description);
+      // Import service types and lead sources (only for Booked Client report, not Leads report)
+      // Check if this is a Leads report by checking if there are no bookings
+      const isLeadsReport = result.bookings.length === 0 && result.funnelData.length > 0;
+      
+      if (!isLeadsReport) {
+        // Only import service types and lead sources for Booked Client report
+        for (const serviceType of result.serviceTypes) {
+          if (!serviceTypes.find(st => st.id === serviceType.id)) {
+            if (dataManager) {
+              await dataManager.createServiceType(serviceType.name, serviceType.description);
+            } else {
+              await UnifiedDataService.createServiceType(user.id, serviceType.name, serviceType.description);
+            }
           }
         }
-      }
 
-      // Import lead sources
-      for (const leadSource of result.leadSources) {
-        if (!leadSources.find(ls => ls.id === leadSource.id)) {
-          if (dataManager) {
-            await dataManager.createLeadSource(leadSource.name, leadSource.description);
-          } else {
-            await UnifiedDataService.createLeadSource(user.id, leadSource.name, leadSource.description);
+        // Import lead sources
+        for (const leadSource of result.leadSources) {
+          if (!leadSources.find(ls => ls.id === leadSource.id)) {
+            if (dataManager) {
+              await dataManager.createLeadSource(leadSource.name, leadSource.description);
+            } else {
+              await UnifiedDataService.createLeadSource(user.id, leadSource.name, leadSource.description);
+            }
           }
         }
       }
@@ -312,8 +318,18 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
       }
 
       console.log('CSV import completed successfully');
+      
+      // Show success message
+      const importedItems = [];
+      if (result.bookings.length > 0) importedItems.push(`${result.bookings.length} bookings`);
+      if (result.funnelData.length > 0) importedItems.push(`${result.funnelData.length} months of funnel data`);
+      if (importedItems.length > 0) {
+        alert(`Successfully imported ${importedItems.join(' and ')}!`);
+      }
     } catch (error) {
       console.error('Error importing CSV data:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to import data. Please try again.';
+      alert(`Import error: ${errorMessage}`);
       throw error;
     }
   };
