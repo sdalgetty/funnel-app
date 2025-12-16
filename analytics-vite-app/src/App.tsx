@@ -465,46 +465,25 @@ function AppContent() {
         {/* User Menu */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
           {user ? (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  backgroundColor: '#fef3c7',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                  color: '#92400e'
-                }}>
-                  <Crown size={12} />
-                  Pro
-                </div>
-                <span style={{ fontSize: '14px', color: '#374151' }}>
-                  {user.name}
-                </span>
-              </div>
-              <button
-                onClick={signOut}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  backgroundColor: 'white',
-                  color: '#6b7280',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <LogOut size={12} />
-                Logout
-              </button>
-            </>
+            <button
+              onClick={signOut}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: '1px solid #d1d5db',
+                backgroundColor: 'white',
+                color: '#6b7280',
+                fontSize: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              <LogOut size={12} />
+              Logout
+            </button>
           ) : (
             <button
               onClick={() => setShowAuthModal(true)}
