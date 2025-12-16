@@ -6,7 +6,7 @@ import LoginForm from './components/LoginForm'
 import TestConnection from './components/TestConnection'
 import AcceptInvitation from './components/AcceptInvitation'
 import { UpgradePrompt } from './FeatureGate'
-import { User, Crown, LogOut, Settings, Shield } from 'lucide-react'
+import { User, Crown, LogOut, Settings, Shield, Plus } from 'lucide-react'
 import type { Page } from './types'
 import AdminDashboard from './components/AdminDashboard'
 import { usePageView } from './hooks/usePostHog'
@@ -405,6 +405,44 @@ function AppContent() {
             <Settings size={16} />
             Profile
           </button>
+          {user && !isViewOnly && (
+            <button
+              onClick={() => {
+                const now = new Date()
+                const month = { year: now.getFullYear(), month: now.getMonth() + 1 }
+                setCurrentPage('funnel')
+                setNavigationAction({ page: 'funnel', action: 'edit-month', month })
+                setTimeout(() => setNavigationAction(null), 1000)
+              }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)',
+                marginLeft: '8px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)'
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(16, 185, 129, 0.4)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)'
+              }}
+            >
+              <Plus size={16} />
+              New
+            </button>
+          )}
         </div>
 
         {/* User Menu */}
