@@ -296,7 +296,24 @@ function AppContent() {
         maxWidth: '100vw',
         boxSizing: 'border-box'
       }}>
-        <h1 style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '0.04em', margin: 0, color: '#1f2937' }}>
+        <h1 
+          onClick={() => setCurrentPage('insights')}
+          style={{ 
+            fontSize: '20px', 
+            fontWeight: '800', 
+            letterSpacing: '0.04em', 
+            margin: 0, 
+            color: '#1f2937',
+            cursor: 'pointer',
+            transition: 'opacity 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '0.7'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '1'
+          }}
+        >
           FNNL
         </h1>
         
