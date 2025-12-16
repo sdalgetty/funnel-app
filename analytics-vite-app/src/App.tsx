@@ -6,7 +6,7 @@ import LoginForm from './components/LoginForm'
 import TestConnection from './components/TestConnection'
 import AcceptInvitation from './components/AcceptInvitation'
 import { UpgradePrompt } from './FeatureGate'
-import { User, Crown, LogOut, Settings, Shield, Plus } from 'lucide-react'
+import { User, Crown, LogOut, Settings, Shield, Plus, X } from 'lucide-react'
 import type { Page } from './types'
 import AdminDashboard from './components/AdminDashboard'
 import { usePageView } from './hooks/usePostHog'
@@ -75,6 +75,7 @@ function AppContent() {
     }
   }, [isAdmin])
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   // Navigation state for opening modals/actions in other tabs
   const [navigationAction, setNavigationAction] = useState<{
@@ -133,6 +134,28 @@ function AppContent() {
     window.addEventListener('navigateToPage', handleNavigate as EventListener)
     return () => window.removeEventListener('navigateToPage', handleNavigate as EventListener)
   }, [])
+
+  // Handle create modal actions
+  const handleCreateAction = (action: string) => {
+    setShowCreateModal(false)
+    const now = new Date()
+    const month = { year: now.getFullYear(), month: now.getMonth() + 1 }
+    
+    switch (action) {
+      case 'add-booking':
+        setCurrentPage('bookings')
+        setNavigationAction({ page: 'bookings', action: 'add-booking' })
+        setTimeout(() => setNavigationAction(null), 500)
+        break
+      case 'add-inquiry':
+      case 'add-call-booked':
+      case 'add-call-taken':
+        setCurrentPage('funnel')
+        setNavigationAction({ page: 'funnel', action: 'edit-month', month })
+        setTimeout(() => setNavigationAction(null), 1000)
+        break
+    }
+  }
 
   // Show invitation acceptance page if on /accept-invite route
   const isOnAcceptInvitePath = window.location.pathname === '/accept-invite'
@@ -407,13 +430,7 @@ function AppContent() {
           </button>
           {user && !isViewOnly && (
             <button
-              onClick={() => {
-                const now = new Date()
-                const month = { year: now.getFullYear(), month: now.getMonth() + 1 }
-                setCurrentPage('funnel')
-                setNavigationAction({ page: 'funnel', action: 'edit-month', month })
-                setTimeout(() => setNavigationAction(null), 1000)
-              }}
+              onClick={() => setShowCreateModal(true)}
               style={{
                 padding: '8px 16px',
                 borderRadius: '6px',
@@ -573,6 +590,140 @@ function AppContent() {
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)} 
       />
+
+      {/* Create Modal */}
+      {showCreateModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '90%',
+            maxWidth: '400px',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Add New</h3>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button
+                onClick={() => handleCreateAction('add-booking')}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
+                }}
+              >
+                Add New Sale
+              </button>
+              <button
+                onClick={() => handleCreateAction('add-inquiry')}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
+                }}
+              >
+                Add New Inquiry
+              </button>
+              <button
+                onClick={() => handleCreateAction('add-call-booked')}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
+                }}
+              >
+                Add New Call Booked
+              </button>
+              <button
+                onClick={() => handleCreateAction('add-call-taken')}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
+                }}
+              >
+                Add New Call Taken
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
