@@ -111,7 +111,8 @@ function AppContent() {
         case 'edit-funnel':
           setCurrentPage('funnel')
           setNavigationAction({ page: 'funnel', action: 'edit-month', month })
-          setTimeout(() => setNavigationAction(null), 100)
+          // Give more time for Funnel component to mount and open modal
+          setTimeout(() => setNavigationAction(null), 1000)
           break
         case 'view-sales':
           setCurrentPage('bookings')

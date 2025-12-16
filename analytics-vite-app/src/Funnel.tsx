@@ -59,31 +59,42 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
     if (navigationAction?.action === 'edit-month' && navigationAction.month) {
       const { year, month } = navigationAction.month
       setSelectedYear(year)
-      // Find or create the month data
-      let monthData = funnelData.find(f => f.year === year && f.month === month)
-      if (!monthData) {
-        // Create a new month entry
-        monthData = {
-          id: `temp_${year}_${month}`,
-          name: 'Default',
-          year,
-          month,
-          inquiries: 0,
-          inquiriesYtd: 0,
-          callsBooked: 0,
-          callsTaken: 0,
-          callsYtd: 0,
-          inquiryToCall: 0,
-          callToBooking: 0,
-          closes: 0,
-          bookings: 0,
-          bookingsYtd: 0,
-          bookingsGoal: 0,
-          cash: 0
+      
+      // Use a small delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        // Find or create the month data
+        let monthData = funnelData.find(f => f.year === year && f.month === month)
+        if (!monthData) {
+          // Create a new month entry
+          monthData = {
+            id: `temp_${year}_${month}`,
+            name: 'Default',
+            year,
+            month,
+            inquiries: 0,
+            inquiriesYtd: 0,
+            callsBooked: 0,
+            callsTaken: 0,
+            callsYtd: 0,
+            inquiryToCall: 0,
+            callToBooking: 0,
+            closes: 0,
+            bookings: 0,
+            bookingsYtd: 0,
+            bookingsGoal: 0,
+            cash: 0,
+            notes: undefined,
+            closesManual: false,
+            bookingsManual: false,
+            cashManual: false
+          }
         }
-      }
-      setEditingMonth(monthData)
-      setIsEditModalOpen(true)
+        setEditingMonth(monthData)
+        setIsEditModalOpen(true)
+        logger.debug('Edit modal opened via navigation action', { year, month })
+      }, 100)
+      
+      return () => clearTimeout(timer)
     }
   }, [navigationAction, funnelData])
   // Calculator removed from Funnel page; single view only
