@@ -26,8 +26,8 @@ This creates the `dist` folder in `analytics-vite-app/dist`.
 # Link to test site
 netlify link --name fnnl-app-test
 
-# Deploy to test (preview/deploy preview)
-netlify deploy --dir=analytics-vite-app/dist --prod=false
+# Deploy to test (preview/deploy preview - omit --prod flag)
+netlify deploy --dir=analytics-vite-app/dist
 ```
 
 **Test Site:** `https://fnnl-app-test.netlify.app`
@@ -50,7 +50,7 @@ You can also use these one-liners:
 
 **Test:**
 ```bash
-cd analytics-vite-app && npm run build && cd .. && netlify link --name fnnl-app-test && netlify deploy --dir=analytics-vite-app/dist --prod=false
+cd analytics-vite-app && npm run build && cd .. && netlify link --name fnnl-app-test && netlify deploy --dir=analytics-vite-app/dist
 ```
 
 **Production:**
