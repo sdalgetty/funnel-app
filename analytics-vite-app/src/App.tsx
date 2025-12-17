@@ -181,11 +181,12 @@ function AppContent() {
   // Show login form if not authenticated
   if (!user) {
     // Show login form (token will be handled by LoginForm and AuthContext)
+    const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname.includes('localhost');
     return (
       <div>
         <LoginForm />
         {/* Only show database test in development */}
-        {import.meta.env.DEV && <TestConnection />}
+        {isDevelopment && <TestConnection />}
       </div>
     )
   }
