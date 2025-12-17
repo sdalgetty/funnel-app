@@ -492,20 +492,6 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                   Import Leads Report
                 </button>
               )}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                backgroundColor: '#fef3c7',
-                fontSize: '12px',
-                fontWeight: '500',
-                color: '#92400e'
-              }}>
-                <Crown size={12} />
-                Pro
-              </div>
             </div>
           )}
         </div>
