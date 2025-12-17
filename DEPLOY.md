@@ -22,6 +22,7 @@ This creates the `dist` folder in `analytics-vite-app/dist`.
 
 ### Step 2: Deploy to Test Environment
 
+**Option A: Using site name (requires linking first)**
 ```bash
 # Link to test site
 netlify link --name fnnl-app-test
@@ -30,16 +31,27 @@ netlify link --name fnnl-app-test
 netlify deploy --dir=analytics-vite-app/dist
 ```
 
+**Option B: Using site ID directly (no linking needed)**
+```bash
+netlify deploy --site=4e44bee4-893e-494e-be35-1a12f341b6c9 --dir=analytics-vite-app/dist
+```
+
 **Test Site:** `https://fnnl-app-test.netlify.app`
 
 ### Step 3: Deploy to Production Environment
 
+**Option A: Using site name (requires linking first)**
 ```bash
 # Link to production site
 netlify link --name fnnl-app-prod
 
 # Deploy to production
 netlify deploy --dir=analytics-vite-app/dist --prod
+```
+
+**Option B: Using site ID directly (no linking needed)**
+```bash
+netlify deploy --site=8313f660-c306-4d5e-af13-eeeb793bfd87 --dir=analytics-vite-app/dist --prod
 ```
 
 **Production Site:** `https://app.fnnlapp.com`
