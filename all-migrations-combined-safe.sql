@@ -3,7 +3,7 @@
 -- This file is idempotent - safe to run multiple times
 -- All ALTER TABLE ADD COLUMN statements use IF NOT EXISTS
 -- Project: Test Environment
--- Date: 2025-12-17T17:04:25.867Z
+-- Date: 2025-12-17T17:06:16.551Z
 
 -- ============================================================================
 -- IMPORTANT: This file is safe to run even if some migrations were already applied
@@ -827,11 +827,13 @@ BEGIN
     
     -- Check if users exist
     IF v_owner_id IS NULL THEN
-        RAISE EXCEPTION 'Owner user (hello@anendlesspursuit.com) not found';
+        RAISE NOTICE 'Owner user not found - skipping account share setup (this is OK for test environments)';
+        RETURN;
     END IF;
     
     IF v_guest_id IS NULL THEN
-        RAISE EXCEPTION 'Guest user (stevedalgetty@gmail.com) not found';
+        RAISE NOTICE 'Guest user not found - skipping account share setup (this is OK for test environments)';
+        RETURN;
     END IF;
     
     -- Upsert the share

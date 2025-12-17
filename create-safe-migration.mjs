@@ -33,6 +33,41 @@ function makeIdempotent(sql) {
     }
   );
 
+  // Make migration 018 safe - only run if users exist
+  // This migration sets up account sharing for specific production users
+  if (sql.includes('hello@anendlesspursuit.com')) {
+    // Replace RAISE EXCEPTION with graceful skip for test environments
+    // Handle both single-line and multi-line formats
+    sql = sql.replace(
+      /IF v_owner_id IS NULL THEN\s*RAISE EXCEPTION 'Owner user \(hello@anendlesspursuit\.com\) not found';\s*END IF;/gi,
+      `IF v_owner_id IS NULL THEN
+        RAISE NOTICE 'Owner user not found - skipping account share setup (this is OK for test environments)';
+        RETURN;
+    END IF;`
+    );
+    
+    sql = sql.replace(
+      /IF v_guest_id IS NULL THEN\s*RAISE EXCEPTION 'Guest user \(stevedalgetty@gmail\.com\) not found';\s*END IF;/gi,
+      `IF v_guest_id IS NULL THEN
+        RAISE NOTICE 'Guest user not found - skipping account share setup (this is OK for test environments)';
+        RETURN;
+    END IF;`
+    );
+    
+    // Also handle the exact format from the file
+    sql = sql.replace(
+      /RAISE EXCEPTION 'Owner user \(hello@anendlesspursuit\.com\) not found';/g,
+      `RAISE NOTICE 'Owner user not found - skipping account share setup (this is OK for test environments)';
+        RETURN;`
+    );
+    
+    sql = sql.replace(
+      /RAISE EXCEPTION 'Guest user \(stevedalgetty@gmail\.com\) not found';/g,
+      `RAISE NOTICE 'Guest user not found - skipping account share setup (this is OK for test environments)';
+        RETURN;`
+    );
+  }
+
   return sql;
 }
 
