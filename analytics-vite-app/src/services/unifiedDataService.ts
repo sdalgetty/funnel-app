@@ -1312,7 +1312,7 @@ export class UnifiedDataService {
     callToBooking: number;
   } | null> {
     if (!this.isSupabaseConfigured()) {
-      return { bookingsGoal: 50, inquiryToCall: 25, callToBooking: 35 };
+      return { bookingsGoal: 0, inquiryToCall: 0, callToBooking: 0 };
     }
 
     try {
@@ -1334,9 +1334,9 @@ export class UnifiedDataService {
       }
 
       return {
-        bookingsGoal: data.bookings_goal || 50,
-        inquiryToCall: data.inquiry_to_call || 25,
-        callToBooking: data.call_to_booking || 35,
+        bookingsGoal: data.bookings_goal || 0,
+        inquiryToCall: data.inquiry_to_call || 0,
+        callToBooking: data.call_to_booking || 0,
       };
     } catch (error) {
       logger.error('Error fetching calculator goals:', error);

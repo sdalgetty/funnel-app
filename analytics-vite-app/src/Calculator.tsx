@@ -86,9 +86,9 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
   }, [dataManager?.funnelData, dataManager?.bookings, dataManager?.serviceTypes, currentYear]);
 
   const [data, setData] = useState<CalculatorData>({
-    bookingsGoal: 50,
-    inquiryToCall: 25,
-    callToBooking: 35,
+    bookingsGoal: 0,
+    inquiryToCall: 0,
+    callToBooking: 0,
     inqYtd: 0,
     callsYtd: 0,
     bookingsYtd: 0,
