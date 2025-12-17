@@ -36,47 +36,57 @@ const testSupabase = createClient(testUrl, testKey, {
 async function copyData() {
   console.log('🚀 Copying production data to test environment...\n');
 
-  // Get production user
+  // Get production user profile (which contains the user ID)
   console.log('📥 Step 1: Getting production user...');
-  const { data: prodUser } = await prodSupabase.auth.admin.getUserByEmail(userEmail);
-  if (!prodUser?.user) {
-    console.error('❌ User not found in production');
-    process.exit(1);
-  }
-  const prodUserId = prodUser.user.id;
-  console.log(`✅ Found production user: ${prodUser.user.email} (${prodUserId})\n`);
+  const { data: prodProfile, error: prodProfileError } = await prodSupabase
+    .from('user_profiles')
+    .select('id, email')
+    .eq('email', userEmail)
+    .single();
 
-  // Get test user
-  console.log('📥 Step 2: Getting test user...');
-  const { data: testUser } = await testSupabase.auth.admin.getUserByEmail(userEmail);
-  if (!testUser?.user) {
-    console.error('❌ User not found in test');
+  if (prodProfileError || !prodProfile) {
+    console.error('❌ User not found in production:', prodProfileError?.message);
     process.exit(1);
   }
-  const testUserId = testUser.user.id;
-  console.log(`✅ Found test user: ${testUser.user.email} (${testUserId})\n`);
+  const prodUserId = prodProfile.id;
+  console.log(`✅ Found production user: ${prodProfile.email} (${prodUserId})\n`);
+
+  // Get test user profile
+  console.log('📥 Step 2: Getting test user...');
+  const { data: testProfile, error: testProfileError } = await testSupabase
+    .from('user_profiles')
+    .select('id, email')
+    .eq('email', userEmail)
+    .single();
+
+  if (testProfileError || !testProfile) {
+    console.error('❌ User not found in test:', testProfileError?.message);
+    process.exit(1);
+  }
+  const testUserId = testProfile.id;
+  console.log(`✅ Found test user: ${testProfile.email} (${testUserId})\n`);
 
   // Update test profile with production data
   console.log('📤 Step 3: Updating user profile...');
-  const { data: prodProfile } = await prodSupabase
+  const { data: prodProfileData } = await prodSupabase
     .from('user_profiles')
     .select('*')
     .eq('id', prodUserId)
     .single();
 
-  if (prodProfile) {
+  if (prodProfileData) {
     await testSupabase
       .from('user_profiles')
       .update({
-        full_name: prodProfile.full_name,
-        company_name: prodProfile.company_name,
-        subscription_tier: prodProfile.subscription_tier,
-        subscription_status: prodProfile.subscription_status,
+        full_name: prodProfileData.full_name,
+        company_name: prodProfileData.company_name,
+        subscription_tier: prodProfileData.subscription_tier,
+        subscription_status: prodProfileData.subscription_status,
         is_admin: true,
-        phone: prodProfile.phone,
-        website: prodProfile.website,
-        crm: prodProfile.crm,
-        crm_other: prodProfile.crm_other,
+        phone: prodProfileData.phone,
+        website: prodProfileData.website,
+        crm: prodProfileData.crm,
+        crm_other: prodProfileData.crm_other,
       })
       .eq('id', testUserId);
     console.log('✅ Profile updated\n');
@@ -90,15 +100,21 @@ async function copyData() {
     .eq('user_id', prodUserId);
 
   if (prodServiceTypes?.length > 0) {
-    await testSupabase.from('service_types').delete().eq('user_id', testUserId);
+    const { error: deleteError } = await testSupabase.from('service_types').delete().eq('user_id', testUserId);
+    if (deleteError) console.error(`⚠️  Error deleting service types: ${deleteError.message}`);
+    
     const testServiceTypes = prodServiceTypes.map(st => ({
       user_id: testUserId,
       name: st.name,
       description: st.description,
       tracks_in_funnel: st.tracks_in_funnel,
     }));
-    await testSupabase.from('service_types').insert(testServiceTypes);
-    console.log(`✅ Copied ${prodServiceTypes.length} service types\n`);
+    const { data: inserted, error: insertError } = await testSupabase.from('service_types').insert(testServiceTypes).select();
+    if (insertError) {
+      console.error(`❌ Error inserting service types: ${insertError.message}`);
+    } else {
+      console.log(`✅ Copied ${inserted?.length || prodServiceTypes.length} service types\n`);
+    }
   }
 
   // Copy lead sources
@@ -109,39 +125,79 @@ async function copyData() {
     .eq('user_id', prodUserId);
 
   if (prodLeadSources?.length > 0) {
-    await testSupabase.from('lead_sources').delete().eq('user_id', testUserId);
+    const { error: deleteError } = await testSupabase.from('lead_sources').delete().eq('user_id', testUserId);
+    if (deleteError) console.error(`⚠️  Error deleting lead sources: ${deleteError.message}`);
+    
     const testLeadSources = prodLeadSources.map(ls => ({
       user_id: testUserId,
       name: ls.name,
       description: ls.description,
     }));
-    await testSupabase.from('lead_sources').insert(testLeadSources);
-    console.log(`✅ Copied ${prodLeadSources.length} lead sources\n`);
+    const { data: inserted, error: insertError } = await testSupabase.from('lead_sources').insert(testLeadSources).select();
+    if (insertError) {
+      console.error(`❌ Error inserting lead sources: ${insertError.message}`);
+    } else {
+      console.log(`✅ Copied ${inserted?.length || prodLeadSources.length} lead sources\n`);
+    }
   }
 
-  // Copy funnel data
+  // Copy funnel data (stored in funnels table)
   console.log('📥 Step 6: Copying funnel data...');
-  const { data: prodFunnelData } = await prodSupabase
-    .from('funnel_data')
+  const { data: prodFunnels } = await prodSupabase
+    .from('funnels')
     .select('*')
-    .eq('user_id', prodUserId);
+    .eq('user_id', prodUserId)
+    .not('year', 'is', null) // Only get monthly data (year is not null)
+    .not('month', 'is', null); // Only get monthly data (month is not null)
 
-  if (prodFunnelData?.length > 0) {
-    await testSupabase.from('funnel_data').delete().eq('user_id', testUserId);
-    const testFunnelData = prodFunnelData.map(fd => ({
+  if (prodFunnels?.length > 0) {
+    const { error: deleteError } = await testSupabase
+      .from('funnels')
+      .delete()
+      .eq('user_id', testUserId)
+      .not('year', 'is', null)
+      .not('month', 'is', null);
+    
+    if (deleteError) {
+      console.error(`⚠️  Error deleting old funnel data: ${deleteError.message}`);
+    }
+    
+    const testFunnels = prodFunnels.map(f => ({
       user_id: testUserId,
-      month_year: fd.month_year,
-      year: fd.year,
-      month: fd.month,
-      inquiries: fd.inquiries,
-      calls_taken: fd.calls_taken,
-      calls_booked: fd.calls_booked,
-      closes: fd.closes,
-      bookings: fd.bookings,
-      notes: fd.notes,
+      name: f.name,
+      year: f.year,
+      month: f.month,
+      inquiries: f.inquiries || 0,
+      calls_taken: f.calls_taken || 0,
+      calls_booked: f.calls_booked || 0,
+      closes: f.closes || 0,
+      bookings: f.bookings || 0,
+      cash: f.cash || 0,
+      notes: f.notes,
+      bookings_goal: f.bookings_goal,
+      inquiry_to_call: f.inquiry_to_call,
+      call_to_booking: f.call_to_booking,
+      inquiries_ytd: f.inquiries_ytd,
+      calls_ytd: f.calls_ytd,
+      bookings_ytd: f.bookings_ytd,
+      last_updated: f.last_updated || new Date().toISOString(),
+      created_at: f.created_at || new Date().toISOString(),
+      updated_at: f.updated_at || new Date().toISOString(),
     }));
-    await testSupabase.from('funnel_data').insert(testFunnelData);
-    console.log(`✅ Copied ${prodFunnelData.length} funnel data records\n`);
+    
+    const { data: insertedFunnels, error: insertError } = await testSupabase
+      .from('funnels')
+      .insert(testFunnels)
+      .select();
+    
+    if (insertError) {
+      console.error(`❌ Error inserting funnel data: ${insertError.message}`);
+      console.error(`   Details: ${JSON.stringify(insertError, null, 2)}`);
+    } else {
+      console.log(`✅ Copied ${insertedFunnels?.length || prodFunnels.length} funnel data records\n`);
+    }
+  } else {
+    console.log('ℹ️  No funnel data found (or all records have null year/month)\n');
   }
 
   // Copy bookings (need to map service types and lead sources)
@@ -186,18 +242,25 @@ async function copyData() {
           lead_source_id: newLeadSourceId,
           booking_date: booking.booking_date,
           date_inquired: booking.date_inquired,
-          date_booked: booking.date_booked,
           project_date: booking.project_date,
-          booked_revenue: booking.booked_revenue,
-          status: booking.status,
+          booked_revenue: booking.booked_revenue || 0,
+          status: booking.status || 'confirmed',
           notes: booking.notes,
         });
       }
     }
 
     if (testBookings.length > 0) {
-      await testSupabase.from('bookings').insert(testBookings);
-      console.log(`✅ Copied ${testBookings.length} bookings\n`);
+      const { error: deleteError } = await testSupabase.from('bookings').delete().eq('user_id', testUserId);
+      if (deleteError) console.error(`⚠️  Error deleting bookings: ${deleteError.message}`);
+      
+      const { data: inserted, error: insertError } = await testSupabase.from('bookings').insert(testBookings).select();
+      if (insertError) {
+        console.error(`❌ Error inserting bookings: ${insertError.message}`);
+        console.error(`   Details: ${JSON.stringify(insertError, null, 2)}`);
+      } else {
+        console.log(`✅ Copied ${inserted?.length || testBookings.length} bookings\n`);
+      }
     } else {
       console.log('⚠️  No bookings could be migrated (missing service types or lead sources)\n');
     }
@@ -211,16 +274,23 @@ async function copyData() {
     .eq('user_id', prodUserId);
 
   if (prodForecastModels?.length > 0) {
-    await testSupabase.from('forecast_models').delete().eq('user_id', testUserId);
+    const { error: deleteError } = await testSupabase.from('forecast_models').delete().eq('user_id', testUserId);
+    if (deleteError) console.error(`⚠️  Error deleting forecast models: ${deleteError.message}`);
+    
     const testForecastModels = prodForecastModels.map(fm => ({
       user_id: testUserId,
       name: fm.name,
-      year: fm.year,
-      is_active: fm.is_active,
-      goals: fm.goals,
+      description: fm.description,
+      model_type: fm.model_type || 'linear',
+      parameters: fm.parameters,
+      is_active: fm.is_active || false,
     }));
-    await testSupabase.from('forecast_models').insert(testForecastModels);
-    console.log(`✅ Copied ${prodForecastModels.length} forecast models\n`);
+    const { data: inserted, error: insertError } = await testSupabase.from('forecast_models').insert(testForecastModels).select();
+    if (insertError) {
+      console.error(`❌ Error inserting forecast models: ${insertError.message}`);
+    } else {
+      console.log(`✅ Copied ${inserted?.length || prodForecastModels.length} forecast models\n`);
+    }
   }
 
   console.log('✅ Migration complete!\n');
@@ -229,7 +299,7 @@ async function copyData() {
   console.log(`   - Service types: ${prodServiceTypes?.length || 0}`);
   console.log(`   - Lead sources: ${prodLeadSources?.length || 0}`);
   console.log(`   - Bookings: ${prodBookings?.length || 0}`);
-  console.log(`   - Funnel data: ${prodFunnelData?.length || 0}`);
+    console.log(`   - Funnel data: ${prodFunnels?.length || 0}`);
   console.log(`   - Forecast models: ${prodForecastModels?.length || 0}\n`);
 }
 
