@@ -184,7 +184,8 @@ function AppContent() {
     return (
       <div>
         <LoginForm />
-        <TestConnection />
+        {/* Only show database test in development */}
+        {import.meta.env.DEV && <TestConnection />}
       </div>
     )
   }
