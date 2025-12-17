@@ -1,5 +1,6 @@
+# This file is kept for reference but Netlify should use the root netlify.toml
+# The root netlify.toml has the correct configuration
 [build]
-  base = "analytics-vite-app"
   command = "npm install && npm run build"
   publish = "dist"
 
