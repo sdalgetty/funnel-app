@@ -182,11 +182,16 @@ function AppContent() {
   // Show login form if not authenticated
   if (!user) {
     // Show login form (token will be handled by LoginForm and AuthContext)
+    // Only show database test in development - check multiple conditions
+    const isProductionDomain = window.location.hostname === 'app.fnnlapp.com';
+    const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname.includes('localhost');
+    const shouldShowTest = !isProductionDomain && isDevelopment;
+    
     return (
       <div>
         <LoginForm />
-        {/* Only show database test in development */}
-        {!import.meta.env.PROD && (
+        {/* Only show database test in development, never in production */}
+        {shouldShowTest && (
           <Suspense fallback={null}>
             <TestConnection />
           </Suspense>
