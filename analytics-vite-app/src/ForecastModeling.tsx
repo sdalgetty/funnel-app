@@ -440,32 +440,68 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                   const totalActual = performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0);
                   const totalForecast = performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0);
                   const overallPercentOfPlan = totalForecast > 0 ? Math.round((totalActual / totalForecast) * 100) : 0;
-                  const backgroundColor = overallPercentOfPlan >= 100 ? '#d1fae5' : 
+                  const overallPacingDelta = overallPercentOfPlan - yearProgress;
+                  
+                  // % of Plan colors (based on achievement)
+                  const planBackgroundColor = overallPercentOfPlan >= 100 ? '#d1fae5' : 
                                         overallPercentOfPlan < 80 ? '#fee2e2' : '#fef3c7';
-                  const textColor = overallPercentOfPlan >= 100 ? '#065f46' : 
+                  const planTextColor = overallPercentOfPlan >= 100 ? '#065f46' : 
                                   overallPercentOfPlan < 80 ? '#991b1b' : '#92400e';
+                  const planBorderColor = overallPercentOfPlan >= 100 ? '#10b981' : overallPercentOfPlan < 80 ? '#ef4444' : '#f59e0b';
+                  
+                  // Pacing colors (based on pacing delta)
+                  const pacingBackgroundColor = overallPacingDelta >= 5 ? '#d1fae5' : 
+                                                overallPacingDelta <= -5 ? '#fee2e2' : '#fef3c7';
+                  const pacingTextColor = overallPacingDelta >= 5 ? '#065f46' : 
+                                          overallPacingDelta <= -5 ? '#991b1b' : '#92400e';
+                  const pacingBorderColor = overallPacingDelta >= 5 ? '#10b981' : 
+                                            overallPacingDelta <= -5 ? '#ef4444' : '#f59e0b';
                   
                   return (
-                    <div style={{
-                      backgroundColor,
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      textAlign: 'left',
-                      border: `1px solid ${overallPercentOfPlan >= 100 ? '#10b981' : overallPercentOfPlan < 80 ? '#ef4444' : '#f59e0b'}`
-                    }}>
-                      <div style={{ 
-                        fontSize: '12px', 
-                        color: textColor, 
-                        marginBottom: '2px' 
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <div style={{
+                        backgroundColor: planBackgroundColor,
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        textAlign: 'left',
+                        border: `1px solid ${planBorderColor}`
                       }}>
-                        % of Plan
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: planTextColor, 
+                          marginBottom: '2px' 
+                        }}>
+                          % of Plan
+                        </div>
+                        <div style={{ 
+                          fontSize: '18px', 
+                          fontWeight: '600', 
+                          color: planTextColor
+                        }}>
+                          {overallPercentOfPlan}%
+                        </div>
                       </div>
-                      <div style={{ 
-                        fontSize: '18px', 
-                        fontWeight: '600', 
-                        color: textColor
+                      <div style={{
+                        backgroundColor: pacingBackgroundColor,
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        textAlign: 'left',
+                        border: `1px solid ${pacingBorderColor}`
                       }}>
-                        {overallPercentOfPlan}%
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: pacingTextColor, 
+                          marginBottom: '2px' 
+                        }}>
+                          Overall Pacing
+                        </div>
+                        <div style={{ 
+                          fontSize: '18px', 
+                          fontWeight: '600', 
+                          color: pacingTextColor
+                        }}>
+                          {overallPacingDelta >= 0 ? '+' : ''}{overallPacingDelta}%
+                        </div>
                       </div>
                     </div>
                   );
@@ -934,34 +970,70 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                 const totalActual = performanceMetrics.reduce((sum, m) => sum + m.actualRevenue, 0);
                 const totalForecast = performanceMetrics.reduce((sum, m) => sum + m.forecastGoal, 0);
                 const overallPercentOfPlan = totalForecast > 0 ? Math.round((totalActual / totalForecast) * 100) : 0;
-                const backgroundColor = overallPercentOfPlan >= 100 ? '#d1fae5' : 
+                const overallPacingDelta = overallPercentOfPlan - yearProgress;
+                
+                // % of Plan colors (based on achievement)
+                const planBackgroundColor = overallPercentOfPlan >= 100 ? '#d1fae5' : 
                                       overallPercentOfPlan < 80 ? '#fee2e2' : '#fef3c7';
-                const textColor = overallPercentOfPlan >= 100 ? '#065f46' : 
+                const planTextColor = overallPercentOfPlan >= 100 ? '#065f46' : 
                                 overallPercentOfPlan < 80 ? '#991b1b' : '#92400e';
+                const planBorderColor = overallPercentOfPlan >= 100 ? '#10b981' : overallPercentOfPlan < 80 ? '#ef4444' : '#f59e0b';
+                
+                // Pacing colors (based on pacing delta)
+                const pacingBackgroundColor = overallPacingDelta >= 5 ? '#d1fae5' : 
+                                              overallPacingDelta <= -5 ? '#fee2e2' : '#fef3c7';
+                const pacingTextColor = overallPacingDelta >= 5 ? '#065f46' : 
+                                        overallPacingDelta <= -5 ? '#991b1b' : '#92400e';
+                const pacingBorderColor = overallPacingDelta >= 5 ? '#10b981' : 
+                                          overallPacingDelta <= -5 ? '#ef4444' : '#f59e0b';
                 
                 return (
-              <div style={{
-                    backgroundColor,
-                padding: '8px 16px',
-                borderRadius: '8px',
-                    textAlign: 'left',
-                    border: `1px solid ${overallPercentOfPlan >= 100 ? '#10b981' : overallPercentOfPlan < 80 ? '#ef4444' : '#f59e0b'}`
-              }}>
-                <div style={{ 
-                  fontSize: '12px', 
-                      color: textColor, 
-                  marginBottom: '2px' 
-                }}>
-                      % of Plan
-                </div>
-                <div style={{ 
-                  fontSize: '18px', 
-                  fontWeight: '600', 
-                      color: textColor
-                }}>
-                      {overallPercentOfPlan}%
-                </div>
-              </div>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{
+                      backgroundColor: planBackgroundColor,
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      textAlign: 'left',
+                      border: `1px solid ${planBorderColor}`
+                    }}>
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: planTextColor, 
+                        marginBottom: '2px' 
+                      }}>
+                        % of Plan
+                      </div>
+                      <div style={{ 
+                        fontSize: '18px', 
+                        fontWeight: '600', 
+                        color: planTextColor
+                      }}>
+                        {overallPercentOfPlan}%
+                      </div>
+                    </div>
+                    <div style={{
+                      backgroundColor: pacingBackgroundColor,
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      textAlign: 'left',
+                      border: `1px solid ${pacingBorderColor}`
+                    }}>
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: pacingTextColor, 
+                        marginBottom: '2px' 
+                      }}>
+                        Overall Pacing
+                      </div>
+                      <div style={{ 
+                        fontSize: '18px', 
+                        fontWeight: '600', 
+                        color: pacingTextColor
+                      }}>
+                        {overallPacingDelta >= 0 ? '+' : ''}{overallPacingDelta}%
+                      </div>
+                    </div>
+                  </div>
                 );
               })()}
             </div>
