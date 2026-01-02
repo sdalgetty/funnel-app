@@ -153,6 +153,11 @@ function AppContent() {
         setNavigationAction({ page: 'funnel', action: 'edit-month', month })
         setTimeout(() => setNavigationAction(null), 1000)
         break
+      case 'add-advertising-lead':
+        setCurrentPage('advertising')
+        setNavigationAction({ page: 'advertising', action: 'edit-month', month })
+        setTimeout(() => setNavigationAction(null), 100)
+        break
     }
   }
 
@@ -623,29 +628,6 @@ function AppContent() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <button
-                onClick={() => handleCreateAction('add-booking')}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-              >
-                Add New Sale
-              </button>
-              <button
                 onClick={() => handleCreateAction('add-inquiry')}
                 style={{
                   width: '100%',
@@ -667,6 +649,29 @@ function AppContent() {
                 }}
               >
                 Add New Inquiry
+              </button>
+              <button
+                onClick={() => handleCreateAction('add-advertising-lead')}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
+                }}
+              >
+                Add New Advertising Lead
               </button>
               <button
                 onClick={() => handleCreateAction('add-call-booked')}
@@ -713,6 +718,29 @@ function AppContent() {
                 }}
               >
                 Add New Call Taken
+              </button>
+              <button
+                onClick={() => handleCreateAction('add-booking')}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
+                }}
+              >
+                Add New Sale
               </button>
             </div>
           </div>

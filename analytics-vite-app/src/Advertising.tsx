@@ -28,21 +28,81 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
   } | null>(null);
 
   const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+
+  // Generate years from upcoming year back 5 years for new users
+  const generateAvailableYears = () => {
+    const years = [];
+    const upcomingYear = currentYear + 1;
+    // Include upcoming year, current year, and 5 previous years
+    years.push(upcomingYear); // Add upcoming year first
+    for (let i = 0; i < 6; i++) { // Current year + 5 previous years
+      years.push(currentYear - i);
+    }
+    return years.sort((a, b) => b - a); // Sort descending (upcoming year first)
+  };
+  
+  const availableYears = generateAvailableYears();
 
   // Handle navigation action to open edit modal for specific month
   useEffect(() => {
     if (navigationAction?.action === 'edit-month' && navigationAction.month && leadSources.length > 0 && adCampaigns.length >= 0) {
       const { year, month } = navigationAction.month
-      // Find or create campaign for that month with first lead source
-      const monthYear = `${year}-${String(month).padStart(2, '0')}`
-      const existingCampaign = adCampaigns.find(c => c.monthYear === monthYear && c.leadSourceId === leadSources[0].id)
+      setSelectedYear(year)
       
-      setSelectedLeadSourceId(leadSources[0].id)
+      // Check if there are any campaigns for the current year
+      const currentYearCampaigns = adCampaigns.filter(c => 
+        c.year === currentYear && 
+        !c.id.startsWith('default_')
+      )
+      
+      // If no campaigns for current year, just navigate to the page (don't open modal)
+      if (currentYearCampaigns.length === 0) {
+        console.log('No advertising data for current year, navigating to page only')
+        return
+      }
+      
+      // Find the last edited lead source for the current year
+      const campaignsByLeadSource = new Map<string, AdCampaign[]>()
+      currentYearCampaigns.forEach(campaign => {
+        const existing = campaignsByLeadSource.get(campaign.leadSourceId) || []
+        campaignsByLeadSource.set(campaign.leadSourceId, [...existing, campaign])
+      })
+      
+      // Find the lead source with the most recent lastUpdated date
+      let lastEditedLeadSourceId = ''
+      let mostRecentDate = new Date(0) // Epoch
+      
+      campaignsByLeadSource.forEach((campaigns, leadSourceId) => {
+        const latestCampaign = campaigns.reduce((latest, current) => {
+          const currentDate = current.lastUpdated ? new Date(current.lastUpdated) : new Date(0)
+          const latestDate = latest.lastUpdated ? new Date(latest.lastUpdated) : new Date(0)
+          return currentDate > latestDate ? current : latest
+        })
+        
+        const latestDate = latestCampaign.lastUpdated ? new Date(latestCampaign.lastUpdated) : new Date(0)
+        if (latestDate > mostRecentDate) {
+          mostRecentDate = latestDate
+          lastEditedLeadSourceId = leadSourceId
+        }
+      })
+      
+      // Fallback to first lead source if no lastUpdated dates found
+      const targetLeadSourceId = lastEditedLeadSourceId || leadSources[0].id
+      const targetLeadSource = leadSources.find(ls => ls.id === targetLeadSourceId) || leadSources[0]
+      
+      const monthYear = `${year}-${String(month).padStart(2, '0')}`
+      const existingCampaign = adCampaigns.find(c => 
+        c.monthYear === monthYear && 
+        c.leadSourceId === targetLeadSourceId
+      )
+      
+      setSelectedLeadSourceId(targetLeadSourceId)
       setUserManuallySelected(true)
       
       if (existingCampaign) {
         setEditingCampaign({
-          leadSource: leadSources[0],
+          leadSource: targetLeadSource,
           month: month,
           year: year,
           spend: existingCampaign.adSpendCents,
@@ -51,7 +111,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
         })
       } else {
         setEditingCampaign({
-          leadSource: leadSources[0],
+          leadSource: targetLeadSource,
           month: month,
           year: year,
           spend: 0,
@@ -61,7 +121,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
       }
       setIsEditModalOpen(true)
     }
-  }, [navigationAction, leadSources, adCampaigns])
+  }, [navigationAction, leadSources, adCampaigns, currentYear])
 
   // Load data from data manager
   useEffect(() => {
@@ -228,14 +288,14 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
     handleCloseModal();
   };
 
-  // Get campaigns for the selected lead source and current year
+  // Get campaigns for the selected lead source and selected year
   const campaignsForSelectedLeadSource = useMemo(() => {
     if (!selectedLeadSourceId) return [];
     return adCampaigns.filter(campaign => 
       campaign.leadSourceId === selectedLeadSourceId && 
-      campaign.year === currentYear
+      campaign.year === selectedYear
     );
-  }, [adCampaigns, selectedLeadSourceId, currentYear]);
+  }, [adCampaigns, selectedLeadSourceId, selectedYear]);
 
   // Create array of all 12 months with data or defaults
   const allMonths = useMemo(() => {
@@ -250,11 +310,11 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
       } else {
         // Create default campaign for missing months
         return {
-          id: `default_${selectedLeadSourceId}_${currentYear}_${month}`,
+          id: `default_${selectedLeadSourceId}_${selectedYear}_${month}`,
           leadSourceId: selectedLeadSourceId,
-          year: currentYear,
+          year: selectedYear,
           month: month,
-          monthYear: `${currentYear}-${String(month).padStart(2, '0')}`,
+          monthYear: `${selectedYear}-${String(month).padStart(2, '0')}`,
           spend: 0,
           adSpendCents: 0,
           leadsGenerated: 0,
@@ -262,7 +322,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
         };
       }
     });
-  }, [campaignsForSelectedLeadSource, selectedLeadSourceId, currentYear]);
+  }, [campaignsForSelectedLeadSource, selectedLeadSourceId, selectedYear]);
 
   // Calculate metrics for the selected lead source
   const metrics = useMemo(() => {
@@ -289,7 +349,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
 
       // Calculate total inquiries from funnel data
       const totalInquiries = funnelData
-        .filter(month => month.year === currentYear)
+        .filter(month => month.year === selectedYear)
         .reduce((sum, month) => sum + month.inquiries, 0);
 
       // Calculate metrics
@@ -311,7 +371,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
         closesFromAds,
         totalInquiries
       };
-  }, [campaignsForSelectedLeadSource, bookings, selectedLeadSource, funnelData, currentYear]);
+  }, [campaignsForSelectedLeadSource, bookings, selectedLeadSource, funnelData, selectedYear]);
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -363,12 +423,40 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
         </div>
       )}
 
+      {/* Year Selector */}
+      <div style={{ marginBottom: '32px' }}>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '14px', 
+          fontWeight: '500', 
+          marginBottom: '6px' 
+        }}>
+          Select Year
+        </label>
+        <select
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+          style={{
+            padding: '10px 12px',
+            border: '1px solid #d1d5db',
+            borderRadius: '8px',
+            fontSize: '14px',
+            backgroundColor: 'white',
+            minWidth: '120px'
+          }}
+        >
+          {availableYears.map(year => (
+            <option key={year} value={year}>{year}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Monthly Ad Tracking Table */}
       {selectedLeadSource && (
       <div style={{ marginBottom: '32px' }}>
         <div style={{ marginBottom: '24px' }}>
           <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
-            Monthly Ad Tracking - {currentYear}
+            Monthly Ad Tracking - {selectedYear}
           </h2>
           <p style={{ color: '#6b7280', margin: '4px 0 0 0', fontSize: '14px' }}>
               Track your monthly ad spend and leads generated for <strong>{selectedLeadSource.name}</strong>
@@ -388,7 +476,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
                   </thead>
                   <tbody>
                     {allMonths.map((campaign, index) => {
-                      const monthName = new Date(currentYear, campaign.month - 1).toLocaleString('default', { month: 'long' });
+                      const monthName = new Date(selectedYear, campaign.month - 1).toLocaleString('default', { month: 'long' });
                       const isDefault = campaign.id.startsWith('default_');
                       return (
                         <tr key={campaign.id} style={{ 
@@ -406,7 +494,7 @@ export default function Advertising({ bookings, leadSources, funnelData, dataMan
                           </td>
                           <td style={{ padding: '12px', color: '#1f2937', textAlign: 'left' }}>
                             <button
-                            onClick={() => !isViewOnly && handleEditCampaign(selectedLeadSource, campaign.month, currentYear, campaign.spend, campaign.leadsGenerated, isDefault)}
+                            onClick={() => !isViewOnly && handleEditCampaign(selectedLeadSource, campaign.month, selectedYear, campaign.spend, campaign.leadsGenerated, isDefault)}
                             disabled={isViewOnly}
                               style={{
                                 padding: '4px 8px',
