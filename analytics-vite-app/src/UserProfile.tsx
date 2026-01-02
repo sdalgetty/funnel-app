@@ -233,48 +233,55 @@ export default function UserProfile() {
         </div>
 
         <nav style={{ padding: '0 16px' }}>
-          {sections.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveSection(id)}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 16px',
-                border: 'none',
-                backgroundColor: activeSection === id ? '#f3f4f6' : 'transparent',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: activeSection === id ? '500' : '400',
-                color: activeSection === id ? '#1f2937' : '#6b7280',
-                marginBottom: '4px',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                if (activeSection !== id) {
-                  e.currentTarget.style.backgroundColor = '#f9fafb';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (activeSection !== id) {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }
-              }}
-            >
-              <Icon size={18} />
-              {label}
-              <ChevronRight 
-                size={16} 
-                style={{ 
-                  marginLeft: 'auto',
-                  opacity: activeSection === id ? 1 : 0.5
-                }} 
-              />
-            </button>
-          ))}
+          {sections.map(({ id, label, icon: Icon }) => {
+            // Disable placeholder sections: subscription, billing, privacy, support
+            const isDisabled = ['subscription', 'billing', 'privacy', 'support'].includes(id);
+            
+            return (
+              <button
+                key={id}
+                onClick={() => !isDisabled && setActiveSection(id)}
+                disabled={isDisabled}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  border: 'none',
+                  backgroundColor: activeSection === id ? '#f3f4f6' : 'transparent',
+                  borderRadius: '8px',
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: activeSection === id ? '500' : '400',
+                  color: isDisabled ? '#9ca3af' : (activeSection === id ? '#1f2937' : '#6b7280'),
+                  marginBottom: '4px',
+                  transition: 'all 0.2s',
+                  opacity: isDisabled ? 0.6 : 1
+                }}
+                onMouseEnter={(e) => {
+                  if (!isDisabled && activeSection !== id) {
+                    e.currentTarget.style.backgroundColor = '#f9fafb';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isDisabled && activeSection !== id) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                <Icon size={18} />
+                {label}
+                <ChevronRight 
+                  size={16} 
+                  style={{ 
+                    marginLeft: 'auto',
+                    opacity: isDisabled ? 0.3 : (activeSection === id ? 1 : 0.5)
+                  }} 
+                />
+              </button>
+            );
+          })}
         </nav>
       </div>
 
@@ -404,15 +411,25 @@ export default function UserProfile() {
             )}
 
             {activeSection === 'subscription' && (
-              <SubscriptionSection 
-                user={user}
-                onUpgrade={upgradeToPro}
-                onDowngrade={downgradeToFree}
-              />
+              <div style={{ 
+                padding: '40px', 
+                textAlign: 'center', 
+                color: '#9ca3af',
+                fontSize: '14px'
+              }}>
+                This section is coming soon.
+              </div>
             )}
 
             {activeSection === 'billing' && (
-              <BillingSection user={user} />
+              <div style={{ 
+                padding: '40px', 
+                textAlign: 'center', 
+                color: '#9ca3af',
+                fontSize: '14px'
+              }}>
+                This section is coming soon.
+              </div>
             )}
 
             {activeSection === 'sharing' && (
@@ -420,11 +437,25 @@ export default function UserProfile() {
             )}
 
             {activeSection === 'privacy' && (
-              <PrivacySection user={user} />
+              <div style={{ 
+                padding: '40px', 
+                textAlign: 'center', 
+                color: '#9ca3af',
+                fontSize: '14px'
+              }}>
+                This section is coming soon.
+              </div>
             )}
 
             {activeSection === 'support' && (
-              <SupportSection user={user} />
+              <div style={{ 
+                padding: '40px', 
+                textAlign: 'center', 
+                color: '#9ca3af',
+                fontSize: '14px'
+              }}>
+                This section is coming soon.
+              </div>
             )}
           </div>
         </div>
