@@ -795,6 +795,18 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
     return forecastModels.length > 0
   }, [forecastModels])
 
+  // Check if there's an active forecast model for the current year
+  const hasActiveForecastModelForCurrentYear = useMemo(() => {
+    const currentYear = new Date().getFullYear()
+    return forecastModels.some(m => m.isActive && m.year === currentYear)
+  }, [forecastModels])
+
+  // Check if it's January (the month, not just the 1st)
+  const isJanuary = useMemo(() => {
+    const now = new Date()
+    return now.getMonth() === 0 // January (month 0)
+  }, [])
+
   // Generate tasks based on state
   useEffect(() => {
     const generateTasks = () => {
@@ -851,20 +863,35 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
       }
 
       // Forecast model tasks
-      if (!hasForecastModel) {
+      // New Year task: In January, always show if there's no active forecast model for current year
+      // This ensures users activate a new model even if last year's model is still active
+      if (isJanuary && !hasActiveForecastModelForCurrentYear) {
+        const currentYear = new Date().getFullYear()
         newTasks.push({
-          id: 'create-forecast',
-          label: 'Create a Forecast Model to plan your year',
+          id: `activate-forecast-${currentYear}`,
+          label: `Activate your ${currentYear} Forecast Model`,
           completed: false,
           action: 'view-forecast'
         })
-      } else if (!hasActiveForecastModel) {
-        newTasks.push({
-          id: 'activate-forecast',
-          label: 'Activate A Forecast Model to track your goals in real time',
-          completed: false,
-          action: 'view-forecast'
-        })
+      }
+      
+      // Regular forecast model tasks (only show if not January)
+      if (!isJanuary) {
+        if (!hasForecastModel) {
+          newTasks.push({
+            id: 'create-forecast',
+            label: 'Create a Forecast Model to plan your year',
+            completed: false,
+            action: 'view-forecast'
+          })
+        } else if (!hasActiveForecastModel) {
+          newTasks.push({
+            id: 'activate-forecast',
+            label: 'Activate A Forecast Model to track your goals in real time',
+            completed: false,
+            action: 'view-forecast'
+          })
+        }
       }
 
       // Load completed tasks from localStorage
@@ -892,7 +919,7 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
     }
 
     generateTasks()
-  }, [isNewMonth, currentMonthHasData, lastMonthHasData, hasForecastModel, hasActiveForecastModel, currentMonth, lastMonth, monthNames, forecastModels])
+  }, [isNewMonth, currentMonthHasData, lastMonthHasData, hasForecastModel, hasActiveForecastModel, hasActiveForecastModelForCurrentYear, isJanuary, currentMonth, lastMonth, monthNames, forecastModels])
 
   // Toggle task completion
   const toggleTask = (taskId: string) => {
