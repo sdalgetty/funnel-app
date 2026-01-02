@@ -958,6 +958,9 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
       case 'add-inquiry':
         handleNavigate('edit-funnel', month)
         break
+      case 'add-advertising-lead':
+        handleNavigate('edit-advertising', month)
+        break
       case 'add-call-booked':
         handleNavigate('edit-funnel', month)
         break
@@ -1159,22 +1162,6 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <button
-                onClick={() => handleCreateAction('add-sale')}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: '14px',
-                  fontWeight: '500'
-                }}
-              >
-                Add New Sale
-              </button>
-              <button
                 onClick={() => handleCreateAction('add-inquiry')}
                 style={{
                   width: '100%',
@@ -1189,6 +1176,22 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
                 }}
               >
                 Add New Inquiry
+              </button>
+              <button
+                onClick={() => handleCreateAction('add-advertising-lead')}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}
+              >
+                Add New Advertising Lead
               </button>
               <button
                 onClick={() => handleCreateAction('add-call-booked')}
@@ -1221,6 +1224,22 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
                 }}
               >
                 Add New Call Taken
+              </button>
+              <button
+                onClick={() => handleCreateAction('add-sale')}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}
+              >
+                Add New Sale
               </button>
             </div>
           </div>
