@@ -198,6 +198,15 @@ function AppContent() {
     )
   }
 
+  // Debug: Log mobile detection on mount
+  useEffect(() => {
+    console.log('[Mobile Debug] Initial state:', { 
+      windowWidth: window.innerWidth, 
+      isMobile: window.innerWidth < 768,
+      userAgent: navigator.userAgent 
+    })
+  }, [])
+
   return (
     <div style={{ 
       minHeight: '100vh', 
