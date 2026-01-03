@@ -851,7 +851,8 @@ function AppContent() {
               </div>
             )}
           </div>
-        )}
+        </div>
+      )}
 
       {/* Page Content */}
       <div style={{ padding: '0' }}>
