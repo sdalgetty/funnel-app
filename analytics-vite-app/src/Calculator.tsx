@@ -49,13 +49,17 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
   }
 
   // Calculate YTD totals from actual funnel data
-  // Use stable references to prevent infinite loops
-  const funnelData = dataManager?.funnelData || [];
-  const bookings = dataManager?.bookings || [];
-  const serviceTypes = dataManager?.serviceTypes || [];
+  // Use JSON.stringify to create stable dependency keys to prevent infinite loops
+  const funnelDataKey = JSON.stringify(dataManager?.funnelData || []);
+  const bookingsKey = JSON.stringify(dataManager?.bookings || []);
+  const serviceTypesKey = JSON.stringify(dataManager?.serviceTypes || []);
   
   const ytdTotals = useMemo(() => {
     try {
+      const funnelData = dataManager?.funnelData || [];
+      const bookings = dataManager?.bookings || [];
+      const serviceTypes = dataManager?.serviceTypes || [];
+      
       // Get trackable service type IDs (for closes calculation)
       const trackableServiceIds = new Set(
         serviceTypes.filter((st: any) => st?.tracksInFunnel).map((st: any) => st?.id).filter(Boolean)
@@ -92,7 +96,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
         bookings: 0,
       };
     }
-  }, [funnelData, bookings, serviceTypes, currentYear]);
+  }, [funnelDataKey, bookingsKey, serviceTypesKey, currentYear, dataManager]);
 
   const [data, setData] = useState<CalculatorData>({
     bookingsGoal: 0,
