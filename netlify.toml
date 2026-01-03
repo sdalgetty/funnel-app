@@ -1,7 +1,7 @@
 [build]
   base = "analytics-vite-app"
   command = "npm install && npm run build"
-  publish = "analytics-vite-app/dist"
+  publish = "dist"
 
 # HTML files should never be cached to prevent stale chunk references
 [[headers]]
@@ -42,4 +42,3 @@
   to = "https://app.fnnlapp.com/:splat"
   status = 301
   force = true
-
