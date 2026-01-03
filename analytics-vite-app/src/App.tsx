@@ -75,7 +75,7 @@ function AppContent() {
   }, [isAdmin])
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   // Navigation state for opening modals/actions in other tabs
   const [navigationAction, setNavigationAction] = useState<{
