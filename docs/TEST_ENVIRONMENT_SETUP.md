@@ -75,7 +75,7 @@ You have two options:
 
 #### For Production Site:
 1. Go to your existing production site settings
-2. Ensure **Production branch** is set to: `main`
+2. Ensure **Production branch** is set to: `dev` (not `main`)
 3. Enable "Deploy only the production branch"
 
 ### Step 5: Set Environment Variables

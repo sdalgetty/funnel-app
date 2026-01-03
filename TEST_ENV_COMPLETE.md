@@ -38,11 +38,11 @@ Your test environment is now fully configured and ready to use!
 4. Test your changes thoroughly
 
 ### Deploy to Production
-1. After testing in test environment, merge to `main`:
+1. After testing in test environment, merge to `dev` (production deploys from `dev` branch):
    ```bash
-   git checkout main
+   git checkout dev
    git merge test
-   git push origin main
+   git push origin dev
    ```
 2. Netlify automatically deploys to production
 3. Your changes are live!
@@ -58,7 +58,7 @@ Your test environment is now fully configured and ready to use!
 ### Production Environment
 - **Supabase:** (your production project)
 - **Netlify Site:** (your existing production site)
-- **Branch:** `main`
+- **Branch:** `dev` (Netlify is configured to deploy from `dev`, not `main`)
 - **URL:** `https://app.fnnlapp.com` (or your custom domain)
 
 ## 📚 Documentation

@@ -54,14 +54,16 @@ git push origin test
 Once testing is complete and approved:
 
 ```bash
-# Merge test to main
-git checkout main
-git pull origin main
+# Merge test to dev (production deploys from dev branch)
+git checkout dev
+git pull origin dev
 git merge test
-git push origin main
+git push origin dev
 ```
 
 **Result**: Netlify automatically deploys to production environment
+
+**Note**: Production Netlify site is configured to deploy from the `dev` branch, not `main`.
 
 ### 5. Post-Deployment Verification
 
