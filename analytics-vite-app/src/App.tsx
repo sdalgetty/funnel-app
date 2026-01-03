@@ -87,7 +87,12 @@ function AppContent() {
   // Device detection
   useEffect(() => {
     const checkDevice = () => {
-      setIsMobile(window.innerWidth < 768)
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      // Debug logging (can be removed later)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Mobile detection:', { width: window.innerWidth, isMobile: mobile })
+      }
     }
     
     checkDevice()
