@@ -134,9 +134,11 @@ export default function Insights({ dataManager }: { dataManager: any }) {
           changed = true
         }
       })
+      // Only update if something actually changed to prevent infinite loops
       return changed ? next : prev
     })
-  }, [validFilterKeys])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeFilterOptions]) // Use timeFilterOptions directly instead of validFilterKeys to avoid Set reference issues
 
   const buildMonthRange = useCallback((filterKey: string): MonthRange => {
     const currentMonthIndex = currentDateInfo.year * 12 + currentDateInfo.month
