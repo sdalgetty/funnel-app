@@ -1045,7 +1045,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                     padding: '8px 12px',
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',
-                    fontSize: '14px',
+                    fontSize: isMobile ? '16px' : '14px',
                     boxSizing: 'border-box'
                   }}
                 />
@@ -1076,7 +1076,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                     padding: '8px 12px',
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',
-                    fontSize: '14px',
+                    fontSize: isMobile ? '16px' : '14px',
                     boxSizing: 'border-box'
                   }}
                 />
@@ -1107,7 +1107,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                     padding: '8px 12px',
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',
-                    fontSize: '14px',
+                    fontSize: isMobile ? '16px' : '14px',
                     boxSizing: 'border-box'
                   }}
                 />
@@ -1174,7 +1174,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                           padding: '8px 12px',
                           border: '1px solid #d1d5db',
                           borderRadius: '6px',
-                          fontSize: '14px',
+                          fontSize: isMobile ? '16px' : '14px',
                           backgroundColor: closesIsManual ? 'white' : '#f9fafb',
                           color: closesIsManual ? '#1f2937' : '#6b7280',
                           cursor: closesIsManual ? 'text' : 'not-allowed',
@@ -1224,10 +1224,11 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                           padding: '8px 12px',
                           border: '1px solid #d1d5db',
                           borderRadius: '6px',
-                          fontSize: '14px',
+                          fontSize: isMobile ? '16px' : '14px',
                           backgroundColor: bookingsIsManual ? 'white' : '#f9fafb',
                           color: bookingsIsManual ? '#1f2937' : '#6b7280',
-                          cursor: bookingsIsManual ? 'text' : 'not-allowed'
+                          cursor: bookingsIsManual ? 'text' : 'not-allowed',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -1273,10 +1274,11 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                           padding: '8px 12px',
                           border: '1px solid #d1d5db',
                           borderRadius: '6px',
-                          fontSize: '14px',
+                          fontSize: isMobile ? '16px' : '14px',
                           backgroundColor: cashIsManual ? 'white' : '#f9fafb',
                           color: cashIsManual ? '#1f2937' : '#6b7280',
-                          cursor: cashIsManual ? 'text' : 'not-allowed'
+                          cursor: cashIsManual ? 'text' : 'not-allowed',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -1310,7 +1312,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                         padding: '8px 12px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
-                        fontSize: '14px',
+                        fontSize: isMobile ? '16px' : '14px',
                         boxSizing: 'border-box'
                       }}
                     />
@@ -1329,7 +1331,8 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                         padding: '8px 12px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
-                        fontSize: '14px'
+                        fontSize: isMobile ? '16px' : '14px',
+                        boxSizing: 'border-box'
                       }}
                     />
                   </div>
@@ -1347,7 +1350,8 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                         padding: '8px 12px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
-                        fontSize: '14px'
+                        fontSize: isMobile ? '16px' : '14px',
+                        boxSizing: 'border-box'
                       }}
                     />
                   </div>
