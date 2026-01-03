@@ -195,7 +195,7 @@ function AppContent() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', width: '100%', overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', width: '100%', overflowX: 'hidden', position: 'relative' }}>
 
       {/* Impersonation Banner (Admin Mode) */}
       {impersonatingUserId && (
@@ -601,7 +601,8 @@ function AppContent() {
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'flex-end',
-            paddingTop: isMobile ? '60px' : '80px'
+            paddingTop: '0',
+            overflow: 'hidden'
           }}
           onClick={() => setIsMobileMenuOpen(false)}
         >
@@ -609,12 +610,14 @@ function AppContent() {
             style={{
               backgroundColor: 'white',
               width: '280px',
-              maxHeight: 'calc(100vh - 80px)',
+              maxWidth: '85vw',
+              height: '100vh',
               overflowY: 'auto',
               boxShadow: '-4px 0 6px rgba(0, 0, 0, 0.1)',
               display: 'flex',
               flexDirection: 'column',
-              padding: '16px 0'
+              padding: '16px 0',
+              marginRight: '0'
             }}
             onClick={(e) => e.stopPropagation()}
           >
