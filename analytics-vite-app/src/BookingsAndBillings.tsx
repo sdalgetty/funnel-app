@@ -1407,7 +1407,15 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
 
       {/* Mobile Card View */}
       {isMobile && (
-        <section style={{ padding: '16px', backgroundColor: '#f9fafb', minHeight: '100vh' }}>
+        <section style={{ 
+          padding: '16px', 
+          backgroundColor: '#f9fafb', 
+          minHeight: '100vh',
+          width: '100%',
+          maxWidth: '100vw',
+          boxSizing: 'border-box',
+          overflowX: 'hidden'
+        }}>
           {paginatedBookings.length === 0 ? (
             <div style={{ 
               padding: '40px', 
@@ -1438,7 +1446,11 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
                       padding: '16px',
                       marginBottom: '12px',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                      border: '1px solid #e5e7eb'
+                      border: '1px solid #e5e7eb',
+                      width: '100%',
+                      maxWidth: '100%',
+                      boxSizing: 'border-box',
+                      overflow: 'hidden'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>

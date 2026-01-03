@@ -195,7 +195,15 @@ function AppContent() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', width: '100%', overflowX: 'hidden', position: 'relative' }}>
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: '#f5f5f5', 
+      width: '100%', 
+      maxWidth: '100vw',
+      overflowX: 'hidden', 
+      position: 'relative',
+      WebkitOverflowScrolling: 'touch'
+    }}>
 
       {/* Impersonation Banner (Admin Mode) */}
       {impersonatingUserId && (
@@ -819,14 +827,14 @@ function AppContent() {
               </button>
             )}
             {user && !isViewOnly && (
-              <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px', paddingTop: '8px' }}>
+              <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px', paddingTop: '8px', paddingLeft: '0', paddingRight: '0' }}>
                 <button
                   onClick={() => {
                     setShowCreateModal(true)
                     setIsMobileMenuOpen(false)
                   }}
                   style={{
-                    width: '100%',
+                    width: 'calc(100% - 32px)',
                     margin: '8px 16px',
                     padding: '12px 16px',
                     borderRadius: '8px',
@@ -840,7 +848,8 @@ function AppContent() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
-                    boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
+                    boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)',
+                    boxSizing: 'border-box'
                   }}
                 >
                   <Plus size={20} />
