@@ -29,7 +29,9 @@ function AppContent() {
   // Set page title based on environment
   useEffect(() => {
     const hostname = window.location.hostname
-    const isTestEnv = hostname.includes('fnnl-app-test') || hostname.includes('test')
+    // Check for test environment - Netlify test sites typically have 'netlify.app' in the domain
+    // and are not the production domain 'app.fnnlapp.com'
+    const isTestEnv = hostname.includes('netlify.app') && !hostname.includes('app.fnnlapp.com')
     document.title = isTestEnv ? 'FNNL TEST' : 'FNNL'
   }, [])
   
