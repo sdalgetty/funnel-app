@@ -505,15 +505,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     // If no stored state, check if user has any accepted shares and auto-switch to the first one
     if (authUser) {
-      console.log('Checking for accepted shares for user:', authUser.id)
+      logger.debug('Checking for accepted shares for user:', authUser.id)
       const acceptedShares = await ShareService.getAcceptedSharesForGuest(authUser.id)
       if (acceptedShares.length > 0) {
         // Auto-switch to the first (most recently accepted) shared account
         const firstShare = acceptedShares[0]
-        console.log('Found accepted share, auto-switching to owner:', firstShare.ownerUserId)
+        logger.debug('Found accepted share, auto-switching to owner:', firstShare.ownerUserId)
         await switchToSharedAccount(firstShare.ownerUserId, authUser.id)
       } else {
-        console.log('No accepted shares found for user')
+        logger.debug('No accepted shares found for user')
       }
     }
   }
@@ -574,7 +574,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Load profile in background (non-blocking)
         loadUserProfile(session.user).then(async userWithProfile => {
           if (userWithProfile) {
-            console.log('Profile loaded in background:', userWithProfile);
+            logger.debug('Profile loaded in background:', userWithProfile);
             setUser(userWithProfile);
             
             // Identify user in PostHog
@@ -595,7 +595,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Keep using basic user - already set
         });
       } else {
-        console.log('No user session');
+        logger.debug('No user session');
         setUser(null);
         setViewingAsGuest(false)
         setSharedAccountOwnerId(null)
@@ -747,7 +747,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Load profile in background (non-blocking)
         loadUserProfile(session.user).then(async userWithProfile => {
           if (userWithProfile) {
-            console.log('Profile loaded in background:', userWithProfile);
+            logger.debug('Profile loaded in background:', userWithProfile);
             setUser(userWithProfile);
             
             // Identify user in PostHog
@@ -779,7 +779,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           })
         });
       } else {
-        console.log('No user session');
+        logger.debug('No user session');
         setUser(null);
         setViewingAsGuest(false)
         setSharedAccountOwnerId(null)
