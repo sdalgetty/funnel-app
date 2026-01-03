@@ -49,26 +49,27 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
   }
 
   // Calculate YTD totals from actual funnel data
+  // Use stable references to prevent infinite loops
+  const funnelData = dataManager?.funnelData || [];
+  const bookings = dataManager?.bookings || [];
+  const serviceTypes = dataManager?.serviceTypes || [];
+  
   const ytdTotals = useMemo(() => {
     try {
-      const funnelData = dataManager?.funnelData || [];
-      const bookings = dataManager?.bookings || [];
-      const serviceTypes = dataManager?.serviceTypes || [];
-      
       // Get trackable service type IDs (for closes calculation)
       const trackableServiceIds = new Set(
         serviceTypes.filter((st: any) => st?.tracksInFunnel).map((st: any) => st?.id).filter(Boolean)
       );
       
       // Get all data for the current year
-      const yearData = (funnelData || []).filter((item: any) => item?.year === currentYear);
+      const yearData = funnelData.filter((item: any) => item?.year === currentYear);
     
       // Calculate inquiries and calls from funnel data
       const totalInquiries = yearData.reduce((acc: number, month: any) => acc + (month?.inquiries || 0), 0);
       const totalCallsTaken = yearData.reduce((acc: number, month: any) => acc + (month?.callsTaken || 0), 0);
       
       // Calculate closes from bookings (only trackable service types)
-      const totalCloses = (bookings || []).filter((b: any) => {
+      const totalCloses = bookings.filter((b: any) => {
         if (!b?.dateBooked) return false;
         try {
           const [y] = b.dateBooked.split('-');
@@ -91,7 +92,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
         bookings: 0,
       };
     }
-  }, [dataManager?.funnelData, dataManager?.bookings, dataManager?.serviceTypes, currentYear]);
+  }, [funnelData, bookings, serviceTypes, currentYear]);
 
   const [data, setData] = useState<CalculatorData>({
     bookingsGoal: 0,
@@ -123,21 +124,21 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
 
   // Update YTD data when funnel data changes
   useEffect(() => {
-    setData(prev => ({
-      ...prev,
-    inqYtd: ytdTotals.inquiries,
-    callsYtd: ytdTotals.callsTaken,
-    bookingsYtd: ytdTotals.bookings,
-    }));
-  }, [ytdTotals]);
-
-  const [calculations, setCalculations] = useState({
-    requiredCalls: 0,
-    requiredInquiries: 0,
-    paceInq: 0,
-    paceCalls: 0,
-    paceBookings: 0,
-  });
+    setData(prev => {
+      // Only update if values actually changed to prevent infinite loops
+      if (prev.inqYtd === ytdTotals.inquiries && 
+          prev.callsYtd === ytdTotals.callsTaken && 
+          prev.bookingsYtd === ytdTotals.bookings) {
+        return prev;
+      }
+      return {
+        ...prev,
+        inqYtd: ytdTotals.inquiries,
+        callsYtd: ytdTotals.callsTaken,
+        bookingsYtd: ytdTotals.bookings,
+      };
+    });
+  }, [ytdTotals.inquiries, ytdTotals.callsTaken, ytdTotals.bookings]);
 
   // Calculate months elapsed in current year
   const getMonthsElapsed = () => {
@@ -154,8 +155,8 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
     return isNaN(value) ? "—" : Math.round(value).toLocaleString();
   };
 
-  // Recalculate all metrics
-  const recalculate = () => {
+  // Calculate all metrics using useMemo to prevent infinite loops
+  const calculations = useMemo(() => {
     const bookingsGoal = data.bookingsGoal;
     const pctInquiryToCall = data.inquiryToCall / 100;
     const pctCallToBooking = data.callToBooking / 100;
@@ -171,19 +172,14 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
     const paceCalls = (data.callsYtd / months) * 12;
     const paceBookings = (data.bookingsYtd / months) * 12;
 
-    setCalculations({
+    return {
       requiredCalls,
       requiredInquiries,
       paceInq,
       paceCalls,
       paceBookings,
-    });
-  };
-
-  // Recalculate when data changes
-  useEffect(() => {
-    recalculate();
-  }, [data]);
+    };
+  }, [data.bookingsGoal, data.inquiryToCall, data.callToBooking, data.inqYtd, data.callsYtd, data.bookingsYtd]);
 
   // Debounced save function for goals
   const saveGoalsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
