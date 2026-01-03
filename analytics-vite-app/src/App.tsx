@@ -26,6 +26,13 @@ function AppContent() {
   const dataManager = useDataManager()
   const [ownerCompanyName, setOwnerCompanyName] = useState<string | null>(null)
   
+  // Set page title based on environment
+  useEffect(() => {
+    const hostname = window.location.hostname
+    const isTestEnv = hostname.includes('fnnl-app-test') || hostname.includes('test')
+    document.title = isTestEnv ? 'FNNL TEST' : 'FNNL'
+  }, [])
+  
   // Load owner's company name when viewing as guest
   useEffect(() => {
     const loadOwnerInfo = async () => {
