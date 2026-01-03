@@ -3311,7 +3311,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
                   padding: '10px 12px',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   boxSizing: 'border-box'
                 }}
                 placeholder="e.g., Ashley & Devon"
@@ -3330,7 +3330,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
                   padding: '10px 12px',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   boxSizing: 'border-box'
                 }}
               >
@@ -3353,7 +3353,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
                   padding: '10px 12px',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   boxSizing: 'border-box'
                 }}
               >
@@ -3379,7 +3379,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
                   padding: '10px 12px',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   boxSizing: 'border-box'
                 }}
               />
@@ -3412,7 +3412,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
                   padding: '10px 12px',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   boxSizing: 'border-box'
                 }}
               />
@@ -3431,7 +3431,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
                   padding: '10px 12px',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   boxSizing: 'border-box'
                 }}
               />
