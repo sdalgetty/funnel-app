@@ -962,11 +962,13 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
             borderRadius: isMobile ? '20px 20px 0 0' : '12px',
             padding: isMobile ? '20px' : '24px',
             width: isMobile ? '100%' : '90%',
-            maxWidth: isMobile ? '100%' : '500px',
+            maxWidth: isMobile ? '100vw' : '500px',
             maxHeight: isMobile ? '90vh' : '90vh',
             overflow: 'auto',
             boxShadow: isMobile ? '0 -4px 6px rgba(0,0,0,0.1)' : '0 4px 6px rgba(0,0,0,0.1)',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            position: 'relative',
+            overflowX: 'hidden'
           }}
           onClick={(e) => e.stopPropagation()}
           >
@@ -1010,9 +1012,16 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
               </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '16px',
+              width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box'
+            }}>
               {/* Inquiries */}
-              <div>
+              <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                   Inquiries
                 </label>
@@ -1032,6 +1041,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                   }}
                   style={{
                     width: '100%',
+                    maxWidth: '100%',
                     padding: '8px 12px',
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',
@@ -1062,6 +1072,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                   }}
                   style={{
                     width: '100%',
+                    maxWidth: '100%',
                     padding: '8px 12px',
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',
@@ -1092,6 +1103,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                   }}
                   style={{
                     width: '100%',
+                    maxWidth: '100%',
                     padding: '8px 12px',
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',

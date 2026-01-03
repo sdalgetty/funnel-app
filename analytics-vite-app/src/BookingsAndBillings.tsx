@@ -3256,6 +3256,8 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
     // Simplified - no payment updates needed
   };
 
+  const isMobile = window.innerWidth < 768;
+
   return (
     <div style={{
       position: 'fixed',
@@ -3265,19 +3267,28 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
       bottom: 0,
       backgroundColor: 'rgba(0,0,0,0.5)',
       display: 'flex',
-      alignItems: 'center',
+      alignItems: isMobile ? 'flex-end' : 'center',
       justifyContent: 'center',
-      zIndex: 1000
-    }}>
+      zIndex: 1000,
+      padding: isMobile ? '0' : '16px'
+    }}
+    onClick={onClose}
+    >
       <div style={{
         backgroundColor: 'white',
-        borderRadius: '12px',
-        padding: '24px',
-        width: '90%',
-        maxWidth: '600px',
+        borderRadius: isMobile ? '20px 20px 0 0' : '12px',
+        padding: isMobile ? '20px' : '24px',
+        width: isMobile ? '100%' : '90%',
+        maxWidth: isMobile ? '100vw' : '600px',
         maxHeight: '90vh',
-        overflow: 'auto'
-      }}>
+        overflow: 'auto',
+        boxShadow: isMobile ? '0 -4px 6px rgba(0,0,0,0.1)' : '0 4px 6px rgba(0,0,0,0.1)',
+        boxSizing: 'border-box',
+        position: 'relative',
+        overflowX: 'hidden'
+      }}
+      onClick={(e) => e.stopPropagation()}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Edit Booking</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
