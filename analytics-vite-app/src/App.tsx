@@ -276,7 +276,7 @@ function AppContent() {
         display: 'flex',
         gap: '16px',
         alignItems: 'center',
-        marginTop: (viewingAsGuest || impersonatingUserId) ? '0' : '0',
+        marginTop: '0',
         width: '100%',
         maxWidth: '100vw',
         boxSizing: 'border-box',
