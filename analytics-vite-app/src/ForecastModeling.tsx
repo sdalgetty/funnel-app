@@ -25,6 +25,13 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   hideTracker = false
 }) => {
   const { user, effectiveUserId, isViewOnly } = useAuth();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   // Track if component has mounted to avoid false warnings during initial render
   const hasMountedRef = useRef(false);
@@ -509,6 +516,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
               </div>
             </div>
 
+            {!isMobile && (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', fontSize: '14px' }}>
                 <thead style={{ backgroundColor: '#f5f5f5' }}>
@@ -657,6 +665,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         )}
       </div>
@@ -1039,6 +1048,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
             </div>
           </div>
 
+          {!isMobile && (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', fontSize: '14px' }}>
               <thead style={{ backgroundColor: '#f5f5f5' }}>
@@ -1189,6 +1199,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
 

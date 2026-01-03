@@ -19,7 +19,15 @@ interface CalculatorProps {
 
 const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false }) => {
   const { user } = useAuth();
-    const currentYear = new Date().getFullYear();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  const currentYear = new Date().getFullYear();
     
   // Show loading state if dataManager is not ready (check early to prevent errors)
   if (!dataManager || dataManager.loading) {
@@ -568,8 +576,8 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
     return (
       <div style={{ 
         display: 'grid', 
-        gap: '16px',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: isMobile ? '12px' : '16px',
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
         maxWidth: '100%',
         overflow: 'hidden'
       }}>

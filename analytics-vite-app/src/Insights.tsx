@@ -450,8 +450,17 @@ export default function Insights({ dataManager }: { dataManager: any }) {
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' })
   const formatNumber = (n: number) => n.toLocaleString()
 
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 style={{ fontSize: '28px', fontWeight: 700, margin: 0, color: '#1f2937' }}>Insights</h1>
       </div>
@@ -465,7 +474,9 @@ export default function Insights({ dataManager }: { dataManager: any }) {
 
       {/* CALCULATOR */}
       <Section title="Sales Calculator">
-        <Calculator dataManager={dataManager} compact />
+        <div style={{ display: isMobile ? 'block' : 'block' }}>
+          <Calculator dataManager={dataManager} compact />
+        </div>
       </Section>
 
       {/* SALES FUNNEL */}
@@ -479,7 +490,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
           />
         }
       >
-        <Cards>
+        <Cards columns={2}>
           {/* Row 1 */}
           <Card icon={<Users size={20} color="#3b82f6" />} label="Inquiries" value={formatNumber(salesTotals.totalInquiries)} sub={`Avg: ${formatNumber(salesTotals.avgInquiries)}/month`} />
           <Card icon={<Phone size={20} color="#10b981" />} label="Calls Booked" value={formatNumber(callTotals.totalCallsBooked)} sub={`Avg: ${formatNumber(callTotals.avgCallsBooked)}/month`} />
@@ -590,7 +601,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
           />
         }
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 12 : 16 }}>
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
             <h3 style={{ margin: '0 0 12px 0', fontSize: 14, color: '#374151' }}>Bookings by Lead Source</h3>
             {leadSourceBreakdown.items.length === 0 ? (
@@ -648,7 +659,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
           />
         }
       >
-        <Cards>
+        <Cards columns={2}>
           <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value={toUSD(advertisingTotals.totalAdSpend)} />
           <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value={toUSD(advertisingTotals.totalBookedFromAds)} />
           <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value={advertisingTotals.overallROI !== null ? advertisingTotals.overallROI.toFixed(2) : 'N/A'} />
@@ -660,10 +671,25 @@ export default function Insights({ dataManager }: { dataManager: any }) {
 }
 
 function Section({ title, actions, children }: { title: string; actions?: React.ReactNode; children: React.ReactNode }) {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+  
   return (
-    <div style={{ marginBottom: 32 }}>
-      <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0, color: '#1f2937', textAlign: 'left' }}>{title}</h2>
+    <div style={{ marginBottom: isMobile ? 24 : 32 }}>
+      <div style={{ 
+        marginBottom: 12, 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        gap: 12,
+        flexWrap: isMobile ? 'wrap' : 'nowrap'
+      }}>
+        <h2 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 600, margin: 0, color: '#1f2937', textAlign: 'left' }}>{title}</h2>
         {actions ? (
           <div style={{ flexShrink: 0 }}>{actions}</div>
         ) : null}
@@ -692,9 +718,21 @@ function TimeFilterSelect({ value, onChange, options }: { value: string; onChang
   )
 }
 
-function Cards({ children }: { children: React.ReactNode }) {
+function Cards({ children, columns = 4 }: { children: React.ReactNode; columns?: number }) {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+  
+  // Mobile: use specified columns, Desktop: use 4
+  const mobileColumns = columns === 1 ? 1 : 2
+  const gridColumns = isMobile ? mobileColumns : 4
+  
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: isMobile ? 12 : 16 }}>
       {children}
     </div>
   )

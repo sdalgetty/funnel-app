@@ -196,26 +196,6 @@ function AppContent() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', width: '100%', overflowX: 'hidden' }}>
-      {/* Mobile Device Warning */}
-      {isMobile && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: '#fef3c7',
-          borderBottom: '1px solid #f59e0b',
-          padding: '12px 16px',
-          textAlign: 'center',
-          zIndex: 1000,
-          fontSize: '14px',
-          color: '#92400e',
-          fontWeight: '500'
-        }}>
-          📱💻 This dashboard is optimized for desktop and tablet. 
-          Please switch to a larger screen for the best experience.
-        </div>
-      )}
 
       {/* Impersonation Banner (Admin Mode) */}
       {impersonatingUserId && (
