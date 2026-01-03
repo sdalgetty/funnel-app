@@ -28,37 +28,23 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
   }, []);
   
   const currentYear = new Date().getFullYear();
-    
-  // Show loading state if dataManager is not ready (check early to prevent errors)
-  if (!dataManager || dataManager.loading) {
-    return (
-      <div style={{ 
-        padding: '24px', 
-        maxWidth: '1200px', 
-        margin: '0 auto',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '400px'
-      }}>
-        <div style={{ textAlign: 'center', color: '#6b7280' }}>
-          <div style={{ fontSize: '16px', marginBottom: '8px' }}>Loading calculator data...</div>
-        </div>
-      </div>
-    );
-  }
 
   // Calculate YTD totals from actual funnel data
-  // Use JSON.stringify to create stable dependency keys to prevent infinite loops
-  const funnelDataKey = JSON.stringify(dataManager?.funnelData || []);
-  const bookingsKey = JSON.stringify(dataManager?.bookings || []);
-  const serviceTypesKey = JSON.stringify(dataManager?.serviceTypes || []);
-  
+  // Handle loading state inside useMemo to avoid early return before hooks
   const ytdTotals = useMemo(() => {
+    // Return default if dataManager is not ready
+    if (!dataManager || dataManager.loading) {
+      return {
+        inquiries: 0,
+        callsTaken: 0,
+        bookings: 0,
+      };
+    }
+
     try {
-      const funnelData = dataManager?.funnelData || [];
-      const bookings = dataManager?.bookings || [];
-      const serviceTypes = dataManager?.serviceTypes || [];
+      const funnelData = dataManager.funnelData || [];
+      const bookings = dataManager.bookings || [];
+      const serviceTypes = dataManager.serviceTypes || [];
       
       // Get trackable service type IDs (for closes calculation)
       const trackableServiceIds = new Set(
@@ -96,7 +82,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
         bookings: 0,
       };
     }
-  }, [funnelDataKey, bookingsKey, serviceTypesKey, currentYear, dataManager]);
+  }, [dataManager, currentYear]);
 
   const [data, setData] = useState<CalculatorData>({
     bookingsGoal: 0,
@@ -570,6 +556,25 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
       </div>
     </>
   );
+
+  // Show loading state if dataManager is not ready (after all hooks are called)
+  if (!dataManager || dataManager.loading) {
+    return (
+      <div style={{ 
+        padding: '24px', 
+        maxWidth: '1200px', 
+        margin: '0 auto',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '400px'
+      }}>
+        <div style={{ textAlign: 'center', color: '#6b7280' }}>
+          <div style={{ fontSize: '16px', marginBottom: '8px' }}>Loading calculator data...</div>
+        </div>
+      </div>
+    );
+  }
 
   // If compact mode, render 4 columns
   if (compact) {
