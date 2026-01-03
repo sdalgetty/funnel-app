@@ -198,19 +198,6 @@ function AppContent() {
     )
   }
 
-  // Debug: Log mobile detection on mount
-  useEffect(() => {
-    const buildVersion = '2026-01-03-mobile-v2'
-    console.log('[Mobile Debug] Build version:', buildVersion)
-    console.log('[Mobile Debug] Initial state:', { 
-      windowWidth: window.innerWidth, 
-      isMobile: window.innerWidth < 768,
-      userAgent: navigator.userAgent,
-      buildVersion
-    })
-    // Also log to window for easy inspection
-    ;(window as any).__APP_BUILD_VERSION__ = buildVersion
-  }, [])
 
   return (
     <div style={{ 
