@@ -280,8 +280,10 @@ function AppContent() {
         width: '100%',
         maxWidth: '100vw',
         boxSizing: 'border-box',
-        position: isMobile ? 'sticky' : 'relative',
+        position: isMobile ? 'fixed' : 'relative',
         top: isMobile ? '0' : 'auto',
+        left: isMobile ? '0' : 'auto',
+        right: isMobile ? '0' : 'auto',
         zIndex: 100
       }}>
         <h1 
@@ -609,18 +611,59 @@ function AppContent() {
           <div
             style={{
               backgroundColor: 'white',
-              width: '280px',
-              maxWidth: '85vw',
+              width: '300px',
+              maxWidth: '90vw',
               height: '100vh',
               overflowY: 'auto',
               boxShadow: '-4px 0 6px rgba(0, 0, 0, 0.1)',
               display: 'flex',
               flexDirection: 'column',
-              padding: '16px 0',
+              padding: '0',
               marginRight: '0'
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Close Button */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '16px 20px',
+              borderBottom: '1px solid #e5e7eb'
+            }}>
+              <h2 style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                margin: 0,
+                color: '#1f2937'
+              }}>
+                Menu
+              </h2>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{
+                  padding: '8px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#6b7280',
+                  borderRadius: '6px',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
             {/* Mobile Menu Items */}
             <button
               onClick={() => {
@@ -839,7 +882,7 @@ function AppContent() {
       )}
 
       {/* Page Content */}
-      <div style={{ padding: '0' }}>
+      <div style={{ padding: '0', marginTop: isMobile ? '56px' : '0' }}>
         <Suspense fallback={<div style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>Loading...</div>}>
           {currentPage === 'insights' && (
             <Insights 
