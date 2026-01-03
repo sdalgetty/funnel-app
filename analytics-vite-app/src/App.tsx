@@ -20,7 +20,6 @@ const Forecast = lazy(() => import('./Forecast'))
 const UserProfile = lazy(() => import('./UserProfile'))
 const Advertising = lazy(() => import('./Advertising'))
 const AuthModal = lazy(() => import('./AuthModal'))
-const MobileTableMockups = lazy(() => import('./components/MobileTableMockups'))
 
 function AppContent() {
   const { user, signOut, loading, features, viewingAsGuest, sharedAccountOwnerId, switchToOwnAccount, isViewOnly, effectiveUserId, isAdmin, impersonatingUserId, impersonatingUser, stopImpersonation } = useAuth()
@@ -427,26 +426,6 @@ function AppContent() {
               Admin
             </button>
           )}
-          {/* Temporary: Mobile Mockups - Remove before production */}
-          <button
-            onClick={() => {
-              setCurrentPage('mockups')
-              window.history.pushState({}, '', '/mockups')
-            }}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              backgroundColor: currentPage === 'mockups' ? '#3b82f6' : '#f3f4f6',
-              color: currentPage === 'mockups' ? 'white' : '#374151',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            📱 Mockups
-          </button>
           <button
             onClick={() => setCurrentPage('profile')}
             style={{
@@ -942,11 +921,6 @@ function AppContent() {
           )}
           {currentPage === 'admin' && <AdminDashboard />}
           {currentPage === 'profile' && <UserProfile />}
-          {currentPage === 'mockups' && (
-            <div style={{ padding: '24px', maxWidth: '100%' }}>
-              <MobileTableMockups />
-            </div>
-          )}
         </Suspense>
       </div>
 

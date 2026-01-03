@@ -224,7 +224,7 @@ export const MOCK_USERS: User[] = [
 // UTILITY TYPES
 // ============================================================================
 
-export type Page = 'insights' | 'funnel' | 'calculator' | 'advertising' | 'forecast' | 'bookings' | 'profile' | 'mockups' | 'admin';
+export type Page = 'insights' | 'funnel' | 'calculator' | 'advertising' | 'forecast' | 'bookings' | 'profile' | 'admin';
 
 export type SortOrder = 'asc' | 'desc';
 
