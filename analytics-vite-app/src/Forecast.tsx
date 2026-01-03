@@ -316,7 +316,7 @@ const Forecast: React.FC<ForecastProps> = ({
       {/* Summary Cards - single row with monthly averages as subtitles */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(4, 1fr)', 
+        gridTemplateColumns: window.innerWidth < 768 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', 
         gap: '20px', 
         marginBottom: '32px' 
       }}>

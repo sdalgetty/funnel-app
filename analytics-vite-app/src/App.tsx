@@ -276,11 +276,12 @@ function AppContent() {
         display: 'flex',
         gap: '16px',
         alignItems: 'center',
-        marginTop: (viewingAsGuest || impersonatingUserId) ? '0' : (isMobile ? '48px' : '0'),
+        marginTop: (viewingAsGuest || impersonatingUserId) ? '0' : '0',
         width: '100%',
         maxWidth: '100vw',
         boxSizing: 'border-box',
-        position: 'relative',
+        position: isMobile ? 'sticky' : 'relative',
+        top: isMobile ? '0' : 'auto',
         zIndex: 100
       }}>
         <h1 
