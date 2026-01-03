@@ -53,6 +53,15 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMonth, setEditingMonth] = useState<FunnelData | null>(null);
+  
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Handle navigation action to open edit modal for specific month
   useEffect(() => {
@@ -501,31 +510,53 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
       </div>
 
       {/* Year Selector */}
-      <div style={{ marginBottom: '32px' }}>
-        <label style={{ 
-          display: 'block', 
-          fontSize: '14px', 
-          fontWeight: '500', 
-          marginBottom: '6px' 
-        }}>
-          Select Year
-        </label>
-        <select
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-          style={{
-            padding: '10px 12px',
-            border: '1px solid #d1d5db',
-            borderRadius: '8px',
-            fontSize: '14px',
-            backgroundColor: 'white',
-            minWidth: '120px'
-          }}
-        >
-          {availableYears.map(year => (
-            <option key={year} value={year}>{year}</option>
-          ))}
-        </select>
+      <div style={{ marginBottom: isMobile ? '24px' : '32px', padding: isMobile ? '16px' : '0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <label style={{ 
+            display: 'block', 
+            fontSize: isMobile ? '16px' : '14px', 
+            fontWeight: '600', 
+            margin: 0,
+            color: '#374151'
+          }}>
+            {isMobile ? 'Funnel View' : 'Select Year'}
+          </label>
+          {isMobile && (
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb',
+                fontSize: '14px',
+                backgroundColor: 'white'
+              }}
+            >
+              {availableYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          )}
+        </div>
+        {!isMobile && (
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            style={{
+              padding: '10px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px',
+              backgroundColor: 'white',
+              minWidth: '120px'
+            }}
+          >
+            {availableYears.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       
@@ -563,7 +594,8 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
           )}
         </div>
 
-        {/* Sales Funnel Table */}
+        {/* Sales Funnel Table - Desktop */}
+        {!isMobile && (
           <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', fontSize: '14px' }}>
             <thead>
@@ -707,7 +739,93 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
             </tbody>
           </table>
         </div>
-        
+        )}
+
+        {/* Mobile Card View */}
+        {isMobile && (
+          <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {filteredData.map((month, index) => {
+              const monthName = new Date(selectedYear, month.month - 1).toLocaleString('default', { month: 'long' });
+              const hasNotes = !!(month.notes && month.notes.trim().length > 0);
+              const isFuture = isFutureMonth(month.year, month.month);
+              
+              return (
+                <div
+                  key={month.id}
+                  style={{
+                    backgroundColor: 'white',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    border: '1px solid #e5e7eb'
+                  }}
+                >
+                  <h4 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 16px 0', color: '#1f2937' }}>
+                    {monthName}
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Inquiries</span>
+                      <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.inquiries)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Calls Booked</span>
+                      <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.callsBooked)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Calls Taken</span>
+                      <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.callsTaken)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Closes</span>
+                      <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.closes)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Bookings</span>
+                      <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.bookings)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Booking Amount</span>
+                      <span style={{ fontSize: '18px', fontWeight: '700', color: '#3b82f6' }}>
+                        {toUSD(month.bookings)}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Cash</span>
+                      <span style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
+                        {toUSD(month.cash)}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => !isViewOnly && !isFuture && handleEditMonth(month)}
+                    disabled={isViewOnly || isFuture}
+                    style={{
+                      width: '100%',
+                      marginTop: '12px',
+                      padding: '8px 12px',
+                      backgroundColor: (isViewOnly || isFuture) ? '#e5e7eb' : '#3b82f6',
+                      color: (isViewOnly || isFuture) ? '#9ca3af' : 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: (isViewOnly || isFuture) ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
+                      opacity: (isViewOnly || isFuture) ? 0.5 : 1
+                    }}
+                  >
+                    <Edit size={14} />
+                    Edit Month
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Notes Modal */}

@@ -91,6 +91,15 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
 
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Data is now managed by the parent component's data manager
 
   // Filtered and sorted bookings
@@ -870,11 +879,11 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
       </section>
 
       {/* Filters and Search */}
-      <section style={{ marginBottom: '24px', backgroundColor: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+      <section style={{ marginBottom: '24px', backgroundColor: 'white', borderRadius: '12px', padding: isMobile ? '16px' : '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(4, 1fr)', 
-          gap: '16px', 
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', 
+          gap: isMobile ? '12px' : '16px', 
           alignItems: 'end'
         }}>
           <div style={{ minWidth: '200px' }}>
@@ -1208,7 +1217,8 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
         />
       )}
 
-      {/* Bookings table */}
+      {/* Bookings table - Desktop */}
+      {!isMobile && (
       <section style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto', maxHeight: '70vh' }}>
           <table style={{ width: '100%', fontSize: '14px', tableLayout: 'fixed' }}>
@@ -1393,6 +1403,200 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
           </div>
         )}
       </section>
+      )}
+
+      {/* Mobile Card View */}
+      {isMobile && (
+        <section style={{ padding: '16px', backgroundColor: '#f9fafb', minHeight: '100vh' }}>
+          {paginatedBookings.length === 0 ? (
+            <div style={{ 
+              padding: '40px', 
+              textAlign: 'center', 
+              color: '#9ca3af',
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              border: '1px solid #e5e7eb'
+            }}>
+              {filteredAndSortedBookings.length === 0 
+                ? 'No bookings found. Click "Add New Booking" to get started.'
+                : 'No bookings match your current filters.'}
+            </div>
+          ) : (
+            <>
+              {paginatedBookings.map((booking) => {
+                const serviceType = serviceTypes.find(st => st.id === booking.serviceTypeId);
+                const leadSource = leadSources.find(ls => ls.id === booking.leadSourceId);
+                const bookingPayments = payments.filter(p => p.bookingId === booking.id);
+                const collected = sum(bookingPayments.filter(p => p.paidAt).map(p => p.amount));
+                
+                return (
+                  <div
+                    key={booking.id}
+                    style={{
+                      backgroundColor: 'white',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      marginBottom: '12px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                      border: '1px solid #e5e7eb'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0', color: '#1f2937' }}>
+                          {booking.projectName}
+                        </h4>
+                        <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981', marginBottom: '12px' }}>
+                          {toUSD(booking.bookedRevenue)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Service Type:</span>
+                          <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
+                            {serviceType?.name || (
+                              <span style={{ color: '#ef4444', fontStyle: 'italic', fontSize: '12px' }}>
+                                Deleted Service Type
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Lead Source:</span>
+                          <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
+                            {leadSource?.name || (
+                              <span style={{ color: '#ef4444', fontStyle: 'italic', fontSize: '12px' }}>
+                                Deleted Lead Source
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Date Inquired:</span>
+                          <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
+                            {formatBookingDate(booking.dateInquired)}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Date Booked:</span>
+                          <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
+                            {formatBookingDate(booking.dateBooked)}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Project Date:</span>
+                          <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
+                            {formatBookingDate(booking.projectDate)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                      <button
+                        disabled={isViewOnly}
+                        style={getDisabledButtonStyle({
+                          flex: 1,
+                          padding: '8px 12px',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
+                        })}
+                        onClick={() => !isViewOnly && setEditingBooking(booking)}
+                      >
+                        <Edit size={14} />
+                        Edit
+                      </button>
+                      <button
+                        style={{
+                          padding: '8px 12px',
+                          backgroundColor: '#fee2e2',
+                          color: '#991b1b',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          cursor: isViewOnly ? 'not-allowed' : 'pointer',
+                          opacity: isViewOnly ? 0.5 : 1
+                        }}
+                        onClick={() => !isViewOnly && deleteBooking(booking.id)}
+                        disabled={isViewOnly}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              
+              {/* Mobile Pagination */}
+              {filteredAndSortedBookings.length > itemsPerPage && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '16px',
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  marginTop: '16px',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    style={{
+                      padding: '10px 16px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: currentPage === 1 ? '#f3f4f6' : 'white',
+                      color: currentPage === 1 ? '#9ca3af' : '#374151',
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Previous
+                  </button>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    color: '#374151',
+                    fontWeight: '500'
+                  }}>
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    style={{
+                      padding: '10px 16px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: currentPage === totalPages ? '#f3f4f6' : 'white',
+                      color: currentPage === totalPages ? '#9ca3af' : '#374151',
+                      cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      )}
 
       {/* Delete Service Type Confirmation Modal */}
       {deleteServiceTypeConfirmation && (

@@ -981,23 +981,24 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
   }, [])
 
   return (
-    <div style={{ 
-      display: 'grid', 
-      gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
-      gap: '24px', 
-      marginBottom: '32px'
-    }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
+        gap: isMobile ? '16px' : '24px', 
+        marginBottom: isMobile ? '24px' : '32px',
+        padding: isMobile ? '16px' : '0'
+      }}>
       {/* Welcome Section */}
       <div style={{
         backgroundColor: 'white',
         borderRadius: '12px',
-        padding: '24px',
+        padding: isMobile ? '20px' : '24px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
       }}>
-        <h2 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 8px 0', color: '#1f2937' }}>
+        <h2 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: '700', margin: '0 0 8px 0', color: '#1f2937' }}>
           Welcome back {firstName}!
         </h2>
-        <p style={{ fontSize: '16px', color: '#6b7280', margin: '0 0 20px 0' }}>
+        <p style={{ fontSize: isMobile ? '14px' : '16px', color: '#6b7280', margin: '0 0 20px 0' }}>
           Remember, winning is a numbers game.
         </p>
         <button
@@ -1008,17 +1009,19 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
             color: isViewOnly ? '#9ca3af' : 'white',
             border: 'none',
             borderRadius: '8px',
-            padding: '12px 24px',
-            fontSize: '14px',
+            padding: isMobile ? '14px 20px' : '12px 24px',
+            fontSize: isMobile ? '16px' : '14px',
             fontWeight: '600',
             cursor: isViewOnly ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            opacity: isViewOnly ? 0.5 : 1
+            opacity: isViewOnly ? 0.5 : 1,
+            width: isMobile ? '100%' : 'auto'
           }}
         >
-          + New
+          <Plus size={isMobile ? 18 : 16} />
+          New
         </button>
       </div>
 
@@ -1027,12 +1030,12 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
         backgroundColor: 'white',
         border: '1px solid #e5e7eb',
         borderRadius: '12px',
-        padding: '20px',
+        padding: isMobile ? '16px' : '20px',
         marginBottom: '24px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? '8px' : '0' }}>
+          <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
             This Month's Tasks
           </h3>
           {tasks.length > 0 && (
@@ -1103,20 +1106,21 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
                 <button
                   onClick={() => handleNavigate(task.action, task.month)}
                   style={{
-                    padding: '4px 8px',
-                    fontSize: '11px',
+                    padding: isMobile ? '8px 12px' : '4px 8px',
+                    fontSize: isMobile ? '13px' : '11px',
                     backgroundColor: '#3b82f6',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '4px',
+                    borderRadius: '6px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px'
+                    gap: '4px',
+                    whiteSpace: 'nowrap'
                   }}
                 >
                   Do Now
-                  <ArrowRight size={12} />
+                  <ArrowRight size={isMobile ? 14 : 12} />
                 </button>
               </div>
             ))}
@@ -1126,26 +1130,34 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '24px',
-            width: '90%',
-            maxWidth: '400px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-          }}>
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: isMobile ? 'flex-end' : 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowCreateModal(false)}
+        >
+          <div 
+            style={{
+              backgroundColor: 'white',
+              borderRadius: isMobile ? '20px 20px 0 0' : '12px',
+              padding: isMobile ? '24px 24px 32px 24px' : '24px',
+              width: isMobile ? '100%' : '90%',
+              maxWidth: isMobile ? '100%' : '400px',
+              maxHeight: isMobile ? '80vh' : 'auto',
+              overflowY: 'auto',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Add New</h3>
               <button
@@ -1160,19 +1172,26 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
                 <X size={20} />
               </button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '12px' }}>
               <button
                 onClick={() => handleCreateAction('add-inquiry')}
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: isMobile ? '16px' : '12px',
                   backgroundColor: '#f3f4f6',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontSize: '14px',
-                  fontWeight: '500'
+                  fontSize: isMobile ? '16px' : '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onTouchStart={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onTouchEnd={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
                 }}
               >
                 Add New Inquiry
@@ -1181,14 +1200,21 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
                 onClick={() => handleCreateAction('add-advertising-lead')}
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: isMobile ? '16px' : '12px',
                   backgroundColor: '#f3f4f6',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontSize: '14px',
-                  fontWeight: '500'
+                  fontSize: isMobile ? '16px' : '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onTouchStart={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onTouchEnd={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
                 }}
               >
                 Add New Advertising Lead
@@ -1197,14 +1223,21 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
                 onClick={() => handleCreateAction('add-call-booked')}
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: isMobile ? '16px' : '12px',
                   backgroundColor: '#f3f4f6',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontSize: '14px',
-                  fontWeight: '500'
+                  fontSize: isMobile ? '16px' : '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onTouchStart={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onTouchEnd={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
                 }}
               >
                 Add New Call Booked
@@ -1213,14 +1246,21 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
                 onClick={() => handleCreateAction('add-call-taken')}
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: isMobile ? '16px' : '12px',
                   backgroundColor: '#f3f4f6',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontSize: '14px',
-                  fontWeight: '500'
+                  fontSize: isMobile ? '16px' : '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onTouchStart={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onTouchEnd={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
                 }}
               >
                 Add New Call Taken
@@ -1229,14 +1269,21 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
                 onClick={() => handleCreateAction('add-sale')}
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: isMobile ? '16px' : '12px',
                   backgroundColor: '#f3f4f6',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontSize: '14px',
-                  fontWeight: '500'
+                  fontSize: isMobile ? '16px' : '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onTouchStart={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onTouchEnd={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
                 }}
               >
                 Add New Sale

@@ -5,7 +5,7 @@ import { useDataManager } from './hooks/useDataManager'
 import LoginForm from './components/LoginForm'
 import AcceptInvitation from './components/AcceptInvitation'
 import { UpgradePrompt } from './FeatureGate'
-import { User, Crown, LogOut, Settings, Shield, Plus, X } from 'lucide-react'
+import { User, Crown, LogOut, Settings, Shield, Plus, X, Menu } from 'lucide-react'
 import type { Page } from './types'
 import AdminDashboard from './components/AdminDashboard'
 import { usePageView } from './hooks/usePostHog'
@@ -20,6 +20,7 @@ const Forecast = lazy(() => import('./Forecast'))
 const UserProfile = lazy(() => import('./UserProfile'))
 const Advertising = lazy(() => import('./Advertising'))
 const AuthModal = lazy(() => import('./AuthModal'))
+const MobileTableMockups = lazy(() => import('./components/MobileTableMockups'))
 
 function AppContent() {
   const { user, signOut, loading, features, viewingAsGuest, sharedAccountOwnerId, switchToOwnAccount, isViewOnly, effectiveUserId, isAdmin, impersonatingUserId, impersonatingUser, stopImpersonation } = useAuth()
@@ -76,6 +77,7 @@ function AppContent() {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   // Navigation state for opening modals/actions in other tabs
   const [navigationAction, setNavigationAction] = useState<{
     page: Page
@@ -290,19 +292,24 @@ function AppContent() {
       <nav style={{ 
         backgroundColor: 'white', 
         borderBottom: '1px solid #e5e7eb',
-        padding: '16px 24px',
+        padding: isMobile ? '12px 16px' : '16px 24px',
         display: 'flex',
         gap: '16px',
         alignItems: 'center',
         marginTop: (viewingAsGuest || impersonatingUserId) ? '0' : (isMobile ? '48px' : '0'),
         width: '100%',
         maxWidth: '100vw',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        position: 'relative',
+        zIndex: 100
       }}>
         <h1 
-          onClick={() => setCurrentPage('insights')}
+          onClick={() => {
+            setCurrentPage('insights')
+            setIsMobileMenuOpen(false)
+          }}
           style={{ 
-            fontSize: '20px', 
+            fontSize: isMobile ? '18px' : '20px', 
             fontWeight: '800', 
             letterSpacing: '0.04em', 
             margin: 0, 
@@ -320,7 +327,8 @@ function AppContent() {
           FNNL
         </h1>
         
-        <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+        {/* Desktop Navigation */}
+        <div style={{ display: isMobile ? 'none' : 'flex', gap: '8px', marginLeft: 'auto' }}>
           <button
             onClick={() => setCurrentPage('insights')}
             style={{
@@ -428,6 +436,26 @@ function AppContent() {
               Admin
             </button>
           )}
+          {/* Temporary: Mobile Mockups - Remove before production */}
+          <button
+            onClick={() => {
+              setCurrentPage('mockups')
+              window.history.pushState({}, '', '/mockups')
+            }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: currentPage === 'mockups' ? '#3b82f6' : '#f3f4f6',
+              color: currentPage === 'mockups' ? 'white' : '#374151',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            📱 Mockups
+          </button>
           <button
             onClick={() => setCurrentPage('profile')}
             style={{
@@ -482,8 +510,28 @@ function AppContent() {
           )}
         </div>
 
-        {/* User Menu */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
+        {/* Mobile Hamburger Menu Button */}
+        {isMobile && (
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            style={{
+              marginLeft: 'auto',
+              padding: '8px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#1f2937'
+            }}
+          >
+            <Menu size={24} />
+          </button>
+        )}
+
+        {/* User Menu - Desktop */}
+        <div style={{ display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
           {user ? (
             <button
               onClick={signOut}
@@ -527,7 +575,283 @@ function AppContent() {
             </button>
           )}
         </div>
+
+        {/* User Menu - Mobile (in hamburger menu) */}
+        {isMobile && user && (
+          <div style={{ 
+            display: isMobileMenuOpen ? 'flex' : 'none',
+            alignItems: 'center',
+            gap: '8px',
+            marginLeft: 'auto',
+            marginRight: '8px'
+          }}>
+            <button
+              onClick={signOut}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: '1px solid #d1d5db',
+                backgroundColor: 'white',
+                color: '#6b7280',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+            >
+              <LogOut size={12} />
+            </button>
+          </div>
+        )}
       </nav>
+
+      {/* Mobile Menu Overlay */}
+      {isMobile && isMobileMenuOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'flex-end',
+            paddingTop: isMobile ? '60px' : '80px'
+          }}
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              width: '280px',
+              maxHeight: 'calc(100vh - 80px)',
+              overflowY: 'auto',
+              boxShadow: '-4px 0 6px rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '16px 0'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Mobile Menu Items */}
+            <button
+              onClick={() => {
+                setCurrentPage('insights')
+                setIsMobileMenuOpen(false)
+              }}
+              style={{
+                padding: '16px 24px',
+                border: 'none',
+                backgroundColor: currentPage === 'insights' ? '#eff6ff' : 'transparent',
+                color: currentPage === 'insights' ? '#3b82f6' : '#374151',
+                fontSize: '16px',
+                fontWeight: currentPage === 'insights' ? '600' : '500',
+                textAlign: 'left',
+                cursor: 'pointer',
+                borderLeft: currentPage === 'insights' ? '4px solid #3b82f6' : '4px solid transparent',
+                transition: 'all 0.2s'
+              }}
+            >
+              Insights
+            </button>
+            <button
+              onClick={() => {
+                setCurrentPage('funnel')
+                setIsMobileMenuOpen(false)
+              }}
+              style={{
+                padding: '16px 24px',
+                border: 'none',
+                backgroundColor: currentPage === 'funnel' ? '#eff6ff' : 'transparent',
+                color: currentPage === 'funnel' ? '#3b82f6' : '#374151',
+                fontSize: '16px',
+                fontWeight: currentPage === 'funnel' ? '600' : '500',
+                textAlign: 'left',
+                cursor: 'pointer',
+                borderLeft: currentPage === 'funnel' ? '4px solid #3b82f6' : '4px solid transparent',
+                transition: 'all 0.2s'
+              }}
+            >
+              Funnel
+            </button>
+            <button
+              onClick={() => {
+                setCurrentPage('forecast')
+                setIsMobileMenuOpen(false)
+              }}
+              style={{
+                padding: '16px 24px',
+                border: 'none',
+                backgroundColor: currentPage === 'forecast' ? '#eff6ff' : 'transparent',
+                color: currentPage === 'forecast' ? '#3b82f6' : '#374151',
+                fontSize: '16px',
+                fontWeight: currentPage === 'forecast' ? '600' : '500',
+                textAlign: 'left',
+                cursor: 'pointer',
+                borderLeft: currentPage === 'forecast' ? '4px solid #3b82f6' : '4px solid transparent',
+                transition: 'all 0.2s'
+              }}
+            >
+              Forecast
+            </button>
+            {features.advertising && (
+              <button
+                onClick={() => {
+                  setCurrentPage('advertising')
+                  setIsMobileMenuOpen(false)
+                }}
+                style={{
+                  padding: '16px 24px',
+                  border: 'none',
+                  backgroundColor: currentPage === 'advertising' ? '#eff6ff' : 'transparent',
+                  color: currentPage === 'advertising' ? '#3b82f6' : '#374151',
+                  fontSize: '16px',
+                  fontWeight: currentPage === 'advertising' ? '600' : '500',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  borderLeft: currentPage === 'advertising' ? '4px solid #3b82f6' : '4px solid transparent',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Advertising
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setCurrentPage('bookings')
+                setIsMobileMenuOpen(false)
+              }}
+              style={{
+                padding: '16px 24px',
+                border: 'none',
+                backgroundColor: currentPage === 'bookings' ? '#eff6ff' : 'transparent',
+                color: currentPage === 'bookings' ? '#3b82f6' : '#374151',
+                fontSize: '16px',
+                fontWeight: currentPage === 'bookings' ? '600' : '500',
+                textAlign: 'left',
+                cursor: 'pointer',
+                borderLeft: currentPage === 'bookings' ? '4px solid #3b82f6' : '4px solid transparent',
+                transition: 'all 0.2s'
+              }}
+            >
+              Sales
+            </button>
+            <button
+              onClick={() => {
+                setCurrentPage('profile')
+                setIsMobileMenuOpen(false)
+              }}
+              style={{
+                padding: '16px 24px',
+                border: 'none',
+                backgroundColor: currentPage === 'profile' ? '#eff6ff' : 'transparent',
+                color: currentPage === 'profile' ? '#3b82f6' : '#374151',
+                fontSize: '16px',
+                fontWeight: currentPage === 'profile' ? '600' : '500',
+                textAlign: 'left',
+                cursor: 'pointer',
+                borderLeft: currentPage === 'profile' ? '4px solid #3b82f6' : '4px solid transparent',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <Settings size={18} />
+              Profile
+            </button>
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setCurrentPage('admin')
+                  setIsMobileMenuOpen(false)
+                  window.history.pushState({}, '', '/admin')
+                }}
+                style={{
+                  padding: '16px 24px',
+                  border: 'none',
+                  backgroundColor: currentPage === 'admin' ? '#eff6ff' : 'transparent',
+                  color: currentPage === 'admin' ? '#3b82f6' : '#374151',
+                  fontSize: '16px',
+                  fontWeight: currentPage === 'admin' ? '600' : '500',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  borderLeft: currentPage === 'admin' ? '4px solid #3b82f6' : '4px solid transparent',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Shield size={18} />
+                Admin
+              </button>
+            )}
+            {user && !isViewOnly && (
+              <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px', paddingTop: '8px' }}>
+                <button
+                  onClick={() => {
+                    setShowCreateModal(true)
+                    setIsMobileMenuOpen(false)
+                  }}
+                  style={{
+                    width: '100%',
+                    margin: '8px 16px',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  <Plus size={20} />
+                  New
+                </button>
+              </div>
+            )}
+            {!user && (
+              <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px', paddingTop: '8px' }}>
+                <button
+                  onClick={() => {
+                    setShowAuthModal(true)
+                    setIsMobileMenuOpen(false)
+                  }}
+                  style={{
+                    width: '100%',
+                    margin: '8px 16px',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <User size={20} />
+                  Sign In
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
       {/* Page Content */}
       <div style={{ padding: '0' }}>
@@ -581,6 +905,11 @@ function AppContent() {
           )}
           {currentPage === 'admin' && <AdminDashboard />}
           {currentPage === 'profile' && <UserProfile />}
+          {currentPage === 'mockups' && (
+            <div style={{ padding: '24px', maxWidth: '100%' }}>
+              <MobileTableMockups />
+            </div>
+          )}
         </Suspense>
       </div>
 
@@ -592,26 +921,34 @@ function AppContent() {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '24px',
-            width: '90%',
-            maxWidth: '400px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-          }}>
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: isMobile ? 'flex-end' : 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowCreateModal(false)}
+        >
+          <div 
+            style={{
+              backgroundColor: 'white',
+              borderRadius: isMobile ? '20px 20px 0 0' : '12px',
+              padding: isMobile ? '24px 24px 32px 24px' : '24px',
+              width: isMobile ? '100%' : '90%',
+              maxWidth: isMobile ? '100%' : '400px',
+              maxHeight: isMobile ? '80vh' : 'auto',
+              overflowY: 'auto',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Add New</h3>
               <button
@@ -626,25 +963,31 @@ function AppContent() {
                 <X size={20} />
               </button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '12px' }}>
               <button
                 onClick={() => handleCreateAction('add-inquiry')}
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: isMobile ? '16px' : '12px',
                   backgroundColor: '#f3f4f6',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   fontWeight: '500',
                   transition: 'all 0.2s'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                  if (!isMobile) e.currentTarget.style.backgroundColor = '#e5e7eb'
                 }}
                 onMouseLeave={(e) => {
+                  if (!isMobile) e.currentTarget.style.backgroundColor = '#f3f4f6'
+                }}
+                onTouchStart={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onTouchEnd={(e) => {
                   e.currentTarget.style.backgroundColor = '#f3f4f6'
                 }}
               >
@@ -654,20 +997,26 @@ function AppContent() {
                 onClick={() => handleCreateAction('add-advertising-lead')}
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: isMobile ? '16px' : '12px',
                   backgroundColor: '#f3f4f6',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   fontWeight: '500',
                   transition: 'all 0.2s'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                  if (!isMobile) e.currentTarget.style.backgroundColor = '#e5e7eb'
                 }}
                 onMouseLeave={(e) => {
+                  if (!isMobile) e.currentTarget.style.backgroundColor = '#f3f4f6'
+                }}
+                onTouchStart={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onTouchEnd={(e) => {
                   e.currentTarget.style.backgroundColor = '#f3f4f6'
                 }}
               >
@@ -677,20 +1026,26 @@ function AppContent() {
                 onClick={() => handleCreateAction('add-call-booked')}
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: isMobile ? '16px' : '12px',
                   backgroundColor: '#f3f4f6',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   fontWeight: '500',
                   transition: 'all 0.2s'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                  if (!isMobile) e.currentTarget.style.backgroundColor = '#e5e7eb'
                 }}
                 onMouseLeave={(e) => {
+                  if (!isMobile) e.currentTarget.style.backgroundColor = '#f3f4f6'
+                }}
+                onTouchStart={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onTouchEnd={(e) => {
                   e.currentTarget.style.backgroundColor = '#f3f4f6'
                 }}
               >
@@ -700,20 +1055,26 @@ function AppContent() {
                 onClick={() => handleCreateAction('add-call-taken')}
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: isMobile ? '16px' : '12px',
                   backgroundColor: '#f3f4f6',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   fontWeight: '500',
                   transition: 'all 0.2s'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                  if (!isMobile) e.currentTarget.style.backgroundColor = '#e5e7eb'
                 }}
                 onMouseLeave={(e) => {
+                  if (!isMobile) e.currentTarget.style.backgroundColor = '#f3f4f6'
+                }}
+                onTouchStart={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onTouchEnd={(e) => {
                   e.currentTarget.style.backgroundColor = '#f3f4f6'
                 }}
               >
@@ -723,20 +1084,26 @@ function AppContent() {
                 onClick={() => handleCreateAction('add-booking')}
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: isMobile ? '16px' : '12px',
                   backgroundColor: '#f3f4f6',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   fontWeight: '500',
                   transition: 'all 0.2s'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                  if (!isMobile) e.currentTarget.style.backgroundColor = '#e5e7eb'
                 }}
                 onMouseLeave={(e) => {
+                  if (!isMobile) e.currentTarget.style.backgroundColor = '#f3f4f6'
+                }}
+                onTouchStart={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onTouchEnd={(e) => {
                   e.currentTarget.style.backgroundColor = '#f3f4f6'
                 }}
               >
