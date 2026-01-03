@@ -950,19 +950,26 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
           bottom: 0,
           backgroundColor: 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: isMobile ? 'flex-end' : 'center',
           justifyContent: 'center',
-          zIndex: 1000
-        }}>
+          zIndex: 1000,
+          padding: isMobile ? '0' : '16px'
+        }}
+        onClick={handleCloseModal}
+        >
           <div style={{
             backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '24px',
-            width: '90%',
-            maxWidth: '500px',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }}>
+            borderRadius: isMobile ? '20px 20px 0 0' : '12px',
+            padding: isMobile ? '20px' : '24px',
+            width: isMobile ? '100%' : '90%',
+            maxWidth: isMobile ? '100%' : '500px',
+            maxHeight: isMobile ? '90vh' : '90vh',
+            overflow: 'auto',
+            boxShadow: isMobile ? '0 -4px 6px rgba(0,0,0,0.1)' : '0 4px 6px rgba(0,0,0,0.1)',
+            boxSizing: 'border-box'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937', textAlign: 'left' }}>
                 Edit {new Date(editingMonth.year, editingMonth.month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -1011,14 +1018,25 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 </label>
                 <input
                   type="number"
-                  value={editingMonth.inquiries}
-                  onChange={(e) => setEditingMonth({ ...editingMonth, inquiries: parseInt(e.target.value) || 0 })}
+                  value={editingMonth.inquiries || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      setEditingMonth({ ...editingMonth, inquiries: 0 });
+                    } else {
+                      const numValue = parseInt(value, 10);
+                      if (!isNaN(numValue)) {
+                        setEditingMonth({ ...editingMonth, inquiries: numValue });
+                      }
+                    }
+                  }}
                   style={{
                     width: '100%',
                     padding: '8px 12px',
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -1030,14 +1048,25 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 </label>
                 <input
                   type="number"
-                  value={editingMonth.callsBooked}
-                  onChange={(e) => setEditingMonth({ ...editingMonth, callsBooked: parseInt(e.target.value) || 0 })}
+                  value={editingMonth.callsBooked || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      setEditingMonth({ ...editingMonth, callsBooked: 0 });
+                    } else {
+                      const numValue = parseInt(value, 10);
+                      if (!isNaN(numValue)) {
+                        setEditingMonth({ ...editingMonth, callsBooked: numValue });
+                      }
+                    }
+                  }}
                   style={{
                     width: '100%',
                     padding: '8px 12px',
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -1049,14 +1078,25 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 </label>
                 <input
                   type="number"
-                  value={editingMonth.callsTaken}
-                  onChange={(e) => setEditingMonth({ ...editingMonth, callsTaken: parseInt(e.target.value) || 0 })}
+                  value={editingMonth.callsTaken || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      setEditingMonth({ ...editingMonth, callsTaken: 0 });
+                    } else {
+                      const numValue = parseInt(value, 10);
+                      if (!isNaN(numValue)) {
+                        setEditingMonth({ ...editingMonth, callsTaken: numValue });
+                      }
+                    }
+                  }}
                   style={{
                     width: '100%',
                     padding: '8px 12px',
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -1102,11 +1142,19 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                       </div>
                       <input
                         type="number"
-                        value={closesIsManual ? editingMonth.closes : closesDynamic}
+                        value={closesIsManual ? (editingMonth.closes || '') : closesDynamic}
                         disabled={!closesIsManual}
                         onChange={(e) => {
                           if (closesIsManual) {
-                            setEditingMonth({ ...editingMonth, closes: parseInt(e.target.value) || 0 });
+                            const value = e.target.value;
+                            if (value === '') {
+                              setEditingMonth({ ...editingMonth, closes: 0 });
+                            } else {
+                              const numValue = parseInt(value, 10);
+                              if (!isNaN(numValue)) {
+                                setEditingMonth({ ...editingMonth, closes: numValue });
+                              }
+                            }
                           }
                         }}
                         style={{
@@ -1117,7 +1165,8 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                           fontSize: '14px',
                           backgroundColor: closesIsManual ? 'white' : '#f9fafb',
                           color: closesIsManual ? '#1f2937' : '#6b7280',
-                          cursor: closesIsManual ? 'text' : 'not-allowed'
+                          cursor: closesIsManual ? 'text' : 'not-allowed',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -1232,14 +1281,25 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                     </label>
                     <input
                       type="number"
-                      value={editingMonth.closes}
-                      onChange={(e) => setEditingMonth({ ...editingMonth, closes: parseInt(e.target.value) || 0 })}
+                      value={editingMonth.closes || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          setEditingMonth({ ...editingMonth, closes: 0 });
+                        } else {
+                          const numValue = parseInt(value, 10);
+                          if (!isNaN(numValue)) {
+                            setEditingMonth({ ...editingMonth, closes: numValue });
+                          }
+                        }
+                      }}
                       style={{
                         width: '100%',
                         padding: '8px 12px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
-                        fontSize: '14px'
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
                       }}
                     />
                   </div>
