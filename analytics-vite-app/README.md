@@ -24,6 +24,8 @@ A modern web application for tracking sales funnel performance, managing booking
 
 ## 🚀 Quick Start
 
+> **Deployment**: Production deploys from `prod` branch, test environment from `test` branch.
+
 ### **Prerequisites**
 - Node.js 18+ 
 - npm or yarn
