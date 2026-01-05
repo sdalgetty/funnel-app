@@ -3498,7 +3498,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
               return (
                 <div key={index} style={{ 
                   display: 'grid', 
-                  gridTemplateColumns: '2fr 1fr 1fr 80px',
+                  gridTemplateColumns: isMobile ? '1fr 1fr 1fr 50px' : '2fr 1fr 1fr 80px',
                   gap: '8px',
                   marginBottom: '8px',
                   padding: '8px',
@@ -3518,7 +3518,8 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
                       padding: '6px 10px',
                       border: '1px solid #d1d5db',
                       borderRadius: '4px',
-                      fontSize: '14px'
+                      fontSize: isMobile ? '16px' : '14px',
+                      minWidth: isMobile ? '80px' : 'auto'
                     }}
                   />
                   <select
@@ -3531,7 +3532,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
                       padding: '6px 10px',
                       border: '1px solid #d1d5db',
                       borderRadius: '4px',
-                      fontSize: '14px'
+                      fontSize: isMobile ? '16px' : '14px'
                     }}
                   >
                     <option value="">Month</option>
@@ -3558,7 +3559,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
                       padding: '6px 10px',
                       border: '1px solid #d1d5db',
                       borderRadius: '4px',
-                      fontSize: '14px'
+                      fontSize: isMobile ? '16px' : '14px'
                     }}
                   >
                     <option value="">Year</option>
