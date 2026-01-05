@@ -228,11 +228,11 @@ export function calculateAverage(total: number, count: number): number {
 /**
  * Format phone number to universal format (XXX-XXX-XXXX)
  * Handles various input formats:
- * - 7039271516 -> 703-927-1516
- * - 703-927-1516 -> 703-927-1516
- * - (703) 927-1516 -> 703-927-1516
- * - 703.927.1516 -> 703-927-1516
- * - +1 703 927 1516 -> 703-927-1516
+ * - 5551234567 -> (555) 123-4567
+ * - 555-123-4567 -> (555) 123-4567
+ * - (555) 123-4567 -> (555) 123-4567
+ * - 555.123.4567 -> (555) 123-4567
+ * - +1 555 123 4567 -> (555) 123-4567
  * @param phone - Phone number in any format
  * @returns Formatted phone number (XXX-XXX-XXXX) or empty string if invalid
  */

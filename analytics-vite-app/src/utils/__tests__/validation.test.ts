@@ -132,7 +132,7 @@ describe('validation', () => {
     it('should provide helpful error messages', () => {
       const result = validatePhone('123')
       expect(result.isValid).toBe(false)
-      expect(result.errors).toContain('Phone number must be 10 digits (e.g., 703-927-1516)')
+      expect(result.errors).toContain('Phone number must be 10 digits (e.g., (555) 123-4567)')
     })
   })
 
