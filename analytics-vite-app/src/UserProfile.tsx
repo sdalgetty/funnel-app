@@ -535,7 +535,8 @@ function AccountSection({
   onCancel,
   validationErrors,
   setValidationErrors,
-  handlePhoneBlur
+  handlePhoneBlur,
+  isMobile = false
 }: {
   user: any;
   formData: any;
@@ -546,6 +547,7 @@ function AccountSection({
   validationErrors: { phone?: string[]; website?: string[] };
   setValidationErrors: (errors: { phone?: string[]; website?: string[] }) => void;
   handlePhoneBlur: () => void;
+  isMobile?: boolean;
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -562,7 +564,7 @@ function AccountSection({
         </h3>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '100%' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
           <div style={{ minWidth: 0, boxSizing: 'border-box' }}>
             <label style={{ 
               display: 'block', 
