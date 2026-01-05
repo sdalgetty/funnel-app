@@ -2,7 +2,7 @@
 
 ## ⚠️ CRITICAL: Branch Configuration
 
-**Production deploys from `dev` branch, NOT `main`!**
+**Production deploys from `prod` branch, NOT `main` or `dev`!**
 **Test deploys from `test` branch.**
 
 ## Test Environment
@@ -45,11 +45,11 @@ git push origin prod
 
 1. **Develop** → Create feature branch
 2. **Test** → Merge to `test` branch → Auto-deploys to test environment
-3. **Production** → Merge to `dev` branch → Auto-deploys to production
+3. **Production** → Merge to `prod` branch → Auto-deploys to production
 
 ## Important Notes
 
 - The `main` branch exists but is **NOT used for deployments**
 - Always verify which branch production is configured to use in Netlify dashboard
-- When deploying, always push to `dev` for production, not `main`
+- When deploying, always push to `prod` for production, not `main` or `dev`
 
