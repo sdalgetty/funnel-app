@@ -22,17 +22,17 @@ git push origin test
 
 ## Production Environment
 
-- **Git Branch:** `dev` ⚠️ **NOT `main`**
+- **Git Branch:** `prod` ⚠️ **NOT `main` or `dev`**
 - **Netlify Site Name:** `fnnl-app-prod`
 - **Netlify Site ID:** `8313f660-c306-4d5e-af13-eeeb793bfd87`
 - **URL:** `https://app.fnnlapp.com`
-- **Deployment:** Automatic on push to `dev` branch
+- **Deployment:** Automatic on push to `prod` branch
 
 ### To Deploy to Production:
 ```bash
-git checkout dev
+git checkout prod
 git merge test  # or merge from your feature branch
-git push origin dev
+git push origin prod
 ```
 
 ## Netlify Configuration
