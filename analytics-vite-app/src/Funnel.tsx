@@ -780,13 +780,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                       <span style={{ fontSize: '14px', color: '#6b7280' }}>Closes</span>
                       <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.closes)}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Bookings</span>
-                      <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.bookings)}</span>
-                    </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Booking Amount</span>
-                      <span style={{ fontSize: '18px', fontWeight: '700', color: '#3b82f6' }}>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Bookings</span>
+                      <span style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
                         {toUSD(month.bookings)}
                       </span>
                     </div>
