@@ -224,7 +224,7 @@ export function validatePhone(phone: string | null | undefined): ValidationResul
 
   // Must be exactly 10 digits
   if (cleaned.length !== 10) {
-    errors.push('Phone number must be 10 digits (e.g., 703-927-1516)');
+    errors.push('Phone number must be 10 digits (e.g., (555) 123-4567)');
   }
 
   return {

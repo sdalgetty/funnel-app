@@ -757,7 +757,7 @@ function AccountSection({
                     }
                   }}
                   onBlur={handlePhoneBlur}
-                  placeholder="703-927-1516 or (703) 927-1516"
+                  placeholder="(555) 123-4567"
                   style={{
                     width: '100%',
                     padding: '10px 12px',
