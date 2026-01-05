@@ -37,6 +37,13 @@ export default function UserProfile() {
   const { user, upgradeToPro, downgradeToFree, updateProfile } = useAuth();
   const [activeSection, setActiveSection] = useState<ProfileSection>('account');
   const [isEditing, setIsEditing] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -197,98 +204,143 @@ export default function UserProfile() {
   return (
     <div style={{ 
       display: 'flex', 
+      flexDirection: isMobile ? 'column' : 'row',
       minHeight: '100vh', 
       backgroundColor: '#f9fafb',
       fontFamily: 'system-ui, -apple-system, sans-serif'
     }}>
-      {/* Sidebar Navigation */}
-      <div style={{
-        width: '280px',
-        backgroundColor: 'white',
-        borderRight: '1px solid #e5e7eb',
-        padding: '24px 0',
-        position: 'sticky',
-        top: 0,
-        height: '100vh',
-        overflowY: 'auto'
-      }}>
-        <div style={{ padding: '0 24px 24px' }}>
-          <h1 style={{ 
-            fontSize: '24px', 
-            fontWeight: '600', 
-            margin: '0 0 8px 0',
-            color: '#1f2937',
-            textAlign: 'left'
-          }}>
-            Account Settings
-          </h1>
-          <p style={{ 
-            fontSize: '14px', 
-            color: '#6b7280', 
-            margin: 0,
-            textAlign: 'left'
-          }}>
-            Manage your account and preferences
-          </p>
-        </div>
+      {/* Sidebar Navigation - Hidden on Mobile */}
+      {!isMobile && (
+        <div style={{
+          width: '280px',
+          backgroundColor: 'white',
+          borderRight: '1px solid #e5e7eb',
+          padding: '24px 0',
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
+          overflowY: 'auto'
+        }}>
+          <div style={{ padding: '0 24px 24px' }}>
+            <h1 style={{ 
+              fontSize: '24px', 
+              fontWeight: '600', 
+              margin: '0 0 8px 0',
+              color: '#1f2937',
+              textAlign: 'left'
+            }}>
+              Account Settings
+            </h1>
+            <p style={{ 
+              fontSize: '14px', 
+              color: '#6b7280', 
+              margin: 0,
+              textAlign: 'left'
+            }}>
+              Manage your account and preferences
+            </p>
+          </div>
 
-        <nav style={{ padding: '0 16px' }}>
-          {sections.map(({ id, label, icon: Icon }) => {
-            // Disable placeholder sections: subscription, billing, privacy, support
-            const isDisabled = ['subscription', 'billing', 'privacy', 'support'].includes(id);
-            
-            return (
-              <button
-                key={id}
-                onClick={() => !isDisabled && setActiveSection(id)}
-                disabled={isDisabled}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 16px',
-                  border: 'none',
-                  backgroundColor: activeSection === id ? '#f3f4f6' : 'transparent',
-                  borderRadius: '8px',
-                  cursor: isDisabled ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  fontWeight: activeSection === id ? '500' : '400',
-                  color: isDisabled ? '#9ca3af' : (activeSection === id ? '#1f2937' : '#6b7280'),
-                  marginBottom: '4px',
-                  transition: 'all 0.2s',
-                  opacity: isDisabled ? 0.6 : 1
-                }}
-                onMouseEnter={(e) => {
-                  if (!isDisabled && activeSection !== id) {
-                    e.currentTarget.style.backgroundColor = '#f9fafb';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isDisabled && activeSection !== id) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }
-                }}
-              >
-                <Icon size={18} />
-                {label}
-                <ChevronRight 
-                  size={16} 
-                  style={{ 
-                    marginLeft: 'auto',
-                    opacity: isDisabled ? 0.3 : (activeSection === id ? 1 : 0.5)
-                  }} 
-                />
-              </button>
-            );
-          })}
-        </nav>
-      </div>
+          <nav style={{ padding: '0 16px' }}>
+            {sections.map(({ id, label, icon: Icon }) => {
+              // Disable placeholder sections: subscription, billing, privacy, support
+              const isDisabled = ['subscription', 'billing', 'privacy', 'support'].includes(id);
+              
+              return (
+                <button
+                  key={id}
+                  onClick={() => !isDisabled && setActiveSection(id)}
+                  disabled={isDisabled}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    border: 'none',
+                    backgroundColor: activeSection === id ? '#f3f4f6' : 'transparent',
+                    borderRadius: '8px',
+                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: activeSection === id ? '500' : '400',
+                    color: isDisabled ? '#9ca3af' : (activeSection === id ? '#1f2937' : '#6b7280'),
+                    marginBottom: '4px',
+                    transition: 'all 0.2s',
+                    opacity: isDisabled ? 0.6 : 1
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isDisabled && activeSection !== id) {
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isDisabled && activeSection !== id) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                >
+                  <Icon size={18} />
+                  {label}
+                  <ChevronRight 
+                    size={16} 
+                    style={{ 
+                      marginLeft: 'auto',
+                      opacity: isDisabled ? 0.3 : (activeSection === id ? 1 : 0.5)
+                    }} 
+                  />
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      )}
 
       {/* Main Content */}
-      <div style={{ flex: 1, padding: '24px' }}>
+      <div style={{ flex: 1, padding: isMobile ? '16px' : '24px', width: isMobile ? '100%' : 'auto' }}>
+        {/* Mobile Navigation Selector */}
+        {isMobile && (
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            padding: '16px',
+            marginBottom: '16px'
+          }}>
+            <h1 style={{ 
+              fontSize: '20px', 
+              fontWeight: '600', 
+              margin: '0 0 12px 0',
+              color: '#1f2937'
+            }}>
+              Account Settings
+            </h1>
+            <select
+              value={activeSection}
+              onChange={(e) => setActiveSection(e.target.value as ProfileSection)}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                fontSize: '16px',
+                backgroundColor: 'white',
+                color: '#1f2937',
+                cursor: 'pointer'
+              }}
+            >
+              {sections
+                .filter(({ id }) => !['subscription', 'billing', 'privacy', 'support'].includes(id))
+                .map(({ id, label }) => (
+                  <option key={id} value={id} disabled={['subscription', 'billing', 'privacy', 'support'].includes(id)}>
+                    {label}
+                  </option>
+                ))}
+            </select>
+          </div>
+        )}
+
         <div style={{
-          maxWidth: '800px',
+          maxWidth: isMobile ? '100%' : '800px',
           backgroundColor: 'white',
           borderRadius: '12px',
           border: '1px solid #e5e7eb',
@@ -296,22 +348,26 @@ export default function UserProfile() {
         }}>
           {/* Header */}
           <div style={{
-            padding: '24px',
+            padding: isMobile ? '16px' : '24px',
             borderBottom: '1px solid #e5e7eb',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            justifyContent: 'space-between',
+            gap: isMobile ? '12px' : '0'
           }}>
-            <div>
-              <h2 style={{ 
-                fontSize: '20px', 
-                fontWeight: '600', 
-                margin: '0 0 4px 0',
-                color: '#1f2937',
-                textAlign: 'left'
-              }}>
-                {sections.find(s => s.id === activeSection)?.label}
-              </h2>
+            <div style={{ flex: 1 }}>
+              {!isMobile && (
+                <h2 style={{ 
+                  fontSize: '20px', 
+                  fontWeight: '600', 
+                  margin: '0 0 4px 0',
+                  color: '#1f2937',
+                  textAlign: 'left'
+                }}>
+                  {sections.find(s => s.id === activeSection)?.label}
+                </h2>
+              )}
               <p style={{ 
                 fontSize: '14px', 
                 color: '#6b7280', 
@@ -327,7 +383,7 @@ export default function UserProfile() {
               </p>
             </div>
             {activeSection === 'account' && (
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: isMobile ? '100%' : 'auto' }}>
                 {isEditing ? (
                   <>
                     <button
@@ -343,11 +399,12 @@ export default function UserProfile() {
                         borderRadius: '6px',
                         fontSize: '14px',
                         fontWeight: '500',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        flex: isMobile ? 1 : 'none'
                       }}
                     >
                       <Save size={16} />
-                      Save Changes
+                      {isMobile ? 'Save' : 'Save Changes'}
                     </button>
                     <button
                       onClick={handleCancel}
@@ -362,7 +419,8 @@ export default function UserProfile() {
                         borderRadius: '6px',
                         fontSize: '14px',
                         fontWeight: '500',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        flex: isMobile ? 1 : 'none'
                       }}
                     >
                       <X size={16} />
@@ -383,7 +441,9 @@ export default function UserProfile() {
                       borderRadius: '6px',
                       fontSize: '14px',
                       fontWeight: '500',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      width: isMobile ? '100%' : 'auto',
+                      justifyContent: 'center'
                     }}
                   >
                     <Edit size={16} />
@@ -395,7 +455,7 @@ export default function UserProfile() {
           </div>
 
           {/* Content */}
-          <div style={{ padding: '24px' }}>
+          <div style={{ padding: isMobile ? '16px' : '24px' }}>
             {activeSection === 'account' && (
               <AccountSection 
                 user={user}
@@ -407,6 +467,7 @@ export default function UserProfile() {
                 validationErrors={validationErrors}
                 setValidationErrors={setValidationErrors}
                 handlePhoneBlur={handlePhoneBlur}
+                isMobile={isMobile}
               />
             )}
 
@@ -474,7 +535,8 @@ function AccountSection({
   onCancel,
   validationErrors,
   setValidationErrors,
-  handlePhoneBlur
+  handlePhoneBlur,
+  isMobile = false
 }: {
   user: any;
   formData: any;
@@ -485,6 +547,7 @@ function AccountSection({
   validationErrors: { phone?: string[]; website?: string[] };
   setValidationErrors: (errors: { phone?: string[]; website?: string[] }) => void;
   handlePhoneBlur: () => void;
+  isMobile?: boolean;
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -501,7 +564,7 @@ function AccountSection({
         </h3>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '100%' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
           <div style={{ minWidth: 0, boxSizing: 'border-box' }}>
             <label style={{ 
               display: 'block', 
