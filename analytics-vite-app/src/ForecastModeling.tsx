@@ -1595,7 +1595,7 @@ function ModelModal({
                   fontSize: '14px',
                   boxSizing: 'border-box'
                 }}
-                placeholder="e.g., 2025 Model"
+                placeholder={`e.g., ${new Date().getFullYear()} Model`}
               />
             </div>
           </div>
