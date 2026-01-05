@@ -1443,24 +1443,18 @@ export class UnifiedDataService {
    * @param userId - The user ID to reset
    */
   static async resetDemoAccountData(userId: string): Promise<void> {
-    console.log('🔄 RESET FUNCTION CALLED for userId:', userId);
-    
     try {
       // Additional safety check: Verify we're in test environment
       const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
       const isTestEnv = hostname.includes('netlify.app') && !hostname.includes('app.fnnlapp.com')
       
-      console.log('🔍 RESET ENV CHECK:', { hostname, isTestEnv });
-      
       if (!isTestEnv) {
-        console.error('🚨 DEMO RESET SAFETY: Attempted to reset data in non-test environment!');
         logger.error('🚨 DEMO RESET SAFETY: Attempted to reset data in non-test environment!');
         logger.error('🚨 DEMO RESET SAFETY: This function should NEVER run in production!');
         logger.error('🚨 DEMO RESET SAFETY: Aborting reset to protect user data.');
         throw new Error('Demo reset is only allowed in test environment');
       }
 
-      console.log('✅ RESET: Starting data deletion for user:', userId);
       logger.debug('Resetting demo account data for user:', userId);
 
       if (!this.isSupabaseConfigured()) {
@@ -1560,15 +1554,12 @@ export class UnifiedDataService {
         try {
           // Clear completed tasks
           localStorage.removeItem('completedTasks');
-          console.log('✅ RESET: Cleared completedTasks from localStorage');
           logger.debug('Cleared completedTasks from localStorage');
         } catch (storageError) {
-          console.warn('⚠️ RESET: Could not clear localStorage:', storageError);
           logger.warn('Could not clear localStorage:', storageError);
         }
       }
 
-      console.log('✅ RESET: Demo account data reset complete for user:', userId);
       logger.debug('Demo account data reset complete for user:', userId);
     } catch (error) {
       logger.error('Error resetting demo account data:', error);
