@@ -6,9 +6,9 @@ This document outlines the standard workflow for deploying features and updates 
 
 ### Branches
 
-- **`main`**: Production branch - deploys to production environment
+- **`main`**: Main branch - not used for deployments
 - **`test`**: Test branch - deploys to test environment
-- **`dev`**: Development branch - for active development (optional)
+- **`prod`**: Production branch - deploys to production environment
 - **`feature/*`**: Feature branches - for new features
 - **`hotfix/*`**: Hotfix branches - for urgent production fixes
 
@@ -77,9 +77,9 @@ git push origin prod
 For urgent fixes that need to go directly to production:
 
 ```bash
-# Create hotfix from main
-git checkout main
-git pull origin main
+# Create hotfix from prod
+git checkout prod
+git pull origin prod
 git checkout -b hotfix/urgent-fix
 
 # Make the fix, commit
@@ -87,24 +87,24 @@ git add .
 git commit -m "Fix urgent issue X"
 
 # Deploy to production
-git checkout main
+git checkout prod
 git merge hotfix/urgent-fix
-git push origin main
+git push origin prod
 
 # Also merge to test to keep in sync
 git checkout test
-git merge main
+git merge prod
 git push origin test
 ```
 
 ## Keeping Branches in Sync
 
-Regularly sync test branch with main to keep them aligned:
+Regularly sync test branch with prod to keep them aligned:
 
 ```bash
-# Sync test with main
+# Sync test with prod
 git checkout test
-git merge main
+git merge prod
 git push origin test
 ```
 
@@ -166,9 +166,9 @@ If a deployment causes issues:
 git log --oneline
 
 # Revert to that commit
-git checkout main
+git checkout prod
 git reset --hard <commit-hash>
-git push origin main --force
+git push origin prod --force
 ```
 
 **Warning**: Use `--force` carefully and only when necessary!
@@ -262,8 +262,8 @@ git merge <branch-name>
 4. **Test database migrations in test first**
 5. **Monitor both environments after deployment**
 6. **Document breaking changes**
-7. **Keep test and main branches in sync**
+7. **Keep test and prod branches in sync**
 8. **Use feature branches for new work**
-9. **Review code before merging to main**
+9. **Review code before merging to prod**
 10. **Have a rollback plan ready**
 
