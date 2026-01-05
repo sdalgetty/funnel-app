@@ -467,6 +467,7 @@ export default function UserProfile() {
                 validationErrors={validationErrors}
                 setValidationErrors={setValidationErrors}
                 handlePhoneBlur={handlePhoneBlur}
+                isMobile={isMobile}
               />
             )}
 
