@@ -1432,4 +1432,147 @@ export class UnifiedDataService {
       // Don't throw - we don't want to fail signup if default data creation fails
     }
   }
+
+  /**
+   * Resets demo account data - clears all user data except profile
+   * Used for onboarding demonstrations. Keeps profile info and default service types/lead sources.
+   * 
+   * ⚠️ SAFETY: This function should ONLY be called from test environments.
+   * Additional safety checks are performed in AuthContext before calling this.
+   * 
+   * @param userId - The user ID to reset
+   */
+  static async resetDemoAccountData(userId: string): Promise<void> {
+    console.log('🔄 RESET FUNCTION CALLED for userId:', userId);
+    
+    try {
+      // Additional safety check: Verify we're in test environment
+      const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
+      const isTestEnv = hostname.includes('netlify.app') && !hostname.includes('app.fnnlapp.com')
+      
+      console.log('🔍 RESET ENV CHECK:', { hostname, isTestEnv });
+      
+      if (!isTestEnv) {
+        console.error('🚨 DEMO RESET SAFETY: Attempted to reset data in non-test environment!');
+        logger.error('🚨 DEMO RESET SAFETY: Attempted to reset data in non-test environment!');
+        logger.error('🚨 DEMO RESET SAFETY: This function should NEVER run in production!');
+        logger.error('🚨 DEMO RESET SAFETY: Aborting reset to protect user data.');
+        throw new Error('Demo reset is only allowed in test environment');
+      }
+
+      console.log('✅ RESET: Starting data deletion for user:', userId);
+      logger.debug('Resetting demo account data for user:', userId);
+
+      if (!this.isSupabaseConfigured()) {
+        logger.warn('Supabase not configured, skipping demo account reset');
+        return;
+      }
+
+      // Clear all data tables except user_profiles
+      // We'll keep service_types and lead_sources since they're defaults needed for the app
+      
+      // Delete in order to respect foreign key constraints
+      // 1. Payments (references bookings)
+      const { error: paymentsError } = await supabase
+        .from('payments')
+        .delete()
+        .eq('user_id', userId);
+
+      if (paymentsError) {
+        logger.error('Error deleting payments:', paymentsError);
+      }
+
+      // 2. Bookings (references service_types and lead_sources)
+      const { error: bookingsError } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('user_id', userId);
+
+      if (bookingsError) {
+        logger.error('Error deleting bookings:', bookingsError);
+      }
+
+      // 3. Ad campaigns (references ad_sources)
+      const { error: adCampaignsError } = await supabase
+        .from('ad_campaigns')
+        .delete()
+        .eq('user_id', userId);
+
+      if (adCampaignsError) {
+        logger.error('Error deleting ad campaigns:', adCampaignsError);
+      }
+
+      // 4. Ad sources (references lead_sources)
+      const { error: adSourcesError } = await supabase
+        .from('ad_sources')
+        .delete()
+        .eq('user_id', userId);
+
+      if (adSourcesError) {
+        logger.error('Error deleting ad sources:', adSourcesError);
+      }
+
+      // 5. Forecast models
+      const { error: forecastModelsError } = await supabase
+        .from('forecast_models')
+        .delete()
+        .eq('user_id', userId);
+
+      if (forecastModelsError) {
+        logger.error('Error deleting forecast models:', forecastModelsError);
+      }
+
+      // 6. Funnel data (including calculator data which uses year=0, month=0)
+      const { error: funnelsError } = await supabase
+        .from('funnels')
+        .delete()
+        .eq('user_id', userId);
+
+      if (funnelsError) {
+        logger.error('Error deleting funnel data:', funnelsError);
+      }
+
+      // 7. Remove all service types except defaults (we'll recreate them)
+      const { error: serviceTypesError } = await supabase
+        .from('service_types')
+        .delete()
+        .eq('user_id', userId);
+
+      if (serviceTypesError) {
+        logger.error('Error deleting service types:', serviceTypesError);
+      }
+
+      // 8. Remove all lead sources except defaults (we'll recreate them)
+      const { error: leadSourcesError } = await supabase
+        .from('lead_sources')
+        .delete()
+        .eq('user_id', userId);
+
+      if (leadSourcesError) {
+        logger.error('Error deleting lead sources:', leadSourcesError);
+      }
+
+      // 9. Recreate default service types and lead sources
+      await this.createDefaultDataForNewUser(userId);
+
+      // 10. Clear localStorage for task completions (if in browser environment)
+      if (typeof window !== 'undefined') {
+        try {
+          // Clear completed tasks
+          localStorage.removeItem('completedTasks');
+          console.log('✅ RESET: Cleared completedTasks from localStorage');
+          logger.debug('Cleared completedTasks from localStorage');
+        } catch (storageError) {
+          console.warn('⚠️ RESET: Could not clear localStorage:', storageError);
+          logger.warn('Could not clear localStorage:', storageError);
+        }
+      }
+
+      console.log('✅ RESET: Demo account data reset complete for user:', userId);
+      logger.debug('Demo account data reset complete for user:', userId);
+    } catch (error) {
+      logger.error('Error resetting demo account data:', error);
+      // Don't throw - we don't want to fail login if reset fails
+    }
+  }
 }

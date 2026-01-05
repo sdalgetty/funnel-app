@@ -8,6 +8,41 @@ import { logger } from '../utils/logger'
 import { TIMEOUTS } from '../constants/app'
 import { identifyUser, trackEvent, resetPostHog } from '../lib/posthog'
 
+// Demo account email for onboarding demonstrations
+// This account will auto-reset all data (except profile) on each login
+// Set via VITE_DEMO_ONBOARDING_EMAIL environment variable, defaults to 'demo-onboarding@test.com'
+const DEMO_ONBOARDING_EMAIL = import.meta.env.VITE_DEMO_ONBOARDING_EMAIL || 'demo-onboarding@test.com'
+
+/**
+ * Check if we're in a test environment (NOT production)
+ * Multiple checks to ensure safety:
+ * 1. Hostname must contain 'netlify.app' (test Netlify sites)
+ * 2. Hostname must NOT contain 'app.fnnlapp.com' (production domain)
+ * 3. Environment variable flag must be enabled (if set)
+ */
+const isTestEnvironment = (): boolean => {
+  // Check hostname
+  const hostname = window.location.hostname
+  
+  // Must be a Netlify test site (not production)
+  const isNetlifyTest = hostname.includes('netlify.app') && !hostname.includes('app.fnnlapp.com')
+  
+  // Additional check: environment variable flag (if set, must be explicitly enabled)
+  const envFlag = import.meta.env.VITE_ENABLE_DEMO_RESET
+  const envFlagEnabled = envFlag === 'true' || envFlag === '1'
+  
+  // If env flag is set, it must be enabled. If not set, we allow it in test environment.
+  const envCheck = envFlag ? envFlagEnabled : true
+  
+  const isTest = isNetlifyTest && envCheck
+  
+  if (!isTest && hostname.includes('app.fnnlapp.com')) {
+    logger.warn('⚠️ DEMO RESET: Production environment detected - reset feature is DISABLED')
+  }
+  
+  return isTest
+}
+
 interface AuthContextType {
   user: AuthUser | null
   session: Session | null
@@ -573,8 +608,74 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Load profile in background (non-blocking)
         loadUserProfile(session.user).then(async userWithProfile => {
+          console.log('📋 PROFILE LOADED:', userWithProfile?.email);
+          
           if (userWithProfile) {
             logger.debug('Profile loaded in background:', userWithProfile);
+            
+            // Check if this is the demo onboarding account and reset data if needed
+            // This handles the case where user refreshes page or has existing session
+            const userEmail = userWithProfile.email?.toLowerCase() || ''
+            const demoEmail = DEMO_ONBOARDING_EMAIL.toLowerCase()
+            const isDemoAccount = userEmail === demoEmail
+            const isTestEnv = isTestEnvironment()
+            
+            // Aggressive debug logging - always show
+            console.log('🔍 DEMO RESET CHECK (INITIAL SESSION):', {
+              userEmail,
+              demoEmail,
+              emailsMatch: userEmail === demoEmail,
+              isDemoAccount,
+              isTestEnv,
+              hostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A',
+              envFlag: import.meta.env.VITE_ENABLE_DEMO_RESET
+            });
+            
+            // Check if we should reset (only once per session to avoid loops)
+            const resetKey = `demo_reset_${userWithProfile.id}`
+            const hasResetThisSession = sessionStorage.getItem(resetKey) === 'true'
+            
+            console.log('🔍 DEMO RESET SESSION CHECK (INITIAL):', {
+              resetKey,
+              hasResetThisSession,
+              shouldReset: isDemoAccount && isTestEnv && !hasResetThisSession
+            });
+            
+            if (isDemoAccount && isTestEnv && !hasResetThisSession) {
+              console.log('✅ DEMO RESET: Conditions met, starting reset...');
+              logger.log('🔄 DEMO RESET: Demo account detected on initial session load, resetting data...');
+              console.log('🔄 DEMO RESET: Resetting all data for demo account...');
+              try {
+                // Clear localStorage BEFORE resetting database
+                if (typeof window !== 'undefined') {
+                  try {
+                    localStorage.removeItem('completedTasks');
+                    console.log('✅ DEMO RESET: Cleared completedTasks from localStorage');
+                  } catch (storageError) {
+                    logger.warn('Could not clear localStorage:', storageError);
+                  }
+                }
+                
+                await UnifiedDataService.resetDemoAccountData(userWithProfile.id);
+                logger.log('✅ DEMO RESET: Demo account data reset complete');
+                console.log('✅ DEMO RESET: All data reset successfully');
+                
+                // Mark that we've reset in this session
+                sessionStorage.setItem(resetKey, 'true')
+                
+                // Force a page reload to ensure fresh data is loaded
+                setTimeout(() => {
+                  console.log('🔄 DEMO RESET: Reloading page to show fresh data...');
+                  window.location.reload();
+                }, 1000);
+                return; // Don't continue with profile loading, reload will handle it
+              } catch (resetError) {
+                logger.error('❌ DEMO RESET: Error resetting demo account data:', resetError);
+                console.error('❌ DEMO RESET: Error:', resetError);
+                // Continue with login even if reset fails
+              }
+            }
+            
             setUser(userWithProfile);
             
             // Identify user in PostHog
@@ -704,6 +805,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔔 AUTH STATE CHANGE:', { event, hasSession: !!session, userEmail: session?.user?.email });
       logger.debug('Auth state change', { event, hasSession: !!session });
       
       // Handle token refresh event
@@ -716,6 +818,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Handle sign out
       if (event === 'SIGNED_OUT') {
         logger.debug('User signed out')
+        // Clear demo reset flag on logout so it resets on next login
+        if (typeof window !== 'undefined' && session?.user?.email?.toLowerCase() === DEMO_ONBOARDING_EMAIL.toLowerCase()) {
+          const resetKey = `demo_reset_${session.user.id}`
+          sessionStorage.removeItem(resetKey)
+          console.log('🔄 DEMO RESET: Cleared reset flag on logout');
+        }
         setSession(null)
         setUser(null)
         setViewingAsGuest(false)
@@ -748,6 +856,83 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         loadUserProfile(session.user).then(async userWithProfile => {
           if (userWithProfile) {
             logger.debug('Profile loaded in background:', userWithProfile);
+            
+            // Check if this is the demo onboarding account and reset data if needed
+            // MULTIPLE SAFEGUARDS to ensure this ONLY happens in test environment:
+            // 1. Must be SIGNED_IN event (not token refresh or other events)
+            // 2. Must be test environment (not production)
+            // 3. Email must match exactly (case-insensitive)
+            const userEmail = userWithProfile.email?.toLowerCase() || ''
+            const demoEmail = DEMO_ONBOARDING_EMAIL.toLowerCase()
+            const isDemoAccount = userEmail === demoEmail
+            const isTestEnv = isTestEnvironment()
+            
+            // Aggressive debug logging - always show
+            console.log('🔍 DEMO RESET CHECK (AUTH EVENT):', {
+              event,
+              userEmail,
+              demoEmail,
+              emailsMatch: userEmail === demoEmail,
+              isDemoAccount,
+              isTestEnv,
+              hostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A',
+              envFlag: import.meta.env.VITE_ENABLE_DEMO_RESET
+            });
+            
+            // Check if we should reset on SIGNED_IN event
+            // Use sessionStorage to prevent multiple resets in same session
+            const resetKey = `demo_reset_${userWithProfile.id}`
+            const hasResetThisSession = sessionStorage.getItem(resetKey) === 'true'
+            
+            console.log('🔍 DEMO RESET SESSION CHECK (AUTH EVENT):', {
+              resetKey,
+              hasResetThisSession,
+              eventIsSignedIn: event === 'SIGNED_IN',
+              shouldReset: event === 'SIGNED_IN' && isDemoAccount && isTestEnv && !hasResetThisSession
+            });
+            
+            if (event === 'SIGNED_IN' && isDemoAccount && isTestEnv && !hasResetThisSession) {
+              console.log('✅ DEMO RESET: Conditions met, starting reset...');
+              logger.log('🔄 DEMO RESET: Demo onboarding account detected in TEST environment');
+              logger.log('🔄 DEMO RESET: Starting data reset...');
+              console.log('🔄 DEMO RESET: Resetting all data for demo account...');
+              try {
+                // Clear localStorage BEFORE resetting database (for immediate UI effect)
+                if (typeof window !== 'undefined') {
+                  try {
+                    localStorage.removeItem('completedTasks');
+                    console.log('✅ DEMO RESET: Cleared completedTasks from localStorage');
+                  } catch (storageError) {
+                    logger.warn('Could not clear localStorage:', storageError);
+                  }
+                }
+                
+                await UnifiedDataService.resetDemoAccountData(userWithProfile.id);
+                logger.log('✅ DEMO RESET: Demo account data reset complete');
+                console.log('✅ DEMO RESET: All data reset successfully');
+                
+                // Mark that we've reset in this session
+                sessionStorage.setItem(resetKey, 'true')
+                
+                // Force a page reload to ensure fresh data is loaded
+                // This ensures the UI reflects the reset state and prevents stale data
+                // Small delay to ensure database operations complete
+                setTimeout(() => {
+                  console.log('🔄 DEMO RESET: Reloading page to show fresh data...');
+                  window.location.reload();
+                }, 1000);
+                return; // Don't continue with profile loading, reload will handle it
+              } catch (resetError) {
+                logger.error('❌ DEMO RESET: Error resetting demo account data:', resetError);
+                console.error('❌ DEMO RESET: Error:', resetError);
+                // Continue with login even if reset fails
+              }
+            } else if (event === 'SIGNED_IN' && isDemoAccount && !isTestEnv) {
+              // Safety check: If demo account tries to log in to production, log a warning
+              logger.warn('⚠️ DEMO RESET: Demo account login detected in PRODUCTION - reset is DISABLED for safety');
+              logger.warn('⚠️ DEMO RESET: This account should only be used in test environment');
+            }
+            
             setUser(userWithProfile);
             
             // Identify user in PostHog
@@ -884,6 +1069,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const signOut = async () => {
+    // Clear demo reset flag on logout so it resets on next login
+    if (typeof window !== 'undefined' && user?.email?.toLowerCase() === DEMO_ONBOARDING_EMAIL.toLowerCase()) {
+      const resetKey = `demo_reset_${user.id}`
+      sessionStorage.removeItem(resetKey)
+      console.log('🔄 DEMO RESET: Cleared reset flag on signOut');
+    }
+    
     // Track sign out
     trackEvent('sign_out');
     
