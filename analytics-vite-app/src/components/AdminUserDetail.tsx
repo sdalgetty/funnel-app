@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { AdminService, UserProfile } from '../services/adminService';
+import { AdminService } from '../services/adminService';
+import type { UserProfile } from '../services/adminService';
 import { ArrowLeft, Mail, Building, Calendar, CreditCard, UserCog, Phone, Globe, User } from 'lucide-react';
 import { pageContainerStyle, cardStyle } from '../utils/styling';
 

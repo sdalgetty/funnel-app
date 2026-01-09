@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { AdminService, UserProfile, AdminAccessLog } from '../services/adminService';
+import { AdminService } from '../services/adminService';
+import type { UserProfile, AdminAccessLog } from '../services/adminService';
 import { Users, Search, Eye, User, Clock, LogOut, ArrowLeft } from 'lucide-react';
 import AdminUserDetail from './AdminUserDetail';
 import AdminAccessLogs from './AdminAccessLogs';

@@ -220,6 +220,24 @@ export function useDataManager(): DataManager {
     }
   }, [effectiveUserId, user?.id, isViewOnly]);
 
+  const toggleLeadSourceAdSource = useCallback(async (id: string) => {
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
+    
+    try {
+      const success = await UnifiedDataService.toggleLeadSourceAdSource(userId, id, isViewOnly);
+      if (success) {
+        setLeadSources(prev => prev.map(ls => 
+          ls.id === id ? { ...ls, isAdSource: !ls.isAdSource } : ls
+        ));
+      }
+      return success;
+    } catch (err) {
+      logger.error('Error toggling lead source ad source:', err);
+      return false;
+    }
+  }, [effectiveUserId, user?.id, isViewOnly]);
+
   const deleteLeadSource = useCallback(async (id: string) => {
     const userId = effectiveUserId || user?.id;
     if (!userId) return false;
@@ -497,6 +515,7 @@ export function useDataManager(): DataManager {
     // Lead source operations
     createLeadSource,
     updateLeadSource,
+    toggleLeadSourceAdSource,
     deleteLeadSource,
     
     // Booking operations

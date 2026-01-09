@@ -488,6 +488,24 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     if (!dataManager || dataManager.loading) {
       return { totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 }
     }
+    // If ads tracking is enabled, use funnel data instead of ad_campaigns
+    if (user?.adsTrackingEnabled) {
+      // Calculate from funnelData.adsSpend for months in the selected range
+      const totalAdSpend = funnelData
+        .filter(month => isMonthInRange(month.year, month.month, advertisingRange))
+        .reduce((sum, month) => sum + (month.adsSpend || 0), 0)
+      
+      // Filter bookings by ad lead sources
+      const adLeadSourceIds = new Set(leadSources.filter(ls => ls.isAdSource).map(ls => ls.id))
+      const bookingsFromAds = advertisingBookings.filter(b => b.leadSourceId && adLeadSourceIds.has(b.leadSourceId))
+      const totalBookedFromAds = bookingsFromAds.reduce((sum, booking) => sum + (booking.revenue || booking.bookedRevenue || 0), 0)
+      const closesFromAds = bookingsFromAds.length
+      const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? totalBookedFromAds / totalAdSpend : null
+      const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0
+      return { totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
+    }
+    
+    // Fallback to old ad_campaigns approach (for backwards compatibility)
     if (dedupedAdCampaigns.length === 0) {
       return { totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 }
     }
@@ -501,7 +519,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? totalBookedFromAds / totalAdSpend : null
     const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0
     return { totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
-  }, [dataManager, dataManager?.loading, dedupedAdCampaigns, advertisingBookings, advertisingLeadSourceIds])
+  }, [dataManager, dataManager?.loading, user?.adsTrackingEnabled, funnelData, advertisingRange, leadSources, dedupedAdCampaigns, advertisingBookings, advertisingLeadSourceIds])
 
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' })
   const formatNumber = (n: number) => n.toLocaleString()
@@ -704,24 +722,26 @@ export default function Insights({ dataManager }: { dataManager: any }) {
         <p style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>Includes only bookings whose service types are tracked in the Funnel.</p>
       </Section>
 
-      {/* ADVERTISING */}
-      <Section
-        title="Advertising"
-        actions={
-          <TimeFilterSelect
-            value={sectionFilters.advertising}
-            onChange={(value) => handleFilterChange('advertising', value)}
-            options={timeFilterOptions}
-          />
-        }
-      >
-        <Cards columns={2}>
-          <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value={toUSD(advertisingTotals.totalAdSpend)} />
-          <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value={toUSD(advertisingTotals.totalBookedFromAds)} />
-          <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value={advertisingTotals.overallROI !== null ? advertisingTotals.overallROI.toFixed(2) : 'N/A'} />
-          <Card icon={<Target size={20} color="#8b5cf6" />} label="Cost Per Close" value={toUSD(advertisingTotals.costPerClose)} />
-        </Cards>
-      </Section>
+      {/* ADVERTISING - Only show if ads tracking is enabled */}
+      {user?.adsTrackingEnabled && (
+        <Section
+          title="Advertising"
+          actions={
+            <TimeFilterSelect
+              value={sectionFilters.advertising}
+              onChange={(value) => handleFilterChange('advertising', value)}
+              options={timeFilterOptions}
+            />
+          }
+        >
+          <Cards columns={2}>
+            <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value={toUSD(advertisingTotals.totalAdSpend)} />
+            <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value={toUSD(advertisingTotals.totalBookedFromAds)} />
+            <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value={advertisingTotals.overallROI !== null ? advertisingTotals.overallROI.toFixed(2) : 'N/A'} />
+            <Card icon={<Target size={20} color="#8b5cf6" />} label="Cost Per Close" value={toUSD(advertisingTotals.costPerClose)} />
+          </Cards>
+        </Section>
+      )}
     </div>
   )
 }
