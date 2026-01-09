@@ -1235,6 +1235,37 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 />
               </div>
 
+              {/* Ads Spend - only show if ads tracking is enabled */}
+              {adsTrackingEnabled && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                    Ads Spend ($)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={editingMonth.adsSpend ? (editingMonth.adsSpend / 100) : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                        const numValue = value === '' ? 0 : parseFloat(value);
+                        if (!isNaN(numValue)) {
+                          setEditingMonth({ ...editingMonth, adsSpend: Math.round(numValue * 100) });
+                        }
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: isMobile ? '16px' : '14px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Dynamic/Manual fields for Pro accounts */}
               {isProAccount && (() => {
                 // Get dynamic values for this month
@@ -1357,37 +1388,6 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                         }}
                       />
                     </div>
-
-                    {/* Ads Spend - only show if ads tracking is enabled */}
-                    {adsTrackingEnabled && (
-                      <div>
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
-                          Ads Spend ($)
-                        </label>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={editingMonth.adsSpend ? (editingMonth.adsSpend / 100) : ''}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
-                              const numValue = value === '' ? 0 : parseFloat(value);
-                              if (!isNaN(numValue)) {
-                                setEditingMonth({ ...editingMonth, adsSpend: Math.round(numValue * 100) });
-                              }
-                            }
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '6px',
-                            fontSize: isMobile ? '16px' : '14px',
-                            boxSizing: 'border-box'
-                          }}
-                        />
-                      </div>
-                    )}
 
                     {/* Cash */}
                     <div>
