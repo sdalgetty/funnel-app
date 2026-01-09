@@ -488,6 +488,24 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     if (!dataManager || dataManager.loading) {
       return { totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 }
     }
+    // If ads tracking is enabled, use funnel data instead of ad_campaigns
+    if (user?.adsTrackingEnabled) {
+      // Calculate from funnelData.adsSpend for months in the selected range
+      const totalAdSpend = funnelData
+        .filter(month => isMonthInRange(month.year, month.month, advertisingRange))
+        .reduce((sum, month) => sum + (month.adsSpend || 0), 0)
+      
+      // For bookings from ads, we'll use all bookings in the range
+      // (since we're aggregating all lead sources, we can't filter by specific lead source)
+      const bookingsFromAds = advertisingBookings
+      const totalBookedFromAds = bookingsFromAds.reduce((sum, booking) => sum + (booking.revenue || booking.bookedRevenue || 0), 0)
+      const closesFromAds = bookingsFromAds.length
+      const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? totalBookedFromAds / totalAdSpend : null
+      const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0
+      return { totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
+    }
+    
+    // Fallback to old ad_campaigns approach (for backwards compatibility)
     if (dedupedAdCampaigns.length === 0) {
       return { totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 }
     }
@@ -501,7 +519,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? totalBookedFromAds / totalAdSpend : null
     const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0
     return { totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
-  }, [dataManager, dataManager?.loading, dedupedAdCampaigns, advertisingBookings, advertisingLeadSourceIds])
+  }, [dataManager, dataManager?.loading, user?.adsTrackingEnabled, funnelData, advertisingRange, dedupedAdCampaigns, advertisingBookings, advertisingLeadSourceIds])
 
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' })
   const formatNumber = (n: number) => n.toLocaleString()
