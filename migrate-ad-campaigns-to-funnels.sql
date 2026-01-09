@@ -31,7 +31,8 @@ WHERE f.user_id = aa.user_id
   AND (f.ads_spend_cents = 0 OR f.ads_spend_cents IS NULL);
 
 -- Step 3: Insert new funnel records for months that don't exist yet (only for months with ad data)
-INSERT INTO funnels (user_id, year, month, name, ads_lead, ads_spend_cents, inquiries, calls_booked, calls_taken, closes, bookings, cash, last_updated, updated_at)
+-- Note: Only include columns that exist - let defaults handle created_at/updated_at if they exist
+INSERT INTO funnels (user_id, year, month, name, ads_lead, ads_spend_cents, inquiries, calls_booked, calls_taken, closes, bookings, cash, last_updated)
 SELECT 
   aa.user_id,
   aa.year,
@@ -45,8 +46,7 @@ SELECT
   0 as closes,
   0 as bookings,
   0 as cash,
-  NOW() as last_updated,
-  NOW() as updated_at
+  NOW() as last_updated
 FROM aggregated_ads aa
 WHERE NOT EXISTS (
   SELECT 1 
