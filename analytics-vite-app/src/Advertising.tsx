@@ -643,7 +643,7 @@ function EditCampaignForm({
 }) {
   const [formData, setFormData] = useState({
     spend: initialData.spend / 100, // Convert from cents to dollars for display
-    leadsGenerated: initialData.leadsGenerated
+    leadsGenerated: initialData.leadsGenerated.toString() // Store as string to prevent mobile "05" issue
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -654,7 +654,7 @@ function EditCampaignForm({
     
     onSave({
       spend: spendInCents,
-      leadsGenerated: formData.leadsGenerated
+      leadsGenerated: parseInt(formData.leadsGenerated || '0', 10)
     });
   };
 
@@ -708,18 +708,15 @@ function EditCampaignForm({
           Leads Generated
         </label>
         <input
-          type="number"
-          min="0"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
           value={formData.leadsGenerated}
           onChange={(e) => {
             const value = e.target.value;
-            if (value === '') {
-              handleChange('leadsGenerated', 0);
-            } else {
-              const numValue = parseInt(value, 10);
-              if (!isNaN(numValue)) {
-                handleChange('leadsGenerated', numValue);
-              }
+            // Only allow digits, store as string to prevent "05" issue
+            if (value === '' || /^\d+$/.test(value)) {
+              handleChange('leadsGenerated', value);
             }
           }}
           disabled={isViewOnly}
