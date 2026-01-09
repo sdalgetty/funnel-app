@@ -269,9 +269,9 @@ export class UnifiedDataService {
       upsertData.bookings_manual = funnelData.bookingsManual || false;
       upsertData.cash_manual = funnelData.cashManual || false;
       
-      // Ads tracking fields
-      if (funnelData.adsLead !== undefined) upsertData.ads_lead = Number(funnelData.adsLead || 0);
-      if (funnelData.adsSpend !== undefined) upsertData.ads_spend_cents = Number(funnelData.adsSpend || 0);
+      // Ads tracking fields - always include them if they exist in funnelData, default to 0
+      upsertData.ads_lead = Number(funnelData.adsLead ?? 0);
+      upsertData.ads_spend_cents = Number(funnelData.adsSpend ?? 0);
 
       logger.debug('Upsert data prepared', {
         year: upsertData.year,

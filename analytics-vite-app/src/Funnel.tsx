@@ -248,7 +248,13 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
           lastUpdated: new Date().toISOString()
     };
     
-    logger.debug('Data to save', { funnelId: dataToSave.id, year: dataToSave.year, month: dataToSave.month });
+    logger.debug('Data to save', { 
+      funnelId: dataToSave.id, 
+      year: dataToSave.year, 
+      month: dataToSave.month,
+      adsLead: dataToSave.adsLead,
+      adsSpend: dataToSave.adsSpend
+    });
     
     try {
       logger.debug('Attempting to save', { hasDataManager: !!dataManager, hasSaveMethod: !!dataManager?.saveFunnelData });
