@@ -531,81 +531,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
         </p>
       </div>
 
-      {/* Ads Tracking Toggle */}
-      {!isViewOnly && (
-        <div style={{ 
-          marginBottom: '24px', 
-          padding: '16px', 
-          backgroundColor: 'white', 
-          borderRadius: '8px', 
-          border: '1px solid #e5e7eb',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div>
-            <label style={{ 
-              display: 'block', 
-              fontSize: '14px', 
-              fontWeight: '600', 
-              margin: 0,
-              marginBottom: '4px',
-              color: '#374151'
-            }}>
-              Ads Tracking
-            </label>
-            <p style={{ 
-              fontSize: '12px', 
-              color: '#6b7280', 
-              margin: 0 
-            }}>
-              Track ad leads and spend directly in the Funnel view
-            </p>
-          </div>
-          <label style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            cursor: 'pointer',
-            gap: '12px'
-          }}>
-            <div style={{
-              position: 'relative',
-              width: '48px',
-              height: '24px',
-              borderRadius: '12px',
-              backgroundColor: adsTrackingEnabled ? '#3b82f6' : '#d1d5db',
-              transition: 'background-color 0.2s',
-              cursor: 'pointer'
-            }}
-            onClick={() => handleAdsTrackingToggle(!adsTrackingEnabled)}
-            >
-              <div style={{
-                position: 'absolute',
-                top: '2px',
-                left: adsTrackingEnabled ? '26px' : '2px',
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                backgroundColor: 'white',
-                transition: 'left 0.2s',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-              }} />
-            </div>
-            <span style={{ 
-              fontSize: '14px', 
-              color: '#374151',
-              fontWeight: adsTrackingEnabled ? '600' : '400',
-              userSelect: 'none'
-            }}>
-              {adsTrackingEnabled ? 'On' : 'Off'}
-            </span>
-          </label>
-        </div>
-      )}
-
-      {/* Year Selector */}
+      {/* Year Selector with Ads Tracking Toggle */}
       <div style={{ marginBottom: isMobile ? '24px' : '32px', padding: isMobile ? '16px' : '0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '16px' }}>
           <label style={{ 
             display: 'block', 
             fontSize: isMobile ? '16px' : '14px', 
@@ -632,24 +560,96 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
               ))}
             </select>
           )}
+          {!isViewOnly && !isMobile && (
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              cursor: 'pointer',
+              gap: '8px',
+              fontSize: '14px',
+              color: '#374151'
+            }}>
+              <span style={{ userSelect: 'none' }}>Track Advertising Data</span>
+              <div style={{
+                position: 'relative',
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                backgroundColor: adsTrackingEnabled ? '#3b82f6' : '#d1d5db',
+                transition: 'background-color 0.2s',
+                cursor: 'pointer'
+              }}
+              onClick={() => handleAdsTrackingToggle(!adsTrackingEnabled)}
+              >
+                <div style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: adsTrackingEnabled ? '22px' : '2px',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  backgroundColor: 'white',
+                  transition: 'left 0.2s',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                }} />
+              </div>
+            </label>
+          )}
         </div>
         {!isMobile && (
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            style={{
-              padding: '10px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              fontSize: '14px',
-              backgroundColor: 'white',
-              minWidth: '120px'
-            }}
-          >
-            {availableYears.map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              style={{
+                padding: '10px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                fontSize: '14px',
+                backgroundColor: 'white',
+                minWidth: '120px'
+              }}
+            >
+              {availableYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+            {!isViewOnly && (
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                cursor: 'pointer',
+                gap: '8px',
+                fontSize: '14px',
+                color: '#374151'
+              }}>
+                <span style={{ userSelect: 'none' }}>Track Advertising Data</span>
+                <div style={{
+                  position: 'relative',
+                  width: '44px',
+                  height: '24px',
+                  borderRadius: '12px',
+                  backgroundColor: adsTrackingEnabled ? '#3b82f6' : '#d1d5db',
+                  transition: 'background-color 0.2s',
+                  cursor: 'pointer'
+                }}
+                onClick={() => handleAdsTrackingToggle(!adsTrackingEnabled)}
+                >
+                  <div style={{
+                    position: 'absolute',
+                    top: '2px',
+                    left: adsTrackingEnabled ? '22px' : '2px',
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    backgroundColor: 'white',
+                    transition: 'left 0.2s',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }} />
+                </div>
+              </label>
+            )}
+          </div>
         )}
       </div>
 
