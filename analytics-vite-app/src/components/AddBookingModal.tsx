@@ -294,7 +294,11 @@ export function AddBookingModal({
               type="number"
               step="0.01"
               value={formData.bookedRevenue}
-              onChange={(e) => setFormData({ ...formData, bookedRevenue: e.target.value })}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Allow empty string for better mobile editing experience
+                setFormData({ ...formData, bookedRevenue: value });
+              }}
               required
               disabled={isViewOnly}
               style={{
@@ -337,10 +341,18 @@ export function AddBookingModal({
                   step="0.01"
                   placeholder="Amount"
                   value={payment.amount ? (payment.amount / 100).toFixed(2) : ''}
-                  onChange={(e) => handleUpdatePayment(index, { 
-                    amount: Math.round(parseFloat(e.target.value || '0') * 100),
-                    amountCents: Math.round(parseFloat(e.target.value || '0') * 100)
-                  })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      handleUpdatePayment(index, { amount: 0, amountCents: 0 });
+                    } else {
+                      const numValue = parseFloat(value);
+                      if (!isNaN(numValue)) {
+                        const cents = Math.round(numValue * 100);
+                        handleUpdatePayment(index, { amount: cents, amountCents: cents });
+                      }
+                    }
+                  }}
                   disabled={isViewOnly}
                   style={{ flex: 1, padding: '6px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '12px' }}
                 />
@@ -412,6 +424,10 @@ export function AddBookingModal({
     </div>
   );
 }
+
+
+
+
 
 
 

@@ -676,7 +676,17 @@ function EditCampaignForm({
           step="0.01"
           min="0"
           value={formData.spend}
-          onChange={(e) => handleChange('spend', parseFloat(e.target.value) || 0)}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === '') {
+              handleChange('spend', 0);
+            } else {
+              const numValue = parseFloat(value);
+              if (!isNaN(numValue)) {
+                handleChange('spend', numValue);
+              }
+            }
+          }}
           disabled={isViewOnly}
           style={{
             width: '100%',
@@ -701,7 +711,17 @@ function EditCampaignForm({
           type="number"
           min="0"
           value={formData.leadsGenerated}
-          onChange={(e) => handleChange('leadsGenerated', parseInt(e.target.value) || 0)}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === '') {
+              handleChange('leadsGenerated', 0);
+            } else {
+              const numValue = parseInt(value, 10);
+              if (!isNaN(numValue)) {
+                handleChange('leadsGenerated', numValue);
+              }
+            }
+          }}
           disabled={isViewOnly}
           style={{
             width: '100%',

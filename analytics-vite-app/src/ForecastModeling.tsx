@@ -1767,7 +1767,17 @@ function ModelModal({
                       <input
                         type="number"
                         value={service.quantity}
-                        onChange={(e) => updateServiceType(index, 'quantity', parseInt(e.target.value) || 0)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === '') {
+                            updateServiceType(index, 'quantity', 0);
+                          } else {
+                            const numValue = parseInt(value, 10);
+                            if (!isNaN(numValue)) {
+                              updateServiceType(index, 'quantity', numValue);
+                            }
+                          }
+                        }}
                         style={{
                           width: '100%',
                           padding: '8px 12px',
@@ -1786,7 +1796,17 @@ function ModelModal({
                       <input
                         type="number"
                         value={service.avgBooking / 100}
-                        onChange={(e) => updateServiceType(index, 'avgBooking', Math.round((parseFloat(e.target.value) || 0) * 100))}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === '') {
+                            updateServiceType(index, 'avgBooking', 0);
+                          } else {
+                            const numValue = parseFloat(value);
+                            if (!isNaN(numValue)) {
+                              updateServiceType(index, 'avgBooking', Math.round(numValue * 100));
+                            }
+                          }
+                        }}
                         style={{
                           width: '100%',
                           padding: '8px 12px',

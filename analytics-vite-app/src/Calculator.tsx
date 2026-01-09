@@ -268,7 +268,17 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
         <input
           type="number"
           value={data.bookingsGoal}
-          onChange={(e) => updateData('bookingsGoal', parseInt(e.target.value) || 0)}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === '') {
+              updateData('bookingsGoal', 0);
+            } else {
+              const numValue = parseInt(value, 10);
+              if (!isNaN(numValue)) {
+                updateData('bookingsGoal', numValue);
+              }
+            }
+          }}
           style={{
             width: '100%',
             padding: '10px 12px',
@@ -294,7 +304,17 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
         <input
           type="number"
           value={data.inquiryToCall}
-          onChange={(e) => updateData('inquiryToCall', parseInt(e.target.value) || 0)}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === '') {
+              updateData('inquiryToCall', 0);
+            } else {
+              const numValue = parseInt(value, 10);
+              if (!isNaN(numValue)) {
+                updateData('inquiryToCall', numValue);
+              }
+            }
+          }}
           style={{
             width: '100%',
             padding: '10px 12px',
@@ -320,7 +340,17 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
         <input
           type="number"
           value={data.callToBooking}
-          onChange={(e) => updateData('callToBooking', parseInt(e.target.value) || 0)}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === '') {
+              updateData('callToBooking', 0);
+            } else {
+              const numValue = parseInt(value, 10);
+              if (!isNaN(numValue)) {
+                updateData('callToBooking', numValue);
+              }
+            }
+          }}
           style={{
             width: '100%',
             padding: '10px 12px',
@@ -670,7 +700,17 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
               <input
                 type="number"
                 value={data.bookingsGoal}
-                onChange={(e) => updateData('bookingsGoal', parseInt(e.target.value) || 0)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '') {
+                    updateData('bookingsGoal', 0);
+                  } else {
+                    const numValue = parseInt(value, 10);
+                    if (!isNaN(numValue)) {
+                      updateData('bookingsGoal', numValue);
+                    }
+                  }
+                }}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -696,7 +736,17 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
               <input
                 type="number"
                 value={data.inquiryToCall}
-                onChange={(e) => updateData('inquiryToCall', parseInt(e.target.value) || 0)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '') {
+                    updateData('inquiryToCall', 0);
+                  } else {
+                    const numValue = parseInt(value, 10);
+                    if (!isNaN(numValue)) {
+                      updateData('inquiryToCall', numValue);
+                    }
+                  }
+                }}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -722,7 +772,17 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
               <input
                 type="number"
                 value={data.callToBooking}
-                onChange={(e) => updateData('callToBooking', parseInt(e.target.value) || 0)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '') {
+                    updateData('callToBooking', 0);
+                  } else {
+                    const numValue = parseInt(value, 10);
+                    if (!isNaN(numValue)) {
+                      updateData('callToBooking', numValue);
+                    }
+                  }
+                }}
                 style={{
                   width: '100%',
                   padding: '10px 12px',

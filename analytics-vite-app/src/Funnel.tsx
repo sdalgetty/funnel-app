@@ -1211,8 +1211,15 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                         disabled={!bookingsIsManual}
                         onChange={(e) => {
                           if (bookingsIsManual) {
-                            const newValue = parseFloat(e.target.value) || 0;
-                            setEditingMonth({ ...editingMonth, bookings: Math.round(newValue * 100) });
+                            const value = e.target.value;
+                            if (value === '') {
+                              setEditingMonth({ ...editingMonth, bookings: 0 });
+                            } else {
+                              const numValue = parseFloat(value);
+                              if (!isNaN(numValue)) {
+                                setEditingMonth({ ...editingMonth, bookings: Math.round(numValue * 100) });
+                              }
+                            }
                           }
                         }}
                         style={{
@@ -1261,8 +1268,15 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                         disabled={!cashIsManual}
                         onChange={(e) => {
                           if (cashIsManual) {
-                            const newValue = parseFloat(e.target.value) || 0;
-                            setEditingMonth({ ...editingMonth, cash: Math.round(newValue * 100) });
+                            const value = e.target.value;
+                            if (value === '') {
+                              setEditingMonth({ ...editingMonth, cash: 0 });
+                            } else {
+                              const numValue = parseFloat(value);
+                              if (!isNaN(numValue)) {
+                                setEditingMonth({ ...editingMonth, cash: Math.round(numValue * 100) });
+                              }
+                            }
                           }
                         }}
                         style={{
@@ -1321,7 +1335,17 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                     <input
                       type="number"
                       value={editingMonth.bookings / 100}
-                      onChange={(e) => setEditingMonth({ ...editingMonth, bookings: (parseFloat(e.target.value) || 0) * 100 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          setEditingMonth({ ...editingMonth, bookings: 0 });
+                        } else {
+                          const numValue = parseFloat(value);
+                          if (!isNaN(numValue)) {
+                            setEditingMonth({ ...editingMonth, bookings: Math.round(numValue * 100) });
+                          }
+                        }
+                      }}
                       style={{
                         width: '100%',
                         padding: '8px 12px',
@@ -1340,7 +1364,17 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                     <input
                       type="number"
                       value={editingMonth.cash / 100}
-                      onChange={(e) => setEditingMonth({ ...editingMonth, cash: (parseFloat(e.target.value) || 0) * 100 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          setEditingMonth({ ...editingMonth, cash: 0 });
+                        } else {
+                          const numValue = parseFloat(value);
+                          if (!isNaN(numValue)) {
+                            setEditingMonth({ ...editingMonth, cash: Math.round(numValue * 100) });
+                          }
+                        }
+                      }}
                       style={{
                         width: '100%',
                         padding: '8px 12px',

@@ -2200,7 +2200,11 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
               type="number"
               step="0.01"
               value={formData.bookedRevenue}
-              onChange={(e) => setFormData({ ...formData, bookedRevenue: e.target.value })}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Allow empty string for better mobile editing experience
+                setFormData({ ...formData, bookedRevenue: value });
+              }}
               style={{
                 width: '100%',
                 padding: '10px 12px',
@@ -2266,8 +2270,16 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
                     placeholder="Amount ($)"
                     value={payment.amount ? (payment.amount / 100).toString() : ''}
                     onChange={(e) => {
-                      const cents = Math.round(parseFloat(e.target.value || '0') * 100);
-                      handleUpdatePayment(index, { amount: cents, amountCents: cents });
+                      const value = e.target.value;
+                      if (value === '') {
+                        handleUpdatePayment(index, { amount: 0, amountCents: 0 });
+                      } else {
+                        const numValue = parseFloat(value);
+                        if (!isNaN(numValue)) {
+                          const cents = Math.round(numValue * 100);
+                          handleUpdatePayment(index, { amount: cents, amountCents: cents });
+                        }
+                      }
                     }}
                     style={{
                       padding: '6px 10px',
@@ -3007,7 +3019,11 @@ function AddPaymentModal({ bookingId, onAdd, onClose }: {
                 type="number"
                 step="0.01"
                 value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Allow empty string for better mobile editing experience
+                  setFormData({ ...formData, amount: value });
+                }}
                 style={{
                   width: '100%',
                   padding: '8px 12px',
@@ -3446,7 +3462,11 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
               type="number"
               step="0.01"
               value={formData.bookedRevenue}
-              onChange={(e) => setFormData({ ...formData, bookedRevenue: e.target.value })}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Allow empty string for better mobile editing experience
+                setFormData({ ...formData, bookedRevenue: value });
+              }}
               style={{
                 width: '100%',
                 padding: '10px 12px',
@@ -3511,8 +3531,16 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
                     placeholder="Amount ($)"
                     value={payment.amount ? (payment.amount / 100).toString() : ''}
                     onChange={(e) => {
-                      const cents = Math.round(parseFloat(e.target.value || '0') * 100);
-                      handleUpdatePayment(index, { amount: cents, amountCents: cents });
+                      const value = e.target.value;
+                      if (value === '') {
+                        handleUpdatePayment(index, { amount: 0, amountCents: 0 });
+                      } else {
+                        const numValue = parseFloat(value);
+                        if (!isNaN(numValue)) {
+                          const cents = Math.round(numValue * 100);
+                          handleUpdatePayment(index, { amount: cents, amountCents: cents });
+                        }
+                      }
                     }}
                     style={{
                       padding: '6px 10px',
