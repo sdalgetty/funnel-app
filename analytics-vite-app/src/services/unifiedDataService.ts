@@ -94,6 +94,8 @@ export class UnifiedDataService {
       closesManual: record.closes_manual || false,
       bookingsManual: record.bookings_manual || false,
       cashManual: record.cash_manual || false,
+      adsLead: record.ads_lead || 0,
+      adsSpend: record.ads_spend_cents || 0,
       lastUpdated: record.updated_at || new Date().toISOString()
     }));
   }
@@ -266,6 +268,10 @@ export class UnifiedDataService {
       upsertData.closes_manual = funnelData.closesManual || false;
       upsertData.bookings_manual = funnelData.bookingsManual || false;
       upsertData.cash_manual = funnelData.cashManual || false;
+      
+      // Ads tracking fields
+      if (funnelData.adsLead !== undefined) upsertData.ads_lead = Number(funnelData.adsLead || 0);
+      if (funnelData.adsSpend !== undefined) upsertData.ads_spend_cents = Number(funnelData.adsSpend || 0);
 
       logger.debug('Upsert data prepared', {
         year: upsertData.year,

@@ -42,7 +42,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
     paymentsDataCount: paymentsData.length 
   });
   
-  const { user, features } = useAuth();
+  const { user, features, updateProfile } = useAuth();
   logger.debug('Auth context loaded', { 
     userId: user?.id, 
     email: user?.email, 
@@ -53,6 +53,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMonth, setEditingMonth] = useState<FunnelData | null>(null);
+  const [adsTrackingEnabled, setAdsTrackingEnabled] = useState<boolean>(user?.adsTrackingEnabled || false);
   
   // Mobile detection
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -62,6 +63,27 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Sync adsTrackingEnabled with user profile
+  useEffect(() => {
+    if (user?.adsTrackingEnabled !== undefined) {
+      setAdsTrackingEnabled(user.adsTrackingEnabled);
+    }
+  }, [user?.adsTrackingEnabled]);
+
+  // Handle toggle change
+  const handleAdsTrackingToggle = async (enabled: boolean) => {
+    setAdsTrackingEnabled(enabled);
+    if (user) {
+      try {
+        await updateProfile({ adsTrackingEnabled: enabled });
+      } catch (error) {
+        logger.error('Failed to update ads tracking setting:', error);
+        // Revert on error
+        setAdsTrackingEnabled(!enabled);
+      }
+    }
+  };
 
   // Handle navigation action to open edit modal for specific month
   useEffect(() => {
@@ -509,6 +531,78 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
         </p>
       </div>
 
+      {/* Ads Tracking Toggle */}
+      {!isViewOnly && (
+        <div style={{ 
+          marginBottom: '24px', 
+          padding: '16px', 
+          backgroundColor: 'white', 
+          borderRadius: '8px', 
+          border: '1px solid #e5e7eb',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div>
+            <label style={{ 
+              display: 'block', 
+              fontSize: '14px', 
+              fontWeight: '600', 
+              margin: 0,
+              marginBottom: '4px',
+              color: '#374151'
+            }}>
+              Ads Tracking
+            </label>
+            <p style={{ 
+              fontSize: '12px', 
+              color: '#6b7280', 
+              margin: 0 
+            }}>
+              Track ad leads and spend directly in the Funnel view
+            </p>
+          </div>
+          <label style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            cursor: 'pointer',
+            gap: '12px'
+          }}>
+            <div style={{
+              position: 'relative',
+              width: '48px',
+              height: '24px',
+              borderRadius: '12px',
+              backgroundColor: adsTrackingEnabled ? '#3b82f6' : '#d1d5db',
+              transition: 'background-color 0.2s',
+              cursor: 'pointer'
+            }}
+            onClick={() => handleAdsTrackingToggle(!adsTrackingEnabled)}
+            >
+              <div style={{
+                position: 'absolute',
+                top: '2px',
+                left: adsTrackingEnabled ? '26px' : '2px',
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                backgroundColor: 'white',
+                transition: 'left 0.2s',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }} />
+            </div>
+            <span style={{ 
+              fontSize: '14px', 
+              color: '#374151',
+              fontWeight: adsTrackingEnabled ? '600' : '400',
+              userSelect: 'none'
+            }}>
+              {adsTrackingEnabled ? 'On' : 'Off'}
+            </span>
+          </label>
+        </div>
+      )}
+
       {/* Year Selector */}
       <div style={{ marginBottom: isMobile ? '24px' : '32px', padding: isMobile ? '16px' : '0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -602,11 +696,17 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
               <tr style={{ backgroundColor: '#f9fafb' }}>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151', minWidth: '120px' }}>Month</th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '90px' }}>Inquiries</th>
+                {adsTrackingEnabled && (
+                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '100px' }}>Ads Lead</th>
+                )}
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>Calls Booked</th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>Calls Taken</th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '90px' }}>Closes</th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Bookings</th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Cash</th>
+                {adsTrackingEnabled && (
+                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Ads Spend</th>
+                )}
                 <th style={{ padding: '12px 6px', textAlign: 'center', fontWeight: '600', color: '#374151', width: '60px' }}>Notes</th>
                 <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600', color: '#374151', minWidth: '110px' }}>Actions</th>
               </tr>
@@ -629,6 +729,11 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                     <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
                       {formatNumber(month.inquiries)}
                     </td>
+                    {adsTrackingEnabled && (
+                      <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
+                        {formatNumber(month.adsLead || 0)}
+                      </td>
+                    )}
                     <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
                       {formatNumber(month.callsBooked)}
                     </td>
@@ -644,6 +749,11 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                     <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
                       {toUSD(month.cash)}
                     </td>
+                    {adsTrackingEnabled && (
+                      <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
+                        {toUSD(month.adsSpend || 0)}
+                      </td>
+                    )}
                     <td style={{ padding: '12px 6px', textAlign: 'center' }}>
                       {(() => {
                         const isFuture = isFutureMonth(month.year, month.month);
@@ -718,6 +828,11 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
                   {formatNumber(analyticsMetrics.totalInquiries)}
                 </td>
+                {adsTrackingEnabled && (
+                  <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
+                    {formatNumber(filteredData.reduce((sum, month) => sum + (month.adsLead || 0), 0))}
+                  </td>
+                )}
                 <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
                   {formatNumber(analyticsMetrics.totalCallsBooked)}
                 </td>
@@ -733,6 +848,11 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
                   {toUSD(analyticsMetrics.totalCash)}
                 </td>
+                {adsTrackingEnabled && (
+                  <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
+                    {toUSD(filteredData.reduce((sum, month) => sum + (month.adsSpend || 0), 0))}
+                  </td>
+                )}
                 <td style={{ padding: '12px 6px' }}></td>
                 <td style={{ padding: '12px 8px' }}></td>
               </tr>
@@ -768,6 +888,12 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                       <span style={{ fontSize: '14px', color: '#6b7280' }}>Inquiries</span>
                       <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.inquiries)}</span>
                     </div>
+                    {adsTrackingEnabled && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '14px', color: '#6b7280' }}>Ads Lead</span>
+                        <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.adsLead || 0)}</span>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '14px', color: '#6b7280' }}>Calls Booked</span>
                       <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.callsBooked)}</span>
@@ -792,6 +918,14 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                         {toUSD(month.cash)}
                       </span>
                     </div>
+                    {adsTrackingEnabled && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '14px', color: '#6b7280' }}>Ads Spend</span>
+                        <span style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
+                          {toUSD(month.adsSpend || 0)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={() => !isViewOnly && !isFuture && handleEditMonth(month)}
@@ -1045,6 +1179,37 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 />
               </div>
 
+              {/* Ads Lead - only show if ads tracking is enabled */}
+              {adsTrackingEnabled && (
+                <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                    Ads Lead
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={editingMonth.adsLead || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || /^\d+$/.test(value)) {
+                        const numValue = value === '' ? 0 : parseInt(value, 10);
+                        setEditingMonth({ ...editingMonth, adsLead: numValue });
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      maxWidth: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: isMobile ? '16px' : '14px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Calls Booked */}
               <div>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
@@ -1225,6 +1390,37 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                         }}
                       />
                     </div>
+
+                    {/* Ads Spend - only show if ads tracking is enabled */}
+                    {adsTrackingEnabled && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                          Ads Spend ($)
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={editingMonth.adsSpend ? (editingMonth.adsSpend / 100) : ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                              const numValue = value === '' ? 0 : parseFloat(value);
+                              if (!isNaN(numValue)) {
+                                setEditingMonth({ ...editingMonth, adsSpend: Math.round(numValue * 100) });
+                              }
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: isMobile ? '16px' : '14px',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+                    )}
 
                     {/* Cash */}
                     <div>

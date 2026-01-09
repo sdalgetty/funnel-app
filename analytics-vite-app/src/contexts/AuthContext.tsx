@@ -101,7 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const lastActivityTime = useRef<number>(Date.now())
 
   // Helper function to build combined user from auth user and profile data
-  const buildCombinedUser = async (authUser: { id: string; email?: string; created_at: string; user_metadata?: { full_name?: string } }, profileData: { first_name: string | null; last_name: string | null; full_name: string | null; company_name: string | null; phone: string | null; website: string | null; crm: string | null; crm_other: string | null; subscription_tier: string; subscription_status: string; trial_ends_at: string | null }): Promise<AuthUser> => {
+  const buildCombinedUser = async (authUser: { id: string; email?: string; created_at: string; user_metadata?: { full_name?: string } }, profileData: { first_name: string | null; last_name: string | null; full_name: string | null; company_name: string | null; phone: string | null; website: string | null; crm: string | null; crm_other: string | null; ads_tracking_enabled: boolean | null; subscription_tier: string; subscription_status: string; trial_ends_at: string | null }): Promise<AuthUser> => {
     // Explicitly check for null/undefined to avoid falling back to email when name is intentionally empty
     const firstName = profileData.first_name !== null && profileData.first_name !== undefined 
       ? profileData.first_name 
@@ -131,6 +131,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         : '',
       crm: (profileData.crm as CRMType | undefined) || undefined,
       crmOther: profileData.crm_other || undefined,
+      adsTrackingEnabled: profileData.ads_tracking_enabled === true,
       subscriptionTier: profileData.subscription_tier || 'pro',
       subscriptionStatus: profileData.subscription_status || 'active',
       createdAt: new Date(authUser.created_at),
@@ -247,6 +248,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         lastName: '',
         name: authUser.user_metadata?.full_name || authUser.email,
         companyName: '',
+        adsTrackingEnabled: false,
         subscriptionTier: 'pro', // Set to pro for testing
         subscriptionStatus: 'active',
         createdAt: new Date(authUser.created_at),
@@ -1111,11 +1113,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Include CRM fields in updates if provided
     if (updates.crm !== undefined) dbUpdates.crm = updates.crm || null
     if (updates.crmOther !== undefined) dbUpdates.crm_other = updates.crmOther || null
+    // Include ads tracking enabled in updates if provided
+    if (updates.adsTrackingEnabled !== undefined) dbUpdates.ads_tracking_enabled = updates.adsTrackingEnabled || false
 
       logger.debug('Updating user profile', { userId: user.id, updates: dbUpdates });
 
       // Select all columns including phone/website (migration should have run)
-      const selectColumns = 'id, email, first_name, last_name, full_name, company_name, phone, website, crm, crm_other, subscription_tier, subscription_status, created_at, updated_at'
+      const selectColumns = 'id, email, first_name, last_name, full_name, company_name, phone, website, crm, crm_other, ads_tracking_enabled, subscription_tier, subscription_status, created_at, updated_at'
       
       let { data, error } = await supabase
         .from('user_profiles')
@@ -1151,7 +1155,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           .from('user_profiles')
           .update(dbUpdatesWithoutNewFields)
           .eq('id', user.id)
-          .select('id, email, first_name, last_name, full_name, company_name, crm, crm_other, subscription_tier, subscription_status, created_at, updated_at')
+          .select('id, email, first_name, last_name, full_name, company_name, crm, crm_other, ads_tracking_enabled, subscription_tier, subscription_status, created_at, updated_at')
         .single()
         
         data = retryResult.data

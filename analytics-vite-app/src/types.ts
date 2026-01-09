@@ -47,6 +47,8 @@ export interface FunnelData {
   bookingsYtd: number;
   bookingsGoal: number;
   cash: number; // in cents
+  adsLead?: number; // Number of ad leads (aggregated across all lead sources)
+  adsSpend?: number; // Ad spend in cents (aggregated across all lead sources)
   notes?: string | null;
   closesManual?: boolean; // If true, closes is manually entered
   bookingsManual?: boolean; // If true, bookings is manually entered

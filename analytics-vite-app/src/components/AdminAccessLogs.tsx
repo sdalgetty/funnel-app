@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AdminService, AdminAccessLog } from '../services/adminService';
+import { AdminService } from '../services/adminService';
+import type { AdminAccessLog } from '../services/adminService';
 import { ArrowLeft, Clock, User, Eye, Edit, Play, Square } from 'lucide-react';
 
 interface AdminAccessLogsProps {
@@ -328,6 +329,10 @@ export default function AdminAccessLogs({ onBack }: AdminAccessLogsProps) {
     </div>
   );
 }
+
+
+
+
 
 
 

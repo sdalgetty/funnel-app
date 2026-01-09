@@ -704,24 +704,26 @@ export default function Insights({ dataManager }: { dataManager: any }) {
         <p style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>Includes only bookings whose service types are tracked in the Funnel.</p>
       </Section>
 
-      {/* ADVERTISING */}
-      <Section
-        title="Advertising"
-        actions={
-          <TimeFilterSelect
-            value={sectionFilters.advertising}
-            onChange={(value) => handleFilterChange('advertising', value)}
-            options={timeFilterOptions}
-          />
-        }
-      >
-        <Cards columns={2}>
-          <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value={toUSD(advertisingTotals.totalAdSpend)} />
-          <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value={toUSD(advertisingTotals.totalBookedFromAds)} />
-          <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value={advertisingTotals.overallROI !== null ? advertisingTotals.overallROI.toFixed(2) : 'N/A'} />
-          <Card icon={<Target size={20} color="#8b5cf6" />} label="Cost Per Close" value={toUSD(advertisingTotals.costPerClose)} />
-        </Cards>
-      </Section>
+      {/* ADVERTISING - Only show if ads tracking is enabled */}
+      {user?.adsTrackingEnabled && (
+        <Section
+          title="Advertising"
+          actions={
+            <TimeFilterSelect
+              value={sectionFilters.advertising}
+              onChange={(value) => handleFilterChange('advertising', value)}
+              options={timeFilterOptions}
+            />
+          }
+        >
+          <Cards columns={2}>
+            <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value={toUSD(advertisingTotals.totalAdSpend)} />
+            <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value={toUSD(advertisingTotals.totalBookedFromAds)} />
+            <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value={advertisingTotals.overallROI !== null ? advertisingTotals.overallROI.toFixed(2) : 'N/A'} />
+            <Card icon={<Target size={20} color="#8b5cf6" />} label="Cost Per Close" value={toUSD(advertisingTotals.costPerClose)} />
+          </Cards>
+        </Section>
+      )}
     </div>
   )
 }

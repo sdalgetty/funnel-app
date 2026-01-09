@@ -168,11 +168,6 @@ function AppContent() {
         setNavigationAction({ page: 'funnel', action: 'edit-month', month })
         setTimeout(() => setNavigationAction(null), 1000)
         break
-      case 'add-advertising-lead':
-        setCurrentPage('advertising')
-        setNavigationAction({ page: 'advertising', action: 'edit-month', month })
-        setTimeout(() => setNavigationAction(null), 100)
-        break
     }
   }
 
@@ -382,24 +377,6 @@ function AppContent() {
           >
             Forecast
           </button>
-          {features.advertising && (
-            <button
-              onClick={() => setCurrentPage('advertising')}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: currentPage === 'advertising' ? '#3b82f6' : '#f3f4f6',
-                color: currentPage === 'advertising' ? 'white' : '#374151',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              Advertising
-            </button>
-          )}
           <button
             onClick={() => setCurrentPage('bookings')}
             style={{
@@ -727,28 +704,6 @@ function AppContent() {
             >
               Forecast
             </button>
-            {features.advertising && (
-              <button
-                onClick={() => {
-                  setCurrentPage('advertising')
-                  setIsMobileMenuOpen(false)
-                }}
-                style={{
-                  padding: '16px 24px',
-                  border: 'none',
-                  backgroundColor: currentPage === 'advertising' ? '#eff6ff' : 'transparent',
-                  color: currentPage === 'advertising' ? '#3b82f6' : '#374151',
-                  fontSize: '16px',
-                  fontWeight: currentPage === 'advertising' ? '600' : '500',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  borderLeft: currentPage === 'advertising' ? '4px solid #3b82f6' : '4px solid transparent',
-                  transition: 'all 0.2s'
-                }}
-              >
-                Advertising
-              </button>
-            )}
             <button
               onClick={() => {
                 setCurrentPage('bookings')
@@ -1018,35 +973,6 @@ function AppContent() {
                 }}
               >
                 Add New Inquiry
-              </button>
-              <button
-                onClick={() => handleCreateAction('add-advertising-lead')}
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '16px' : '12px',
-                  backgroundColor: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: isMobile ? '16px' : '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isMobile) e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onMouseLeave={(e) => {
-                  if (!isMobile) e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-                onTouchStart={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onTouchEnd={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-              >
-                Add New Advertising Lead
               </button>
               <button
                 onClick={() => handleCreateAction('add-call-booked')}

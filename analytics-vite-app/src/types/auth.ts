@@ -22,6 +22,7 @@ export interface AuthUser {
   website?: string;
   crm?: CRMType;
   crmOther?: string; // Custom CRM name when crm is 'other'
+  adsTrackingEnabled?: boolean; // If true, track ads in Funnel view instead of separate page
   subscriptionTier: SubscriptionTier;
   subscriptionStatus: SubscriptionStatus;
   createdAt: Date;
