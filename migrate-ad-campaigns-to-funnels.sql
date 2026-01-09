@@ -21,8 +21,7 @@ WITH aggregated_ads AS (
 UPDATE funnels f
 SET 
   ads_lead = COALESCE(aa.total_ads_lead, 0),
-  ads_spend_cents = COALESCE(aa.total_ads_spend_cents, 0),
-  updated_at = NOW()
+  ads_spend_cents = COALESCE(aa.total_ads_spend_cents, 0)
 FROM aggregated_ads aa
 WHERE f.user_id = aa.user_id 
   AND f.year = aa.year 
@@ -31,8 +30,8 @@ WHERE f.user_id = aa.user_id
   AND (f.ads_spend_cents = 0 OR f.ads_spend_cents IS NULL);
 
 -- Step 3: Insert new funnel records for months that don't exist yet (only for months with ad data)
--- Note: Only include columns that exist - let defaults handle created_at/updated_at if they exist
-INSERT INTO funnels (user_id, year, month, name, ads_lead, ads_spend_cents, inquiries, calls_booked, calls_taken, closes, bookings, cash, last_updated)
+-- Note: Only include required columns - let defaults handle timestamps
+INSERT INTO funnels (user_id, year, month, name, ads_lead, ads_spend_cents, inquiries, calls_booked, calls_taken, closes, bookings, cash)
 SELECT 
   aa.user_id,
   aa.year,
@@ -45,8 +44,7 @@ SELECT
   0 as calls_taken,
   0 as closes,
   0 as bookings,
-  0 as cash,
-  NOW() as last_updated
+  0 as cash
 FROM aggregated_ads aa
 WHERE NOT EXISTS (
   SELECT 1 
