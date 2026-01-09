@@ -1189,6 +1189,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const updatedWebsite = data.website !== null && data.website !== undefined ? data.website : '';
     const updatedCrm = (data.crm as CRMType | undefined) || undefined;
     const updatedCrmOther = data.crm_other !== null && data.crm_other !== undefined ? data.crm_other : undefined;
+    const updatedAdsTrackingEnabled = data.ads_tracking_enabled === true;
     
     // Update local state immediately with the data returned from the update
     const updatedUser = {
@@ -1201,7 +1202,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       phone: updatedPhone,
       website: updatedWebsite,
       crm: updatedCrm,
-      crmOther: updatedCrmOther
+      crmOther: updatedCrmOther,
+      adsTrackingEnabled: updatedAdsTrackingEnabled
     };
     
     logger.debug('Updating user state', {
