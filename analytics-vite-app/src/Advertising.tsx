@@ -642,15 +642,16 @@ function EditCampaignForm({
   isViewOnly?: boolean;
 }) {
   const [formData, setFormData] = useState({
-    spend: initialData.spend / 100, // Convert from cents to dollars for display
-    leadsGenerated: initialData.leadsGenerated.toString() // Store as string to prevent mobile "05" issue
+    spend: (initialData.spend / 100).toString(), // Store as string to prevent "05" issue
+    leadsGenerated: initialData.leadsGenerated.toString() // Store as string to prevent "05" issue
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Convert dollars back to cents
-    const spendInCents = Math.round(formData.spend * 100);
+    // Convert dollars back to cents (parse from string)
+    const spendValue = parseFloat(formData.spend || '0');
+    const spendInCents = Math.round(spendValue * 100);
     
     onSave({
       spend: spendInCents,
@@ -672,19 +673,15 @@ function EditCampaignForm({
           Ad Spend ($)
         </label>
         <input
-          type="number"
-          step="0.01"
-          min="0"
+          type="text"
+          inputMode="decimal"
           value={formData.spend}
           onChange={(e) => {
             const value = e.target.value;
-            if (value === '') {
-              handleChange('spend', 0);
-            } else {
-              const numValue = parseFloat(value);
-              if (!isNaN(numValue)) {
-                handleChange('spend', numValue);
-              }
+            // Allow empty string or valid decimal numbers
+            // Pattern: optional negative, digits, optional decimal point and digits
+            if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+              handleChange('spend', value);
             }
           }}
           disabled={isViewOnly}

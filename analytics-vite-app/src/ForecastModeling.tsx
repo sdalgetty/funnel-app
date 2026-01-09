@@ -1765,17 +1765,15 @@ function ModelModal({
                         Quantity
                       </label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={service.quantity}
                         onChange={(e) => {
                           const value = e.target.value;
-                          if (value === '') {
-                            updateServiceType(index, 'quantity', 0);
-                          } else {
-                            const numValue = parseInt(value, 10);
-                            if (!isNaN(numValue)) {
-                              updateServiceType(index, 'quantity', numValue);
-                            }
+                          if (value === '' || /^\d+$/.test(value)) {
+                            const numValue = value === '' ? 0 : parseInt(value, 10);
+                            updateServiceType(index, 'quantity', numValue);
                           }
                         }}
                         style={{
@@ -1786,7 +1784,6 @@ function ModelModal({
                           fontSize: '14px',
                           boxSizing: 'border-box'
                         }}
-                        min="0"
                       />
                     </div>
                     <div>
@@ -1794,14 +1791,13 @@ function ModelModal({
                         Avg Booking ($)
                       </label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         value={service.avgBooking / 100}
                         onChange={(e) => {
                           const value = e.target.value;
-                          if (value === '') {
-                            updateServiceType(index, 'avgBooking', 0);
-                          } else {
-                            const numValue = parseFloat(value);
+                          if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                            const numValue = value === '' ? 0 : parseFloat(value);
                             if (!isNaN(numValue)) {
                               updateServiceType(index, 'avgBooking', Math.round(numValue * 100));
                             }
@@ -1815,8 +1811,6 @@ function ModelModal({
                           fontSize: '14px',
                           boxSizing: 'border-box'
                         }}
-                        min="0"
-                        step="0.01"
                       />
                     </div>
                     <div>

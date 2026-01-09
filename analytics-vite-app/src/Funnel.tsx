@@ -1022,17 +1022,15 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                   Inquiries
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={editingMonth.inquiries || ''}
                   onChange={(e) => {
                     const value = e.target.value;
-                    if (value === '') {
-                      setEditingMonth({ ...editingMonth, inquiries: 0 });
-                    } else {
-                      const numValue = parseInt(value, 10);
-                      if (!isNaN(numValue)) {
-                        setEditingMonth({ ...editingMonth, inquiries: numValue });
-                      }
+                    if (value === '' || /^\d+$/.test(value)) {
+                      const numValue = value === '' ? 0 : parseInt(value, 10);
+                      setEditingMonth({ ...editingMonth, inquiries: numValue });
                     }
                   }}
                   style={{
@@ -1053,17 +1051,15 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                   Calls Booked
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={editingMonth.callsBooked || ''}
                   onChange={(e) => {
                     const value = e.target.value;
-                    if (value === '') {
-                      setEditingMonth({ ...editingMonth, callsBooked: 0 });
-                    } else {
-                      const numValue = parseInt(value, 10);
-                      if (!isNaN(numValue)) {
-                        setEditingMonth({ ...editingMonth, callsBooked: numValue });
-                      }
+                    if (value === '' || /^\d+$/.test(value)) {
+                      const numValue = value === '' ? 0 : parseInt(value, 10);
+                      setEditingMonth({ ...editingMonth, callsBooked: numValue });
                     }
                   }}
                   style={{
@@ -1084,17 +1080,15 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                   Calls Taken
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={editingMonth.callsTaken || ''}
                   onChange={(e) => {
                     const value = e.target.value;
-                    if (value === '') {
-                      setEditingMonth({ ...editingMonth, callsTaken: 0 });
-                    } else {
-                      const numValue = parseInt(value, 10);
-                      if (!isNaN(numValue)) {
-                        setEditingMonth({ ...editingMonth, callsTaken: numValue });
-                      }
+                    if (value === '' || /^\d+$/.test(value)) {
+                      const numValue = value === '' ? 0 : parseInt(value, 10);
+                      setEditingMonth({ ...editingMonth, callsTaken: numValue });
                     }
                   }}
                   style={{
@@ -1149,19 +1143,17 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                         </div>
                       </div>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={closesIsManual ? (editingMonth.closes || '') : closesDynamic}
                         disabled={!closesIsManual}
                         onChange={(e) => {
                           if (closesIsManual) {
                             const value = e.target.value;
-                            if (value === '') {
-                              setEditingMonth({ ...editingMonth, closes: 0 });
-                            } else {
-                              const numValue = parseInt(value, 10);
-                              if (!isNaN(numValue)) {
-                                setEditingMonth({ ...editingMonth, closes: numValue });
-                              }
+                            if (value === '' || /^\d+$/.test(value)) {
+                              const numValue = value === '' ? 0 : parseInt(value, 10);
+                              setEditingMonth({ ...editingMonth, closes: numValue });
                             }
                           }
                         }}
@@ -1205,17 +1197,15 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                         </div>
                       </div>
                       <input
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         value={bookingsIsManual ? (editingMonth.bookings / 100) : (bookingsDynamic / 100)}
                         disabled={!bookingsIsManual}
                         onChange={(e) => {
                           if (bookingsIsManual) {
                             const value = e.target.value;
-                            if (value === '') {
-                              setEditingMonth({ ...editingMonth, bookings: 0 });
-                            } else {
-                              const numValue = parseFloat(value);
+                            if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                              const numValue = value === '' ? 0 : parseFloat(value);
                               if (!isNaN(numValue)) {
                                 setEditingMonth({ ...editingMonth, bookings: Math.round(numValue * 100) });
                               }
@@ -1262,17 +1252,15 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                         </div>
                       </div>
                       <input
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         value={cashIsManual ? (editingMonth.cash / 100) : (cashDynamic / 100)}
                         disabled={!cashIsManual}
                         onChange={(e) => {
                           if (cashIsManual) {
                             const value = e.target.value;
-                            if (value === '') {
-                              setEditingMonth({ ...editingMonth, cash: 0 });
-                            } else {
-                              const numValue = parseFloat(value);
+                            if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                              const numValue = value === '' ? 0 : parseFloat(value);
                               if (!isNaN(numValue)) {
                                 setEditingMonth({ ...editingMonth, cash: Math.round(numValue * 100) });
                               }
@@ -1304,17 +1292,15 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                       Closes
                     </label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={editingMonth.closes || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        if (value === '') {
-                          setEditingMonth({ ...editingMonth, closes: 0 });
-                        } else {
-                          const numValue = parseInt(value, 10);
-                          if (!isNaN(numValue)) {
-                            setEditingMonth({ ...editingMonth, closes: numValue });
-                          }
+                        if (value === '' || /^\d+$/.test(value)) {
+                          const numValue = value === '' ? 0 : parseInt(value, 10);
+                          setEditingMonth({ ...editingMonth, closes: numValue });
                         }
                       }}
                       style={{
@@ -1333,14 +1319,13 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                       Bookings ($)
                     </label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       value={editingMonth.bookings / 100}
                       onChange={(e) => {
                         const value = e.target.value;
-                        if (value === '') {
-                          setEditingMonth({ ...editingMonth, bookings: 0 });
-                        } else {
-                          const numValue = parseFloat(value);
+                        if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                          const numValue = value === '' ? 0 : parseFloat(value);
                           if (!isNaN(numValue)) {
                             setEditingMonth({ ...editingMonth, bookings: Math.round(numValue * 100) });
                           }
@@ -1362,14 +1347,13 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                       Cash ($)
                     </label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       value={editingMonth.cash / 100}
                       onChange={(e) => {
                         const value = e.target.value;
-                        if (value === '') {
-                          setEditingMonth({ ...editingMonth, cash: 0 });
-                        } else {
-                          const numValue = parseFloat(value);
+                        if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                          const numValue = value === '' ? 0 : parseFloat(value);
                           if (!isNaN(numValue)) {
                             setEditingMonth({ ...editingMonth, cash: Math.round(numValue * 100) });
                           }

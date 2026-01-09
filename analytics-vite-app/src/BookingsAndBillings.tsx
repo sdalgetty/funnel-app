@@ -2197,13 +2197,15 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
               Booked Revenue *
             </label>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={formData.bookedRevenue}
               onChange={(e) => {
                 const value = e.target.value;
-                // Allow empty string for better mobile editing experience
-                setFormData({ ...formData, bookedRevenue: value });
+                // Allow empty string or valid decimal numbers
+                if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                  setFormData({ ...formData, bookedRevenue: value });
+                }
               }}
               style={{
                 width: '100%',
@@ -2265,19 +2267,19 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
                   borderRadius: '6px'
                 }}>
                   <input
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="Amount ($)"
                     value={payment.amount ? (payment.amount / 100).toString() : ''}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (value === '') {
-                        handleUpdatePayment(index, { amount: 0, amountCents: 0 });
-                      } else {
-                        const numValue = parseFloat(value);
+                      if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                        const numValue = value === '' ? 0 : parseFloat(value);
                         if (!isNaN(numValue)) {
                           const cents = Math.round(numValue * 100);
                           handleUpdatePayment(index, { amount: cents, amountCents: cents });
+                        } else if (value === '') {
+                          handleUpdatePayment(index, { amount: 0, amountCents: 0 });
                         }
                       }
                     }}
@@ -3016,13 +3018,15 @@ function AddPaymentModal({ bookingId, onAdd, onClose }: {
                 Amount *
               </label>
               <input
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={formData.amount}
                 onChange={(e) => {
                   const value = e.target.value;
-                  // Allow empty string for better mobile editing experience
-                  setFormData({ ...formData, amount: value });
+                  // Allow empty string or valid decimal numbers
+                  if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                    setFormData({ ...formData, amount: value });
+                  }
                 }}
                 style={{
                   width: '100%',
@@ -3526,19 +3530,19 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
                   borderRadius: '6px'
                 }}>
                   <input
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="Amount ($)"
                     value={payment.amount ? (payment.amount / 100).toString() : ''}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (value === '') {
-                        handleUpdatePayment(index, { amount: 0, amountCents: 0 });
-                      } else {
-                        const numValue = parseFloat(value);
+                      if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                        const numValue = value === '' ? 0 : parseFloat(value);
                         if (!isNaN(numValue)) {
                           const cents = Math.round(numValue * 100);
                           handleUpdatePayment(index, { amount: cents, amountCents: cents });
+                        } else if (value === '') {
+                          handleUpdatePayment(index, { amount: 0, amountCents: 0 });
                         }
                       }
                     }}

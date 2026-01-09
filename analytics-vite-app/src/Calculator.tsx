@@ -266,17 +266,15 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
           Bookings Goal
         </label>
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
           value={data.bookingsGoal}
           onChange={(e) => {
             const value = e.target.value;
-            if (value === '') {
-              updateData('bookingsGoal', 0);
-            } else {
-              const numValue = parseInt(value, 10);
-              if (!isNaN(numValue)) {
-                updateData('bookingsGoal', numValue);
-              }
+            if (value === '' || /^\d+$/.test(value)) {
+              const numValue = value === '' ? 0 : parseInt(value, 10);
+              updateData('bookingsGoal', numValue);
             }
           }}
           style={{
@@ -302,17 +300,15 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
           Inquiry to Call Rate (%)
         </label>
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
           value={data.inquiryToCall}
           onChange={(e) => {
             const value = e.target.value;
-            if (value === '') {
-              updateData('inquiryToCall', 0);
-            } else {
-              const numValue = parseInt(value, 10);
-              if (!isNaN(numValue)) {
-                updateData('inquiryToCall', numValue);
-              }
+            if (value === '' || /^\d+$/.test(value)) {
+              const numValue = value === '' ? 0 : parseInt(value, 10);
+              updateData('inquiryToCall', numValue);
             }
           }}
           style={{
@@ -338,17 +334,15 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
           Call to Booking Rate (%)
         </label>
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
           value={data.callToBooking}
           onChange={(e) => {
             const value = e.target.value;
-            if (value === '') {
-              updateData('callToBooking', 0);
-            } else {
-              const numValue = parseInt(value, 10);
-              if (!isNaN(numValue)) {
-                updateData('callToBooking', numValue);
-              }
+            if (value === '' || /^\d+$/.test(value)) {
+              const numValue = value === '' ? 0 : parseInt(value, 10);
+              updateData('callToBooking', numValue);
             }
           }}
           style={{
@@ -698,17 +692,15 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
                 Bookings Goal
               </label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={data.bookingsGoal}
                 onChange={(e) => {
                   const value = e.target.value;
-                  if (value === '') {
-                    updateData('bookingsGoal', 0);
-                  } else {
-                    const numValue = parseInt(value, 10);
-                    if (!isNaN(numValue)) {
-                      updateData('bookingsGoal', numValue);
-                    }
+                  if (value === '' || /^\d+$/.test(value)) {
+                    const numValue = value === '' ? 0 : parseInt(value, 10);
+                    updateData('bookingsGoal', numValue);
                   }
                 }}
                 style={{
@@ -734,17 +726,15 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
                 Inquiry to Call Rate (%)
               </label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={data.inquiryToCall}
                 onChange={(e) => {
                   const value = e.target.value;
-                  if (value === '') {
-                    updateData('inquiryToCall', 0);
-                  } else {
-                    const numValue = parseInt(value, 10);
-                    if (!isNaN(numValue)) {
-                      updateData('inquiryToCall', numValue);
-                    }
+                  if (value === '' || /^\d+$/.test(value)) {
+                    const numValue = value === '' ? 0 : parseInt(value, 10);
+                    updateData('inquiryToCall', numValue);
                   }
                 }}
                 style={{
@@ -770,17 +760,15 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
                 Call to Booking Rate (%)
               </label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={data.callToBooking}
                 onChange={(e) => {
                   const value = e.target.value;
-                  if (value === '') {
-                    updateData('callToBooking', 0);
-                  } else {
-                    const numValue = parseInt(value, 10);
-                    if (!isNaN(numValue)) {
-                      updateData('callToBooking', numValue);
-                    }
+                  if (value === '' || /^\d+$/.test(value)) {
+                    const numValue = value === '' ? 0 : parseInt(value, 10);
+                    updateData('callToBooking', numValue);
                   }
                 }}
                 style={{
