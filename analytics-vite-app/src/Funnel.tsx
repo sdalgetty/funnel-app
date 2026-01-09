@@ -676,7 +676,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151', minWidth: '120px' }}>Month</th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '90px' }}>Inquiries</th>
                 {adsTrackingEnabled && (
-                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '100px' }}>Ads Lead</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '100px' }}>Ad Leads</th>
                 )}
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>Calls Booked</th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>Calls Taken</th>
@@ -869,7 +869,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                     </div>
                     {adsTrackingEnabled && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '14px', color: '#6b7280' }}>Ads Lead</span>
+                        <span style={{ fontSize: '14px', color: '#6b7280' }}>Ad Leads</span>
                         <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.adsLead || 0)}</span>
                       </div>
                     )}
@@ -1158,11 +1158,11 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 />
               </div>
 
-              {/* Ads Lead - only show if ads tracking is enabled */}
+              {/* Ad Leads - only show if ads tracking is enabled */}
               {adsTrackingEnabled && (
                 <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
                   <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
-                    Ads Lead
+                    Ad Leads
                   </label>
                   <input
                     type="text"
