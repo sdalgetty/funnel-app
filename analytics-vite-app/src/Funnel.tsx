@@ -678,7 +678,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Bookings</th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Cash</th>
                 {adsTrackingEnabled && (
-                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Ads Spend</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Ad Spend</th>
                 )}
                 <th style={{ padding: '12px 6px', textAlign: 'center', fontWeight: '600', color: '#374151', width: '60px' }}>Notes</th>
                 <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600', color: '#374151', minWidth: '110px' }}>Actions</th>
@@ -893,7 +893,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                     </div>
                     {adsTrackingEnabled && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '14px', color: '#6b7280' }}>Ads Spend</span>
+                        <span style={{ fontSize: '14px', color: '#6b7280' }}>Ad Spend</span>
                         <span style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
                           {toUSD(month.adsSpend || 0)}
                         </span>
@@ -1244,9 +1244,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
               {/* Ads Spend - only show if ads tracking is enabled */}
               {adsTrackingEnabled && (
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
-                    Ads Spend ($)
-                  </label>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                      Ad Spend ($)
+                    </label>
                   <input
                     type="text"
                     inputMode="decimal"
