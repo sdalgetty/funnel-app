@@ -44,9 +44,9 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     leadSources: string
     advertising: string
   }>({
-    salesFunnel: 'currentYear',
-    leadSources: 'currentYear',
-    advertising: 'currentYear'
+    salesFunnel: 'past30Days',
+    leadSources: 'past30Days',
+    advertising: 'past30Days'
   })
   const [forecastModels, setForecastModels] = useState<ForecastModel[]>([])
   const [loadingForecastModels, setLoadingForecastModels] = useState(true)
@@ -110,17 +110,29 @@ export default function Insights({ dataManager }: { dataManager: any }) {
   }, [bookings, currentDateInfo.year])
 
   const timeFilterOptions = useMemo(() => {
+    const currentYear = currentDateInfo.year
+    const lastYear = currentYear - 1
+    const yearBeforeThat = currentYear - 2
+    const yearBeforeThat2 = currentYear - 3
+    
     const baseOptions = [
-      { key: 'currentYear', label: 'Current Year' },
-      { key: 'past12Months', label: 'Past 12 Months' },
+      { key: 'past30Days', label: 'Past 30 Days' },
+      { key: 'past90Days', label: 'Past 90 Days' },
       { key: 'past6Months', label: 'Past 6 Months' },
-      { key: 'past3Months', label: 'Past 3 Months' }
+      { key: 'past12Months', label: 'Past 12 Months' },
+      { key: 'currentYear', label: 'Current Year' },
+      { key: `year-${lastYear}`, label: 'Last Year' },
+      { key: `year-${yearBeforeThat}`, label: 'Year Before That' },
+      { key: `year-${yearBeforeThat2}`, label: 'Year Before That' }
     ]
-    const yearOptions = yearsWithBookings
+    
+    // Add any additional years from bookings that aren't already in the list
+    const additionalYearOptions = yearsWithBookings
+      .filter(year => year !== currentYear && year !== lastYear && year !== yearBeforeThat && year !== yearBeforeThat2)
       .map(year => ({ key: `year-${year}`, label: `${year}` }))
-      .filter(option => !baseOptions.some(base => base.key === option.key))
-    return [...baseOptions, ...yearOptions]
-  }, [yearsWithBookings])
+    
+    return [...baseOptions, ...additionalYearOptions]
+  }, [yearsWithBookings, currentDateInfo.year])
 
   const validFilterKeys = useMemo(() => new Set(timeFilterOptions.map(option => option.key)), [timeFilterOptions])
 
@@ -130,7 +142,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       const next = { ...prev }
       ;(['salesFunnel', 'leadSources', 'advertising'] as const).forEach(section => {
         if (!validFilterKeys.has(prev[section])) {
-          next[section] = 'currentYear'
+          next[section] = 'past30Days'
           changed = true
         }
       })
@@ -141,18 +153,34 @@ export default function Insights({ dataManager }: { dataManager: any }) {
   }, [timeFilterOptions]) // Use timeFilterOptions directly instead of validFilterKeys to avoid Set reference issues
 
   const buildMonthRange = useCallback((filterKey: string): MonthRange => {
+    const now = new Date()
     const currentMonthIndex = currentDateInfo.year * 12 + currentDateInfo.month
+    
     switch (filterKey) {
-      case 'past12Months': {
-        const start = currentMonthIndex - 11
+      case 'past30Days': {
+        // Calculate 30 days ago
+        const thirtyDaysAgo = new Date(now)
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+        const startYear = thirtyDaysAgo.getFullYear()
+        const startMonth = thirtyDaysAgo.getMonth() + 1
+        const start = monthToIndex(startYear, startMonth)
+        return { start: Math.max(0, start), end: currentMonthIndex }
+      }
+      case 'past90Days': {
+        // Calculate 90 days ago
+        const ninetyDaysAgo = new Date(now)
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+        const startYear = ninetyDaysAgo.getFullYear()
+        const startMonth = ninetyDaysAgo.getMonth() + 1
+        const start = monthToIndex(startYear, startMonth)
         return { start: Math.max(0, start), end: currentMonthIndex }
       }
       case 'past6Months': {
         const start = currentMonthIndex - 5
         return { start: Math.max(0, start), end: currentMonthIndex }
       }
-      case 'past3Months': {
-        const start = currentMonthIndex - 2
+      case 'past12Months': {
+        const start = currentMonthIndex - 11
         return { start: Math.max(0, start), end: currentMonthIndex }
       }
       case 'currentYear':
@@ -170,10 +198,13 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             }
           }
         }
-        return {
-          start: monthToIndex(currentDateInfo.year, 1),
-          end: monthToIndex(currentDateInfo.year, 12)
-        }
+        // Default to past 30 days if unknown filter
+        const thirtyDaysAgo = new Date(now)
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+        const startYear = thirtyDaysAgo.getFullYear()
+        const startMonth = thirtyDaysAgo.getMonth() + 1
+        const start = monthToIndex(startYear, startMonth)
+        return { start: Math.max(0, start), end: currentMonthIndex }
     }
   }, [currentDateInfo])
 
