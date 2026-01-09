@@ -120,10 +120,10 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       { key: 'past90Days', label: 'Past 90 Days' },
       { key: 'past6Months', label: 'Past 6 Months' },
       { key: 'past12Months', label: 'Past 12 Months' },
-      { key: 'currentYear', label: 'Current Year' },
-      { key: `year-${lastYear}`, label: 'Last Year' },
-      { key: `year-${yearBeforeThat}`, label: 'Year Before That' },
-      { key: `year-${yearBeforeThat2}`, label: 'Year Before That' }
+      { key: 'currentYear', label: `${currentYear}` },
+      { key: `year-${lastYear}`, label: `${lastYear}` },
+      { key: `year-${yearBeforeThat}`, label: `${yearBeforeThat}` },
+      { key: `year-${yearBeforeThat2}`, label: `${yearBeforeThat2}` }
     ]
     
     // Add any additional years from bookings that aren't already in the list
