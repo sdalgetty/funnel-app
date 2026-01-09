@@ -1072,9 +1072,6 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
       case 'add-inquiry':
         handleNavigate('edit-funnel', month)
         break
-      case 'add-advertising-lead':
-        handleNavigate('edit-advertising', month)
-        break
       case 'add-call-booked':
         handleNavigate('edit-funnel', month)
         break
@@ -1309,29 +1306,6 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
                 }}
               >
                 Add New Inquiry
-              </button>
-              <button
-                onClick={() => handleCreateAction('add-advertising-lead')}
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '16px' : '12px',
-                  backgroundColor: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: isMobile ? '16px' : '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s'
-                }}
-                onTouchStart={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onTouchEnd={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-              >
-                Add New Advertising Lead
               </button>
               <button
                 onClick={() => handleCreateAction('add-call-booked')}
