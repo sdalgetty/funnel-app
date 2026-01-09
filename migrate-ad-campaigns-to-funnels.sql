@@ -2,9 +2,7 @@
 -- This aggregates ad_campaigns data by month and populates funnels.ads_lead and funnels.ads_spend_cents
 -- Run this AFTER deploying the new code and running the schema migrations (025 and 026)
 
--- Step 1: Aggregate ad campaigns by user, year, month
--- Parse month_year (format: "2024-01") to extract year and month
--- Sum leads_generated and ad_spend_cents for each month
+-- Step 1: For existing funnel records, add the ad data (only if fields are empty/zero)
 WITH aggregated_ads AS (
   SELECT 
     ac.user_id,
@@ -17,7 +15,6 @@ WITH aggregated_ads AS (
      OR (ac.ad_spend_cents IS NOT NULL AND ac.ad_spend_cents > 0)
   GROUP BY ac.user_id, year, month
 )
--- Step 2: For existing funnel records, add the ad data (only if fields are empty/zero)
 UPDATE funnels f
 SET 
   ads_lead = COALESCE(aa.total_ads_lead, 0),
@@ -29,8 +26,20 @@ WHERE f.user_id = aa.user_id
   AND (f.ads_lead = 0 OR f.ads_lead IS NULL)
   AND (f.ads_spend_cents = 0 OR f.ads_spend_cents IS NULL);
 
--- Step 3: Insert new funnel records for months that don't exist yet (only for months with ad data)
+-- Step 2: Insert new funnel records for months that don't exist yet (only for months with ad data)
 -- Note: Only include required columns - let defaults handle timestamps
+WITH aggregated_ads AS (
+  SELECT 
+    ac.user_id,
+    CAST(SPLIT_PART(ac.month_year, '-', 1) AS INTEGER) as year,
+    CAST(SPLIT_PART(ac.month_year, '-', 2) AS INTEGER) as month,
+    COALESCE(SUM(ac.leads_generated), 0) as total_ads_lead,
+    COALESCE(SUM(ac.ad_spend_cents), 0) as total_ads_spend_cents
+  FROM ad_campaigns ac
+  WHERE (ac.leads_generated IS NOT NULL AND ac.leads_generated > 0) 
+     OR (ac.ad_spend_cents IS NOT NULL AND ac.ad_spend_cents > 0)
+  GROUP BY ac.user_id, year, month
+)
 INSERT INTO funnels (user_id, year, month, name, ads_lead, ads_spend_cents, inquiries, calls_booked, calls_taken, closes, bookings, cash)
 SELECT 
   aa.user_id,
