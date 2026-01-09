@@ -404,6 +404,8 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
           closes: 0,
           bookings: 0,
           cash: 0,
+          adsLead: 0,
+          adsSpend: 0,
           notes: '',
           lastUpdated: new Date().toISOString()
         };
