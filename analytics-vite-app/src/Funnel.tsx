@@ -115,6 +115,8 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
             bookingsYtd: 0,
             bookingsGoal: 0,
             cash: 0,
+            adsLead: 0,
+            adsSpend: 0,
             notes: undefined,
             closesManual: false,
             bookingsManual: false,
@@ -374,6 +376,8 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
           inquiries: existingData?.inquiries || 0, // Keep manual inquiries
           callsBooked: existingData?.callsBooked || 0, // Keep manual calls
           callsTaken: existingData?.callsTaken || 0, // Keep manual calls
+          adsLead: existingData?.adsLead || 0,
+          adsSpend: existingData?.adsSpend || 0,
           closes: closes,
           bookings: bookings,
           cash: cash,
