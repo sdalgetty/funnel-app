@@ -361,20 +361,32 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     // Use closes and bookings from funnelData (respects manual overrides)
     const totalCloses = salesFunnelMonths.reduce((sum, month) => sum + (month.closes || 0), 0)
     const totalBookings = salesFunnelMonths.reduce((sum, month) => sum + (month.bookings || 0), 0)
-    const monthsWithData = salesFunnelMonths.filter(month =>
-      (month.inquiries || 0) > 0 ||
-      (month.callsBooked || 0) > 0 ||
-      (month.callsTaken || 0) > 0 ||
-      (month.closes || 0) > 0 ||
-      (month.bookings || 0) > 0
-    ).length
-    const avgInquiries = monthsWithData > 0 ? Math.round(totalInquiries / monthsWithData) : 0
-    const avgCloses = monthsWithData > 0 ? Math.round(totalCloses / monthsWithData) : 0
-    const avgBookings = monthsWithData > 0 ? Math.round(totalBookings / monthsWithData) : 0
-    const avgCash = monthsWithData > 0 ? Math.round(totalCash / monthsWithData) : 0
+    
+    // For date-based ranges, use a fixed divisor; for month-based ranges, count months with data
+    let divisor: number
+    if (sectionFilters.salesFunnel === 'past30Days') {
+      divisor = 1 // 30 days ≈ 1 month
+    } else if (sectionFilters.salesFunnel === 'past90Days') {
+      divisor = 3 // 90 days ≈ 3 months
+    } else {
+      // For month-based ranges, count months with data
+      divisor = salesFunnelMonths.filter(month =>
+        (month.inquiries || 0) > 0 ||
+        (month.callsBooked || 0) > 0 ||
+        (month.callsTaken || 0) > 0 ||
+        (month.closes || 0) > 0 ||
+        (month.bookings || 0) > 0
+      ).length
+    }
+    
+    const monthsWithData = divisor // Keep for compatibility
+    const avgInquiries = divisor > 0 ? Math.round(totalInquiries / divisor) : 0
+    const avgCloses = divisor > 0 ? Math.round(totalCloses / divisor) : 0
+    const avgBookings = divisor > 0 ? Math.round(totalBookings / divisor) : 0
+    const avgCash = divisor > 0 ? Math.round(totalCash / divisor) : 0
     const inquiryToClose = totalInquiries > 0 ? ((totalCloses / totalInquiries) * 100).toFixed(1) : '0.0'
     return { totalInquiries, totalCloses, totalBookings, totalCash, inquiryToClose, monthsWithData, avgInquiries, avgCloses, avgBookings, avgCash, avgWeddingBooking }
-  }, [salesFunnelMonths, avgWeddingBooking])
+  }, [salesFunnelMonths, avgWeddingBooking, sectionFilters.salesFunnel])
 
   const callTotals = useMemo(() => {
     const totalInquiries = salesFunnelMonths.reduce((sum, month) => sum + (month.inquiries || 0), 0)
@@ -383,22 +395,33 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     // Use closes and bookings from funnelData (respects manual overrides)
     const totalCloses = salesFunnelMonths.reduce((sum, month) => sum + (month.closes || 0), 0)
     const totalBookings = salesFunnelMonths.reduce((sum, month) => sum + (month.bookings || 0), 0)
-    const monthsWithData = salesFunnelMonths.filter(month =>
-      (month.inquiries || 0) > 0 ||
-      (month.callsBooked || 0) > 0 ||
-      (month.callsTaken || 0) > 0 ||
-      (month.closes || 0) > 0 ||
-      (month.bookings || 0) > 0
-    ).length
-    const avgCallsBooked = monthsWithData > 0 ? Math.round(totalCallsBooked / monthsWithData) : 0
-    const avgCallsTaken = monthsWithData > 0 ? Math.round(totalCallsTaken / monthsWithData) : 0
+    
+    // For date-based ranges, use a fixed divisor; for month-based ranges, count months with data
+    let divisor: number
+    if (sectionFilters.salesFunnel === 'past30Days') {
+      divisor = 1 // 30 days ≈ 1 month
+    } else if (sectionFilters.salesFunnel === 'past90Days') {
+      divisor = 3 // 90 days ≈ 3 months
+    } else {
+      // For month-based ranges, count months with data
+      divisor = salesFunnelMonths.filter(month =>
+        (month.inquiries || 0) > 0 ||
+        (month.callsBooked || 0) > 0 ||
+        (month.callsTaken || 0) > 0 ||
+        (month.closes || 0) > 0 ||
+        (month.bookings || 0) > 0
+      ).length
+    }
+    
+    const avgCallsBooked = divisor > 0 ? Math.round(totalCallsBooked / divisor) : 0
+    const avgCallsTaken = divisor > 0 ? Math.round(totalCallsTaken / divisor) : 0
     const inquiryToBooked = totalInquiries > 0 ? ((totalCallsBooked / totalInquiries) * 100).toFixed(1) : '0.0'
     const inquiryToTaken = totalInquiries > 0 ? ((totalCallsTaken / totalInquiries) * 100).toFixed(1) : '0.0'
     const showUpRate = totalCallsBooked > 0 ? ((totalCallsTaken / totalCallsBooked) * 100).toFixed(1) : '0.0'
     const takenToClose = totalCallsTaken > 0 ? ((totalCloses / totalCallsTaken) * 100).toFixed(1) : '0.0'
     const revenuePerCallTaken = totalCallsTaken > 0 ? Math.round(totalBookings / totalCallsTaken) : 0
     return { totalCallsBooked, totalCallsTaken, inquiryToBooked, inquiryToTaken, showUpRate, takenToClose, revenuePerCallTaken, avgCallsBooked, avgCallsTaken }
-  }, [salesFunnelMonths])
+  }, [salesFunnelMonths, sectionFilters.salesFunnel])
 
   // LEAD SOURCES
   const leadSourcesRange = useMemo(() => buildMonthRange(sectionFilters.leadSources), [buildMonthRange, sectionFilters.leadSources])
