@@ -546,7 +546,8 @@ export class UnifiedDataService {
       return data?.map(item => ({
         id: item.id,
         name: item.name,
-        isCustom: true // All database items are considered custom
+        isCustom: true, // All database items are considered custom
+        isAdSource: item.is_ad_source || false
       })) || [];
     } catch (error) {
       logger.error('Error fetching lead sources:', error);
@@ -579,7 +580,8 @@ export class UnifiedDataService {
       return {
         id: data.id,
         name: data.name,
-        isCustom: true
+        isCustom: true,
+        isAdSource: data.is_ad_source || false
       };
     } catch (error) {
       logger.error('Error creating lead source:', error);
@@ -609,6 +611,48 @@ export class UnifiedDataService {
       return true;
     } catch (error) {
       logger.error('Error updating lead source:', error);
+      return false;
+    }
+  }
+
+  static async toggleLeadSourceAdSource(userId: string, id: string, isViewOnly: boolean = false): Promise<boolean> {
+    this.checkWritePermission(isViewOnly);
+    
+    if (!this.isSupabaseConfigured()) {
+      return false;
+    }
+
+    try {
+      // First get the current value
+      const { data: current, error: fetchError } = await supabase
+        .from('lead_sources')
+        .select('is_ad_source')
+        .eq('id', id)
+        .eq('user_id', userId)
+        .single();
+
+      if (fetchError || !current) {
+        logger.error('Error fetching lead source:', fetchError);
+        return false;
+      }
+
+      // Toggle the value
+      const newValue = !current.is_ad_source;
+
+      const { error } = await supabase
+        .from('lead_sources')
+        .update({ is_ad_source: newValue })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) {
+        logger.error('Error toggling ad source flag:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      logger.error('Error toggling ad source flag:', error);
       return false;
     }
   }

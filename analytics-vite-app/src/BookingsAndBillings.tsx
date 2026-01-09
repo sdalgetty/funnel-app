@@ -568,6 +568,23 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
     }
   };
 
+  // Toggle ad source for lead source
+  const toggleLeadSourceAdSource = async (id: string) => {
+    if (dataManager?.toggleLeadSourceAdSource) {
+      await dataManager.toggleLeadSourceAdSource(id);
+    } else if (user?.id) {
+      try {
+        const success = await UnifiedDataService.toggleLeadSourceAdSource(user.id, id);
+        if (success) {
+          // Reload lead sources
+          window.location.reload();
+        }
+      } catch (error) {
+        console.error('Error toggling ad source:', error);
+      }
+    }
+  };
+
   // Update existing booking
   const updateBooking = async (bookingData: Omit<Booking, 'id' | 'createdAt'>) => {
     if (!editingBooking) return;
@@ -1201,6 +1218,7 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
           onAdd={addLeadSource}
           onRemove={removeLeadSource}
           onUpdate={updateLeadSource}
+          onToggleAdSource={toggleLeadSourceAdSource}
           onClose={() => setShowLeadSources(false)}
         />
       )}
@@ -2688,11 +2706,12 @@ function ServiceTypesModal({ serviceTypes, onAdd, onRemove, onUpdate, onToggleFu
 }
 
 // Lead Sources Modal
-function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onClose }: {
+function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onToggleAdSource, onClose }: {
   leadSources: LeadSource[];
   onAdd: (name: string) => void;
   onRemove: (id: string) => void;
   onUpdate: (id: string, newName: string) => void;
+  onToggleAdSource: (id: string) => void;
   onClose: () => void;
 }) {
   const [newLeadSource, setNewLeadSource] = useState('');
@@ -2871,6 +2890,21 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onClose }: {
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
                         <span style={{ fontSize: '14px' }}>{leadSource.name}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <input
+                            type="checkbox"
+                            checked={leadSource.isAdSource || false}
+                            onChange={() => onToggleAdSource(leadSource.id)}
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <span style={{ 
+                            fontSize: '11px', 
+                            color: leadSource.isAdSource ? '#3b82f6' : '#6b7280',
+                            fontWeight: '500'
+                          }}>
+                            Ad Source
+                          </span>
+                        </div>
                       </div>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button

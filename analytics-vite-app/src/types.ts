@@ -79,6 +79,7 @@ export interface LeadSource {
   name: string;
   description?: string;
   isCustom: boolean;
+  isAdSource?: boolean; // If true, bookings from this source are included in advertising ROI calculations
 }
 
 export interface Booking {

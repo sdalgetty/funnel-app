@@ -495,9 +495,9 @@ export default function Insights({ dataManager }: { dataManager: any }) {
         .filter(month => isMonthInRange(month.year, month.month, advertisingRange))
         .reduce((sum, month) => sum + (month.adsSpend || 0), 0)
       
-      // For bookings from ads, we'll use all bookings in the range
-      // (since we're aggregating all lead sources, we can't filter by specific lead source)
-      const bookingsFromAds = advertisingBookings
+      // Filter bookings by ad lead sources
+      const adLeadSourceIds = new Set(leadSources.filter(ls => ls.isAdSource).map(ls => ls.id))
+      const bookingsFromAds = advertisingBookings.filter(b => b.leadSourceId && adLeadSourceIds.has(b.leadSourceId))
       const totalBookedFromAds = bookingsFromAds.reduce((sum, booking) => sum + (booking.revenue || booking.bookedRevenue || 0), 0)
       const closesFromAds = bookingsFromAds.length
       const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? totalBookedFromAds / totalAdSpend : null
@@ -519,7 +519,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? totalBookedFromAds / totalAdSpend : null
     const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0
     return { totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
-  }, [dataManager, dataManager?.loading, user?.adsTrackingEnabled, funnelData, advertisingRange, dedupedAdCampaigns, advertisingBookings, advertisingLeadSourceIds])
+  }, [dataManager, dataManager?.loading, user?.adsTrackingEnabled, funnelData, advertisingRange, leadSources, dedupedAdCampaigns, advertisingBookings, advertisingLeadSourceIds])
 
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' })
   const formatNumber = (n: number) => n.toLocaleString()
