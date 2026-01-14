@@ -1,0 +1,5 @@
+CREATE SCHEMA IF NOT EXISTS private;
+
+ALTER TABLE IF EXISTS public.ad_campaigns_backup_20260109_175251 SET SCHEMA private;
+ALTER TABLE IF EXISTS public.lead_sources_backup_20260109_175251 SET SCHEMA private;
+ALTER TABLE IF EXISTS public.funnels_backup_20260109_175251 SET SCHEMA private;
