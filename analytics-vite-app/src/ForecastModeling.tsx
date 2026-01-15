@@ -1415,9 +1415,6 @@ function ModelModal({
       totalForecast: st.totalForecast
     })) || [],
   });
-  const [newServiceTypeName, setNewServiceTypeName] = useState('');
-  const [showNewServiceTypeInput, setShowNewServiceTypeInput] = useState(false);
-
   // Helper functions
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
   const formatNumber = (num: number) => num.toLocaleString();
@@ -1449,30 +1446,6 @@ function ModelModal({
     }));
   };
 
-  const handleAddNewServiceType = () => {
-    if (newServiceTypeName.trim()) {
-      const newServiceType: ServiceType = {
-        id: `st_${Date.now()}`,
-        name: newServiceTypeName.trim(),
-        isCustom: true,
-      };
-      setServiceTypes(prev => [...prev, newServiceType]);
-      
-      // Add the new service type to the form
-      setFormData(prev => ({
-        ...prev,
-        serviceTypes: [...prev.serviceTypes, {
-          serviceTypeId: newServiceType.id,
-          quantity: 0,
-          avgBooking: 0, // in cents
-          totalForecast: 0, // in cents
-        }]
-      }));
-      
-      setNewServiceTypeName('');
-      setShowNewServiceTypeInput(false);
-    }
-  };
 
   const updateServiceType = (index: number, field: string, value: any) => {
     setFormData(prev => ({
@@ -1682,13 +1655,7 @@ function ModelModal({
                       </label>
                       <select
                         value={service.serviceTypeId}
-                        onChange={(e) => {
-                          if (e.target.value === 'add_new') {
-                            setShowNewServiceTypeInput(true);
-                          } else {
-                            updateServiceType(index, 'serviceTypeId', e.target.value);
-                          }
-                        }}
+                        onChange={(e) => updateServiceType(index, 'serviceTypeId', e.target.value)}
                         style={{
                           width: '100%',
                           padding: '8px 12px',
@@ -1702,63 +1669,7 @@ function ModelModal({
                         {serviceTypes.map(st => (
                           <option key={st.id} value={st.id}>{st.name}</option>
                         ))}
-                        <option value="add_new" style={{ fontStyle: 'italic', color: '#6b7280' }}>
-                          + Add New Service Type
-                        </option>
                       </select>
-                      
-                      {showNewServiceTypeInput && (
-                        <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
-                          <input
-                            type="text"
-                            value={newServiceTypeName}
-                            onChange={(e) => setNewServiceTypeName(e.target.value)}
-                            placeholder="Enter new service type name"
-                            style={{
-                              flex: 1,
-                              padding: '6px 8px',
-                              border: '1px solid #d1d5db',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              boxSizing: 'border-box'
-                            }}
-                            onKeyPress={(e) => e.key === 'Enter' && handleAddNewServiceType()}
-                          />
-                          <button
-                            type="button"
-                            onClick={handleAddNewServiceType}
-                            style={{
-                              backgroundColor: '#10b981',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              padding: '6px 12px',
-                              fontSize: '12px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Add
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowNewServiceTypeInput(false);
-                              setNewServiceTypeName('');
-                            }}
-                            style={{
-                              backgroundColor: '#f3f4f6',
-                              color: '#374151',
-                              border: '1px solid #d1d5db',
-                              borderRadius: '4px',
-                              padding: '6px 12px',
-                              fontSize: '12px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      )}
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px', textAlign: 'left' }}>
