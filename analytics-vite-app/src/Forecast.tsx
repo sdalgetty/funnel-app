@@ -11,6 +11,7 @@ interface ForecastProps {
   payments?: Payment[];
   showTrendsOnly?: boolean;
   showModelingOnly?: boolean;
+  dataManager?: any;
 }
 
 const Forecast: React.FC<ForecastProps> = ({ 
@@ -20,7 +21,8 @@ const Forecast: React.FC<ForecastProps> = ({
   bookings = [], 
   payments = [],
   showTrendsOnly = false,
-  showModelingOnly = false
+  showModelingOnly = false,
+  dataManager
 }) => {
   const [viewMode, setViewMode] = useState<'trends' | 'modeling'>(showModelingOnly ? 'modeling' : (showTrendsOnly ? 'trends' : 'trends'));
   const [lookbackMonths, setLookbackMonths] = useState(12);
@@ -222,6 +224,7 @@ const Forecast: React.FC<ForecastProps> = ({
           bookings={bookings}
           payments={payments}
           hideTracker={showModelingOnly}
+          dataManager={dataManager}
         />
       ) : (
         <div>

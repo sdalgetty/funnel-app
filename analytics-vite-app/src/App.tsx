@@ -865,6 +865,7 @@ function AppContent() {
                 bookings={dataManager.bookings} 
                 payments={dataManager.payments}
                 showModelingOnly
+                dataManager={dataManager}
               />
             </FeatureGate>
           )}

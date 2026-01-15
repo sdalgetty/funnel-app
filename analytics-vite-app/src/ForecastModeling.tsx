@@ -15,6 +15,7 @@ interface ForecastModelingProps {
   payments: Payment[];
   showTrackerOnly?: boolean;
   hideTracker?: boolean;
+  dataManager?: any;
 }
 
 const ForecastModeling: React.FC<ForecastModelingProps> = ({ 
@@ -23,7 +24,8 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   bookings, 
   payments,
   showTrackerOnly = false,
-  hideTracker = false
+  hideTracker = false,
+  dataManager
 }) => {
   const { user, effectiveUserId, isViewOnly } = useAuth();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -350,24 +352,40 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   };
 
   const addUserServiceType = async (name: string) => {
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+    if (dataManager?.createServiceType) {
+      await dataManager.createServiceType(trimmedName);
+      return;
+    }
     const userId = effectiveUserId || user?.id;
-    if (!userId || !name.trim()) return;
-    const newServiceType = await UnifiedDataService.createServiceType(userId, name.trim(), false, isViewOnly);
+    if (!userId) return;
+    const newServiceType = await UnifiedDataService.createServiceType(userId, trimmedName, false, isViewOnly);
     if (newServiceType) {
       setServiceTypes(prev => [...prev, newServiceType]);
     }
   };
 
   const updateUserServiceType = async (id: string, newName: string) => {
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+    if (dataManager?.updateServiceType) {
+      await dataManager.updateServiceType(id, trimmedName);
+      return;
+    }
     const userId = effectiveUserId || user?.id;
-    if (!userId || !newName.trim()) return;
-    const success = await UnifiedDataService.updateServiceType(userId, id, newName.trim(), isViewOnly);
+    if (!userId) return;
+    const success = await UnifiedDataService.updateServiceType(userId, id, trimmedName, isViewOnly);
     if (success) {
-      setServiceTypes(prev => prev.map(st => (st.id === id ? { ...st, name: newName.trim() } : st)));
+      setServiceTypes(prev => prev.map(st => (st.id === id ? { ...st, name: trimmedName } : st)));
     }
   };
 
   const toggleUserServiceTypeTracking = async (id: string) => {
+    if (dataManager?.toggleServiceTypeFunnelTracking) {
+      await dataManager.toggleServiceTypeFunnelTracking(id);
+      return;
+    }
     const userId = effectiveUserId || user?.id;
     const current = serviceTypes.find(st => st.id === id);
     if (!userId || !current) return;
@@ -379,6 +397,10 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   };
 
   const removeUserServiceType = async (id: string) => {
+    if (dataManager?.deleteServiceType) {
+      await dataManager.deleteServiceType(id);
+      return;
+    }
     const userId = effectiveUserId || user?.id;
     if (!userId) return;
     const success = await UnifiedDataService.deleteServiceType(userId, id, isViewOnly);

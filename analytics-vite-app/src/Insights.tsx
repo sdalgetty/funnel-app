@@ -645,6 +645,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
               bookings={bookings}
               payments={payments}
               showTrackerOnly
+              dataManager={dataManager}
             />
           )}
         </div>
@@ -660,6 +661,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             bookings={bookings}
             payments={payments}
             showTrendsOnly
+            dataManager={dataManager}
           />
         </div>
       </Section>
