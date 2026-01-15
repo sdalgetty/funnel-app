@@ -776,7 +776,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
           }}
         >
           <Plus size={16} />
-          New Model
+          New Forecast Model
         </button>
         <button
           onClick={() => !isViewOnly && setShowServiceTypesModal(true)}
