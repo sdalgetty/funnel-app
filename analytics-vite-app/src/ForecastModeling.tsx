@@ -5,6 +5,7 @@ import { UnifiedDataService } from './services/unifiedDataService';
 import { calculateCurrentYearRevenueByServiceType } from './services/revenueCalculationService';
 import { logger } from './utils/logger';
 import { toUSD, formatNumber } from './utils/formatters';
+import ServiceTypesModal from './components/ServiceTypesModal';
 import type { ServiceType, Booking, Payment, ForecastModel } from './types';
 
 interface ForecastModelingProps {
@@ -51,6 +52,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
   const [showModelModal, setShowModelModal] = useState(false);
   const [editingModel, setEditingModel] = useState<ForecastModel | null>(null);
   const [loadingModels, setLoadingModels] = useState(true);
+  const [showServiceTypesModal, setShowServiceTypesModal] = useState(false);
 
   // Mark component as mounted after initial render
   useEffect(() => {
@@ -347,17 +349,42 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
     }
   };
 
-  const addServiceType = (name: string) => {
-    const newServiceType: ServiceType = {
-      id: `st_${Date.now()}`,
-      name,
-      isCustom: true,
-    };
-    setServiceTypes(prev => [...prev, newServiceType]);
+  const addUserServiceType = async (name: string) => {
+    const userId = effectiveUserId || user?.id;
+    if (!userId || !name.trim()) return;
+    const newServiceType = await UnifiedDataService.createServiceType(userId, name.trim(), false, isViewOnly);
+    if (newServiceType) {
+      setServiceTypes(prev => [...prev, newServiceType]);
+    }
   };
 
-  const removeServiceType = (id: string) => {
-    setServiceTypes(prev => prev.filter(st => st.id !== id));
+  const updateUserServiceType = async (id: string, newName: string) => {
+    const userId = effectiveUserId || user?.id;
+    if (!userId || !newName.trim()) return;
+    const success = await UnifiedDataService.updateServiceType(userId, id, newName.trim(), isViewOnly);
+    if (success) {
+      setServiceTypes(prev => prev.map(st => (st.id === id ? { ...st, name: newName.trim() } : st)));
+    }
+  };
+
+  const toggleUserServiceTypeTracking = async (id: string) => {
+    const userId = effectiveUserId || user?.id;
+    const current = serviceTypes.find(st => st.id === id);
+    if (!userId || !current) return;
+    const nextValue = !current.tracksInFunnel;
+    const success = await UnifiedDataService.updateServiceTypeFunnelTracking(userId, id, nextValue, isViewOnly);
+    if (success) {
+      setServiceTypes(prev => prev.map(st => (st.id === id ? { ...st, tracksInFunnel: nextValue } : st)));
+    }
+  };
+
+  const removeUserServiceType = async (id: string) => {
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return;
+    const success = await UnifiedDataService.deleteServiceType(userId, id, isViewOnly);
+    if (success) {
+      setServiceTypes(prev => prev.filter(st => st.id !== id));
+    }
   };
 
   // Tracker-only mode: render just the performance tracker block
@@ -728,6 +755,39 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
         >
           <Plus size={16} />
           New Model
+        </button>
+        <button
+          onClick={() => !isViewOnly && setShowServiceTypesModal(true)}
+          disabled={isViewOnly}
+          style={{
+            backgroundColor: isViewOnly ? '#e5e7eb' : 'white',
+            color: isViewOnly ? '#9ca3af' : '#374151',
+            border: '2px solid #d1d5db',
+            borderRadius: '8px',
+            padding: '10px 16px',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: isViewOnly ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            if (!isViewOnly) {
+              e.currentTarget.style.borderColor = '#9ca3af';
+              e.currentTarget.style.backgroundColor = '#f9fafb';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isViewOnly) {
+              e.currentTarget.style.borderColor = '#d1d5db';
+              e.currentTarget.style.backgroundColor = 'white';
+            }
+          }}
+        >
+          <Edit size={16} />
+          Manage Service Types
         </button>
       </div>
 
@@ -1350,6 +1410,17 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
           onCreate={createModel}
           onUpdate={updateModel}
           onClose={() => setEditingModel(null)}
+        />
+      )}
+
+      {showServiceTypesModal && (
+        <ServiceTypesModal
+          serviceTypes={serviceTypes}
+          onAdd={addUserServiceType}
+          onRemove={removeUserServiceType}
+          onUpdate={updateUserServiceType}
+          onToggleFunnelTracking={toggleUserServiceTypeTracking}
+          onClose={() => setShowServiceTypesModal(false)}
         />
       )}
 
