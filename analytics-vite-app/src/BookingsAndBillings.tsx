@@ -1934,7 +1934,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
     projectDate: '',
     bookedRevenue: '',
   });
-  const [scheduledPayments, setScheduledPayments] = useState<Omit<Payment, 'id'>[]>([]);
+  const [scheduledPayments, setScheduledPayments] = useState<Array<Omit<Payment, 'id'> & { amountInput?: string }>>([]);
 
   // Add new payment schedule
   const handleAddPayment = () => {
@@ -1959,7 +1959,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
   };
 
   // Update payment schedule
-  const handleUpdatePayment = (index: number, updates: Partial<Payment>) => {
+  const handleUpdatePayment = (index: number, updates: Partial<Payment & { amountInput?: string }>) => {
     const payment = scheduledPayments[index];
     const updatedPayment = { ...payment, ...updates };
     const newPayments = [...scheduledPayments];
@@ -2289,18 +2289,21 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
                     type="text"
                     inputMode="decimal"
                     placeholder="Amount ($)"
-                    value={payment.amount ? (payment.amount / 100).toString() : ''}
+                    value={payment.amountInput ?? (payment.amount ? (payment.amount / 100).toFixed(2) : '')}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
                         const numValue = value === '' ? 0 : parseFloat(value);
-                        if (!isNaN(numValue)) {
-                          const cents = Math.round(numValue * 100);
-                          handleUpdatePayment(index, { amount: cents, amountCents: cents });
-                        } else if (value === '') {
-                          handleUpdatePayment(index, { amount: 0, amountCents: 0 });
-                        }
+                        const cents = value === '' || Number.isNaN(numValue) ? 0 : Math.round(numValue * 100);
+                        handleUpdatePayment(index, { amountInput: value, amount: cents, amountCents: cents });
                       }
+                    }}
+                    onBlur={() => {
+                      if (payment.amountInput === undefined) return;
+                      const numValue = payment.amountInput === '' ? 0 : parseFloat(payment.amountInput);
+                      if (Number.isNaN(numValue)) return;
+                      const cents = Math.round(numValue * 100);
+                      handleUpdatePayment(index, { amountInput: (cents / 100).toFixed(2), amount: cents, amountCents: cents });
                     }}
                     style={{
                       padding: '6px 10px',
@@ -2895,7 +2898,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
     bookedRevenue: (booking.bookedRevenue / 100).toString(),
   });
 
-  const [scheduledPayments, setScheduledPayments] = useState<Payment[]>([]);
+  const [scheduledPayments, setScheduledPayments] = useState<Array<Payment & { amountInput?: string }>>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
 
   // Load existing scheduled payments for this booking
@@ -2907,7 +2910,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
         p.bookingId === booking.id
       );
       console.log('Filtered payments for this booking:', bookingPayments);
-      setScheduledPayments(bookingPayments || []);
+      setScheduledPayments((bookingPayments || []).map(payment => ({ ...payment, amountInput: undefined })));
     }
   }, [booking.id, dataManager?.payments]);
 
@@ -2955,7 +2958,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
   };
 
   // Update payment schedule
-  const handleUpdatePayment = async (index: number, updates: Partial<Payment>) => {
+  const handleUpdatePayment = async (index: number, updates: Partial<Payment & { amountInput?: string }>) => {
     if (!dataManager) return; // Can't save without dataManager
     
     const payment = scheduledPayments[index];
@@ -3277,18 +3280,21 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
                     type="text"
                     inputMode="decimal"
                     placeholder="Amount ($)"
-                    value={payment.amount ? (payment.amount / 100).toString() : ''}
+                    value={payment.amountInput ?? (payment.amount ? (payment.amount / 100).toFixed(2) : '')}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
                         const numValue = value === '' ? 0 : parseFloat(value);
-                        if (!isNaN(numValue)) {
-                          const cents = Math.round(numValue * 100);
-                          handleUpdatePayment(index, { amount: cents, amountCents: cents });
-                        } else if (value === '') {
-                          handleUpdatePayment(index, { amount: 0, amountCents: 0 });
-                        }
+                        const cents = value === '' || Number.isNaN(numValue) ? 0 : Math.round(numValue * 100);
+                        handleUpdatePayment(index, { amountInput: value, amount: cents, amountCents: cents });
                       }
+                    }}
+                    onBlur={() => {
+                      if (payment.amountInput === undefined) return;
+                      const numValue = payment.amountInput === '' ? 0 : parseFloat(payment.amountInput);
+                      if (Number.isNaN(numValue)) return;
+                      const cents = Math.round(numValue * 100);
+                      handleUpdatePayment(index, { amountInput: (cents / 100).toFixed(2), amount: cents, amountCents: cents });
                     }}
                     style={{
                       padding: '6px 10px',
