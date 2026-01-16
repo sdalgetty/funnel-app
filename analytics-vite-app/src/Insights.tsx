@@ -4,7 +4,7 @@ import Forecast from './Forecast'
 import ForecastModeling from './ForecastModeling'
 import Calculator from './Calculator'
 import type { FunnelData, Booking, Payment, ServiceType, AdCampaign, LeadSource, ForecastModel } from './types'
-import { Users, Phone, CheckCircle, DollarSign, TrendingUp, Target, BarChart3, Plus, X, ArrowRight } from 'lucide-react'
+import { Users, Phone, CheckCircle, DollarSign, TrendingUp, Target, BarChart3, Plus, ArrowRight } from 'lucide-react'
 import { logger } from './utils/logger'
 
 type MonthRange = { start: number; end: number }
@@ -831,7 +831,6 @@ function Card({ icon, label, value, sub }: { icon: React.ReactNode; label: strin
 
 // Welcome and Tasks Component
 function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelData: FunnelData[]; dataManager: any }) {
-  const [showCreateModal, setShowCreateModal] = useState(false)
   const [tasks, setTasks] = useState<Array<{ id: string; label: string; completed: boolean; action: string; month?: { year: number; month: number } }>>([])
   const [forecastModels, setForecastModels] = useState<any[]>([])
   const { user: authUser, effectiveUserId, isViewOnly } = useAuth()
@@ -1061,28 +1060,6 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
     }))
   }
 
-  // Handle create modal actions
-  const handleCreateAction = (action: string) => {
-    setShowCreateModal(false)
-    const now = new Date()
-    const month = { year: now.getFullYear(), month: now.getMonth() + 1 }
-    
-    switch (action) {
-      case 'add-sale':
-        handleNavigate('add-booking')
-        break
-      case 'add-inquiry':
-        handleNavigate('edit-funnel', month)
-        break
-      case 'add-call-booked':
-        handleNavigate('edit-funnel', month)
-        break
-      case 'add-call-taken':
-        handleNavigate('edit-funnel', month)
-        break
-    }
-  }
-
   const firstName = user?.firstName || user?.name?.split(' ')[0] || 'there'
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
@@ -1115,7 +1092,7 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
           Remember, winning is a numbers game.
         </p>
         <button
-          onClick={() => !isViewOnly && setShowCreateModal(true)}
+          onClick={() => !isViewOnly && handleNavigate('edit-funnel', currentMonth)}
           disabled={isViewOnly}
           style={{
             backgroundColor: isViewOnly ? '#e5e7eb' : '#3b82f6',
@@ -1134,7 +1111,7 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
           }}
         >
           <Plus size={isMobile ? 18 : 16} />
-          New
+          Update This Month
         </button>
       </div>
 
@@ -1241,147 +1218,6 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
         )}
       </div>
 
-      {/* Create Modal */}
-      {showCreateModal && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: isMobile ? 'flex-end' : 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}
-          onClick={() => setShowCreateModal(false)}
-        >
-          <div 
-            style={{
-              backgroundColor: 'white',
-              borderRadius: isMobile ? '20px 20px 0 0' : '12px',
-              padding: isMobile ? '24px 24px 32px 24px' : '24px',
-              width: isMobile ? '100%' : '90%',
-              maxWidth: isMobile ? '100%' : '400px',
-              maxHeight: isMobile ? '80vh' : 'auto',
-              overflowY: 'auto',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Add New</h3>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px'
-                }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '12px' }}>
-              <button
-                onClick={() => handleCreateAction('add-inquiry')}
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '16px' : '12px',
-                  backgroundColor: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: isMobile ? '16px' : '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s'
-                }}
-                onTouchStart={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onTouchEnd={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-              >
-                Add New Inquiry
-              </button>
-              <button
-                onClick={() => handleCreateAction('add-call-booked')}
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '16px' : '12px',
-                  backgroundColor: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: isMobile ? '16px' : '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s'
-                }}
-                onTouchStart={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onTouchEnd={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-              >
-                Add New Call Booked
-              </button>
-              <button
-                onClick={() => handleCreateAction('add-call-taken')}
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '16px' : '12px',
-                  backgroundColor: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: isMobile ? '16px' : '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s'
-                }}
-                onTouchStart={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onTouchEnd={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-              >
-                Add New Call Taken
-              </button>
-              <button
-                onClick={() => handleCreateAction('add-sale')}
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '16px' : '12px',
-                  backgroundColor: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: isMobile ? '16px' : '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s'
-                }}
-                onTouchStart={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onTouchEnd={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-              >
-                Add New Sale
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

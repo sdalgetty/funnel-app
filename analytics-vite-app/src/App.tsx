@@ -83,7 +83,6 @@ function AppContent() {
     }
   }, [isAdmin])
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const [showCreateModal, setShowCreateModal] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   // Navigation state for opening modals/actions in other tabs
@@ -149,26 +148,12 @@ function AppContent() {
     return () => window.removeEventListener('navigateToPage', handleNavigate as EventListener)
   }, [])
 
-  // Handle create modal actions
-  const handleCreateAction = (action: string) => {
-    setShowCreateModal(false)
+  const openCurrentMonthFunnel = () => {
     const now = new Date()
     const month = { year: now.getFullYear(), month: now.getMonth() + 1 }
-    
-    switch (action) {
-      case 'add-booking':
-        setCurrentPage('bookings')
-        setNavigationAction({ page: 'bookings', action: 'add-booking' })
-        setTimeout(() => setNavigationAction(null), 500)
-        break
-      case 'add-inquiry':
-      case 'add-call-booked':
-      case 'add-call-taken':
-        setCurrentPage('funnel')
-        setNavigationAction({ page: 'funnel', action: 'edit-month', month })
-        setTimeout(() => setNavigationAction(null), 1000)
-        break
-    }
+    setCurrentPage('funnel')
+    setNavigationAction({ page: 'funnel', action: 'edit-month', month })
+    setTimeout(() => setNavigationAction(null), 1000)
   }
 
   // Show invitation acceptance page if on /accept-invite route
@@ -440,7 +425,7 @@ function AppContent() {
           </button>
           {user && !isViewOnly && (
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={openCurrentMonthFunnel}
               style={{
                 padding: '8px 16px',
                 borderRadius: '6px',
@@ -467,7 +452,7 @@ function AppContent() {
               }}
             >
               <Plus size={16} />
-              New
+              Update This Month
             </button>
           )}
         </div>
@@ -779,7 +764,7 @@ function AppContent() {
               <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px', paddingTop: '8px', paddingLeft: '0', paddingRight: '0' }}>
                 <button
                   onClick={() => {
-                    setShowCreateModal(true)
+                    openCurrentMonthFunnel()
                     setIsMobileMenuOpen(false)
                   }}
                   style={{
@@ -802,7 +787,7 @@ function AppContent() {
                   }}
                 >
                   <Plus size={20} />
-                  New
+                  Update This Month
                 </button>
               </div>
             )}
@@ -901,171 +886,6 @@ function AppContent() {
         onClose={() => setShowAuthModal(false)} 
       />
 
-      {/* Create Modal */}
-      {showCreateModal && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: isMobile ? 'flex-end' : 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}
-          onClick={() => setShowCreateModal(false)}
-        >
-          <div 
-            style={{
-              backgroundColor: 'white',
-              borderRadius: isMobile ? '20px 20px 0 0' : '12px',
-              padding: isMobile ? '24px 24px 32px 24px' : '24px',
-              width: isMobile ? '100%' : '90%',
-              maxWidth: isMobile ? '100%' : '400px',
-              maxHeight: isMobile ? '80vh' : 'auto',
-              overflowY: 'auto',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Add New</h3>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px'
-                }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '12px' }}>
-              <button
-                onClick={() => handleCreateAction('add-inquiry')}
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '16px' : '12px',
-                  backgroundColor: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: isMobile ? '16px' : '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isMobile) e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onMouseLeave={(e) => {
-                  if (!isMobile) e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-                onTouchStart={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onTouchEnd={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-              >
-                Add New Inquiry
-              </button>
-              <button
-                onClick={() => handleCreateAction('add-call-booked')}
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '16px' : '12px',
-                  backgroundColor: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: isMobile ? '16px' : '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isMobile) e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onMouseLeave={(e) => {
-                  if (!isMobile) e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-                onTouchStart={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onTouchEnd={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-              >
-                Add New Call Booked
-              </button>
-              <button
-                onClick={() => handleCreateAction('add-call-taken')}
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '16px' : '12px',
-                  backgroundColor: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: isMobile ? '16px' : '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isMobile) e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onMouseLeave={(e) => {
-                  if (!isMobile) e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-                onTouchStart={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onTouchEnd={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-              >
-                Add New Call Taken
-              </button>
-              <button
-                onClick={() => handleCreateAction('add-booking')}
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '16px' : '12px',
-                  backgroundColor: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: isMobile ? '16px' : '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isMobile) e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onMouseLeave={(e) => {
-                  if (!isMobile) e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-                onTouchStart={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onTouchEnd={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-              >
-                Add New Sale
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
