@@ -2295,7 +2295,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
                       if (value === '' || /^\d*\.?\d*$/.test(value)) {
                         const numValue = value === '' ? 0 : parseFloat(value);
                         const cents = value === '' || Number.isNaN(numValue) ? 0 : Math.round(numValue * 100);
-                        updatePaymentLocal(index, { amountInput: value, amount: cents, amountCents: cents });
+                        handleUpdatePayment(index, { amountInput: value, amount: cents, amountCents: cents });
                       }
                     }}
                     onBlur={() => {
