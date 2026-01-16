@@ -1095,7 +1095,7 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
           onClick={() => !isViewOnly && handleNavigate('edit-funnel', currentMonth)}
           disabled={isViewOnly}
           style={{
-            backgroundColor: isViewOnly ? '#e5e7eb' : '#3b82f6',
+            background: isViewOnly ? '#e5e7eb' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             color: isViewOnly ? '#9ca3af' : 'white',
             border: 'none',
             borderRadius: '8px',
@@ -1107,7 +1107,19 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
             alignItems: 'center',
             gap: '8px',
             opacity: isViewOnly ? 0.5 : 1,
-            width: isMobile ? '100%' : 'auto'
+            width: isMobile ? '100%' : 'auto',
+            boxShadow: isViewOnly ? 'none' : '0 2px 4px rgba(16, 185, 129, 0.3)',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            if (isViewOnly) return
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 4px 6px rgba(16, 185, 129, 0.4)'
+          }}
+          onMouseLeave={(e) => {
+            if (isViewOnly) return
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)'
           }}
         >
           <Plus size={isMobile ? 18 : 16} />
