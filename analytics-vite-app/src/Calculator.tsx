@@ -263,7 +263,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
           color: '#374151', 
           marginBottom: '6px' 
         }}>
-          Bookings Goal
+          Bookings Goal (Number of Weddings)
         </label>
         <input
           type="text"
@@ -689,7 +689,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
                 color: '#374151', 
                 marginBottom: '6px' 
               }}>
-                Bookings Goal
+                Bookings Goal (Number of Weddings)
               </label>
               <input
                 type="text"
