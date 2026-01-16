@@ -2295,7 +2295,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
                       if (value === '' || /^\d*\.?\d*$/.test(value)) {
                         const numValue = value === '' ? 0 : parseFloat(value);
                         const cents = value === '' || Number.isNaN(numValue) ? 0 : Math.round(numValue * 100);
-                        handleUpdatePayment(index, { amountInput: value, amount: cents, amountCents: cents });
+                        updatePaymentLocal(index, { amountInput: value, amount: cents, amountCents: cents });
                       }
                     }}
                     onBlur={() => {
@@ -2910,7 +2910,10 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
         p.bookingId === booking.id
       );
       console.log('Filtered payments for this booking:', bookingPayments);
-      setScheduledPayments((bookingPayments || []).map(payment => ({ ...payment, amountInput: undefined })));
+      setScheduledPayments(prev => (bookingPayments || []).map(payment => {
+        const existing = prev.find(p => p.id === payment.id);
+        return { ...payment, amountInput: existing?.amountInput };
+      }));
     }
   }, [booking.id, dataManager?.payments]);
 
@@ -2994,6 +2997,16 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
         setScheduledPayments(newPayments);
       }
     }
+  };
+
+  const updatePaymentLocal = (index: number, updates: Partial<Payment & { amountInput?: string }>) => {
+    setScheduledPayments(prev => {
+      const payment = prev[index];
+      if (!payment) return prev;
+      const newPayments = [...prev];
+      newPayments[index] = { ...payment, ...updates };
+      return newPayments;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
