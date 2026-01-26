@@ -155,6 +155,8 @@ export default function UserProfile() {
       email: user.email,
       phone: user.phone || '',
       website: user.website || '',
+      crm: user.crm || 'none',
+      crmOther: user.crmOther || '',
       timezone: 'America/New_York',
       dateFormat: 'MM/DD/YYYY',
       notifications: {
@@ -245,8 +247,8 @@ export default function UserProfile() {
 
           <nav style={{ padding: '0 16px' }}>
             {sections.map(({ id, label, icon: Icon }) => {
-              // Disable placeholder sections: subscription, billing, privacy, support
-              const isDisabled = ['subscription', 'billing', 'privacy', 'support'].includes(id);
+              // Disable placeholder sections: subscription, billing, privacy
+              const isDisabled = ['subscription', 'billing', 'privacy'].includes(id);
               
               return (
                 <button
@@ -366,9 +368,9 @@ export default function UserProfile() {
               }}
             >
               {sections
-                .filter(({ id }) => !['subscription', 'billing', 'privacy', 'support'].includes(id))
+                .filter(({ id }) => !['subscription', 'billing', 'privacy'].includes(id))
                 .map(({ id, label }) => (
-                  <option key={id} value={id} disabled={['subscription', 'billing', 'privacy', 'support'].includes(id)}>
+                  <option key={id} value={id} disabled={['subscription', 'billing', 'privacy'].includes(id)}>
                     {label}
                   </option>
                 ))}
