@@ -19,6 +19,7 @@ import {
   Download,
   MessageSquare,
   Star,
+  PlayCircle,
   ChevronRight,
   Edit,
   Save,
