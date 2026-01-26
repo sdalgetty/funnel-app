@@ -548,14 +548,7 @@ export default function UserProfile() {
             )}
 
             {activeSection === 'support' && (
-              <div style={{ 
-                padding: '40px', 
-                textAlign: 'center', 
-                color: '#9ca3af',
-                fontSize: '14px'
-              }}>
-                This section is coming soon.
-              </div>
+              <SupportSection user={user} />
             )}
           </div>
         </div>
