@@ -1831,18 +1831,18 @@ function GoalVisualization({
   const cashMetrics = useMemo(() => {
     if (cashGoal === 0) return null;
 
-    // Remove cash already locked in from prior-year bookings
+    // Remove cash already locked in from prior-year bookings for pacing only
     const adjustedGoal = Math.max(cashGoal - ytdData.lockedInCash, 0);
     const adjustedActual = Math.max(ytdData.cashYtd - ytdData.lockedInCash, 0);
     const percentOfPlan = adjustedGoal === 0
       ? 100
       : Math.round((adjustedActual / adjustedGoal) * 100);
     const pacingDelta = percentOfPlan - yearProgress;
-    const remaining = adjustedGoal - adjustedActual;
+    const remaining = cashGoal - ytdData.cashYtd;
     
     return {
-      actual: adjustedActual,
-      goal: adjustedGoal,
+      actual: ytdData.cashYtd,
+      goal: cashGoal,
       percentOfPlan,
       pacingDelta,
       remaining,
