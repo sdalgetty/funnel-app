@@ -8,6 +8,7 @@ import type { FunnelData, Booking, Payment, ServiceType, AdCampaign, LeadSource 
 import { Users, Phone, CheckCircle, DollarSign, TrendingUp, Target, BarChart3, Plus, ArrowRight, Clock, Calendar } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { UnifiedDataService } from './services/unifiedDataService'
+import OnboardingVideoPanel from './components/OnboardingVideoPanel'
 import { logger } from './utils/logger'
 
 type MonthRange = { start: number; end: number }
@@ -660,6 +661,8 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 style={{ fontSize: '28px', fontWeight: 700, margin: 0, color: '#1f2937' }}>Insights</h1>
       </div>
+
+      <OnboardingVideoPanel userId={user?.id} />
 
       {/* Welcome Section and Tasks */}
       <WelcomeAndTasks 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Target, TrendingUp, Users, Phone } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { UnifiedDataService } from './services/unifiedDataService';
+import OnboardingVideoPanel from './components/OnboardingVideoPanel';
 
 interface CalculatorData {
   bookingsGoal: number;
@@ -516,6 +517,8 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
           Fill out your goals for the current year. You can track real time progress on the Insights page. You can come back and make adjustments at any time.
         </p>
       </div>
+
+      <OnboardingVideoPanel userId={user?.id} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '64px' : '80px' }}>
         {/* Two Column Layout */}
