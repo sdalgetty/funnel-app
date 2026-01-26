@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense, useRef } from 'react'
 import FeatureGate from './FeatureGate'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { useDataManager } from './hooks/useDataManager'
@@ -9,6 +9,7 @@ import { User, Crown, Settings, Shield, Plus, X, Menu } from 'lucide-react'
 import type { Page } from './types'
 import AdminDashboard from './components/AdminDashboard'
 import { usePageView } from './hooks/usePostHog'
+import { UnifiedDataService } from './services/unifiedDataService'
 import './App.css'
 
 // Lazy load heavy components for code splitting
@@ -69,6 +70,7 @@ function AppContent() {
   // Components should access dataManager via props or a DataManagerContext if needed
   
   const [currentPage, setCurrentPage] = useState<Page>('insights')
+  const hasSetInitialPageRef = useRef(false)
   
   // Track page views with PostHog
   usePageView(currentPage, {
@@ -83,6 +85,36 @@ function AppContent() {
       setCurrentPage('admin')
     }
   }, [isAdmin])
+
+  // Default landing page: Goals until goals exist, then Insights
+  useEffect(() => {
+    if (loading || !user?.id) return
+    if (hasSetInitialPageRef.current) return
+    if (currentPage !== 'insights') {
+      hasSetInitialPageRef.current = true
+      return
+    }
+
+    let cancelled = false
+    const resolveLandingPage = async () => {
+      try {
+        const goals = await UnifiedDataService.getCalculatorGoals(user.id)
+        if (cancelled) return
+        setCurrentPage(goals ? 'insights' : 'goals')
+      } catch (error) {
+        console.error('Error checking goals for landing page:', error)
+      } finally {
+        if (!cancelled) {
+          hasSetInitialPageRef.current = true
+        }
+      }
+    }
+    resolveLandingPage()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, loading, currentPage])
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)

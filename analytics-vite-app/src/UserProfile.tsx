@@ -154,6 +154,8 @@ export default function UserProfile() {
       email: user.email,
       phone: user.phone || '',
       website: user.website || '',
+      crm: user.crm || 'none',
+      crmOther: user.crmOther || '',
       timezone: 'America/New_York',
       dateFormat: 'MM/DD/YYYY',
       notifications: {
@@ -244,8 +246,8 @@ export default function UserProfile() {
 
           <nav style={{ padding: '0 16px' }}>
             {sections.map(({ id, label, icon: Icon }) => {
-              // Disable placeholder sections: subscription, billing, privacy, support
-              const isDisabled = ['subscription', 'billing', 'privacy', 'support'].includes(id);
+              // Disable placeholder sections: subscription, billing, privacy
+              const isDisabled = ['subscription', 'billing', 'privacy'].includes(id);
               
               return (
                 <button
@@ -365,9 +367,9 @@ export default function UserProfile() {
               }}
             >
               {sections
-                .filter(({ id }) => !['subscription', 'billing', 'privacy', 'support'].includes(id))
+                .filter(({ id }) => !['subscription', 'billing', 'privacy'].includes(id))
                 .map(({ id, label }) => (
-                  <option key={id} value={id} disabled={['subscription', 'billing', 'privacy', 'support'].includes(id)}>
+                  <option key={id} value={id} disabled={['subscription', 'billing', 'privacy'].includes(id)}>
                     {label}
                   </option>
                 ))}
@@ -545,14 +547,7 @@ export default function UserProfile() {
             )}
 
             {activeSection === 'support' && (
-              <div style={{ 
-                padding: '40px', 
-                textAlign: 'center', 
-                color: '#9ca3af',
-                fontSize: '14px'
-              }}>
-                This section is coming soon.
-              </div>
+              <SupportSection user={user} />
             )}
           </div>
         </div>
@@ -1587,6 +1582,7 @@ function SupportSection({ user }: { user: any }) {
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <button
+            onClick={() => window.open('https://vimeo.com/1158563687?share=copy&fl=sv&fe=ci', '_blank')}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -1601,46 +1597,8 @@ function SupportSection({ user }: { user: any }) {
               width: 'fit-content'
             }}
           >
-            <MessageSquare size={16} />
-            Contact Support
-          </button>
-          
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '12px 16px',
-              backgroundColor: '#f9fafb',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              color: '#374151',
-              width: 'fit-content'
-            }}
-          >
-            <HelpCircle size={16} />
-            View Documentation
-          </button>
-          
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '12px 16px',
-              backgroundColor: '#f9fafb',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              color: '#374151',
-              width: 'fit-content'
-            }}
-          >
-            <Star size={16} />
-            Submit Feature Request
+            <PlayCircle size={16} />
+            Getting Started Video
           </button>
         </div>
       </div>
