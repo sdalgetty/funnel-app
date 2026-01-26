@@ -1757,6 +1757,15 @@ function GoalVisualization({
 
   // Calculate YTD totals
   const ytdData = useMemo(() => {
+    const bookingYearById = new Map<string, number>();
+    bookings.forEach((b) => {
+      if (!b?.id || !b?.dateBooked) return;
+      const year = parseInt(b.dateBooked.split('-')[0], 10);
+      if (Number.isFinite(year)) {
+        bookingYearById.set(b.id, year);
+      }
+    });
+
     // Bookings Revenue YTD
     const bookingsRevenueYtd = bookings
       .filter((b) => {
@@ -1771,20 +1780,25 @@ function GoalVisualization({
       .reduce((sum, b) => sum + (b?.bookedRevenue || 0), 0);
 
     // Cash YTD - sum of all payments expected for current year
-    const cashYtd = payments
-      .filter((p) => {
-        const dateStr = p?.paymentDate || p?.expectedDate || p?.dueDate;
-        if (!dateStr) return false;
-        try {
-          const [y] = dateStr.split('-');
-          return parseInt(y, 10) === currentYear;
-        } catch {
-          return false;
-        }
-      })
-      .reduce((sum, p) => sum + (p?.amount || p?.amountCents || 0), 0);
+    let cashYtd = 0;
+    let lockedInCash = 0;
+    payments.forEach((p) => {
+      const dateStr = p?.paymentDate || p?.expectedDate || p?.dueDate;
+      if (!dateStr) return;
+      const [y] = dateStr.split('-');
+      const paymentYear = parseInt(y, 10);
+      if (!Number.isFinite(paymentYear) || paymentYear !== currentYear) return;
 
-    return { bookingsRevenueYtd, cashYtd };
+      const amount = p?.amount || p?.amountCents || 0;
+      cashYtd += amount;
+
+      const bookingYear = bookingYearById.get(p?.bookingId);
+      if (bookingYear !== undefined && bookingYear < currentYear) {
+        lockedInCash += amount;
+      }
+    });
+
+    return { bookingsRevenueYtd, cashYtd, lockedInCash };
   }, [bookings, payments, currentYear]);
 
   // Calculate year progress percentage
@@ -1816,18 +1830,24 @@ function GoalVisualization({
   // Calculate metrics for Cash
   const cashMetrics = useMemo(() => {
     if (cashGoal === 0) return null;
-    const percentOfPlan = Math.round((ytdData.cashYtd / cashGoal) * 100);
+
+    // Remove cash already locked in from prior-year bookings
+    const adjustedGoal = Math.max(cashGoal - ytdData.lockedInCash, 0);
+    const adjustedActual = Math.max(ytdData.cashYtd - ytdData.lockedInCash, 0);
+    const percentOfPlan = adjustedGoal === 0
+      ? 100
+      : Math.round((adjustedActual / adjustedGoal) * 100);
     const pacingDelta = percentOfPlan - yearProgress;
-    const remaining = cashGoal - ytdData.cashYtd;
+    const remaining = adjustedGoal - adjustedActual;
     
     return {
-      actual: ytdData.cashYtd,
-      goal: cashGoal,
+      actual: adjustedActual,
+      goal: adjustedGoal,
       percentOfPlan,
       pacingDelta,
       remaining,
     };
-  }, [ytdData.cashYtd, cashGoal, yearProgress]);
+  }, [ytdData.cashYtd, ytdData.lockedInCash, cashGoal, yearProgress]);
 
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
