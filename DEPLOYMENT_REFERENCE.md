@@ -4,6 +4,7 @@
 
 **Production deploys from `prod` branch, NOT `main` or `dev`!**
 **Test deploys from `test` branch.**
+**Deploys are automatic on push to these branches.**
 
 ## Test Environment
 
@@ -26,7 +27,7 @@ git push origin test
 - **Netlify Site Name:** `fnnl-app-prod`
 - **Netlify Site ID:** `8313f660-c306-4d5e-af13-eeeb793bfd87`
 - **URL:** `https://app.fnnlapp.com`
-- **Deployment:** Automatic on push to `prod` branch
+- **Deployment:** Automatic on push to `prod` branch (manual deploy only if auto-deploy fails)
 
 ### To Deploy to Production:
 ```bash

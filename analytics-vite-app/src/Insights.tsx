@@ -475,9 +475,10 @@ export default function Insights({ dataManager }: { dataManager: any }) {
 
   // Calculate average time metrics for bookings in the selected range
   const bookingTimeMetrics = useMemo(() => {
-    // Filter bookings by the selected time range (based on dateBooked)
+    // Filter bookings by tracked service types and selected time range (based on dateBooked)
     const filteredBookings = bookings.filter(b => {
       if (!b.dateBooked) return false
+      if (!trackableServiceIds.has(b.serviceTypeId)) return false
       return isDateInRange(b.dateBooked, salesFunnelRange)
     })
 
@@ -538,7 +539,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       : null
 
     return { avgDaysInquiryToBooking, avgMonthsBookingToWedding }
-  }, [bookings, salesFunnelRange])
+  }, [bookings, salesFunnelRange, trackableServiceIds])
 
   // LEAD SOURCES
   const leadSourcesRange = useMemo(() => buildMonthRange(sectionFilters.leadSources), [buildMonthRange, sectionFilters.leadSources])
