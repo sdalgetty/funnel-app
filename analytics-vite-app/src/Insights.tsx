@@ -1490,6 +1490,7 @@ function WelcomeAndTasks({
                 <AnnualizedPace 
                   funnelData={funnelData}
                   bookings={bookings || []}
+                  serviceTypes={dataManager?.serviceTypes || []}
                   calculatorGoals={calculatorGoals}
                   currentYear={currentYear}
                   isMobile={isMobile}
@@ -1521,6 +1522,7 @@ function WelcomeAndTasks({
                 <AnnualizedPace 
                   funnelData={funnelData}
                   bookings={bookings || []}
+                  serviceTypes={dataManager?.serviceTypes || []}
                   calculatorGoals={calculatorGoals}
                   currentYear={currentYear}
                   isMobile={isMobile}
@@ -1537,12 +1539,14 @@ function WelcomeAndTasks({
 function AnnualizedPace({
   funnelData,
   bookings,
+  serviceTypes,
   calculatorGoals,
   currentYear,
   isMobile
 }: {
   funnelData: FunnelData[];
   bookings: Booking[];
+  serviceTypes: ServiceType[];
   calculatorGoals?: { bookingsRevenueGoal: number; cashGoal: number } | null;
   currentYear?: number;
   isMobile: boolean;
@@ -1567,6 +1571,11 @@ function AnnualizedPace({
     loadGoal();
   }, [user?.id]);
 
+  const trackableServiceIds = useMemo(
+    () => new Set(serviceTypes.filter(st => st.tracksInFunnel).map(st => st.id)),
+    [serviceTypes]
+  );
+
   // Calculate YTD totals
   const ytdTotals = useMemo(() => {
     const currentYearValue = yearLabel;
@@ -1587,6 +1596,7 @@ function AnnualizedPace({
 
     const bookingsYtd = bookings.filter(b => {
       if (!b?.dateBooked) return false;
+      if (!trackableServiceIds.has(b.serviceTypeId)) return false;
       const year = parseInt(b.dateBooked.split('-')[0], 10);
       return year === currentYearValue;
     }).length;
@@ -1596,7 +1606,7 @@ function AnnualizedPace({
       callsTaken: callsYtd,
       bookings: bookingsYtd,
     };
-  }, [funnelData, bookings, currentYear]);
+  }, [funnelData, bookings, currentYear, trackableServiceIds]);
 
   // Get months elapsed
   const getMonthsElapsed = () => {
