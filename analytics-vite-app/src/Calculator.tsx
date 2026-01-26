@@ -7,9 +7,13 @@ interface CalculatorData {
   bookingsGoal: number;
   inquiryToCall: number;
   callToBooking: number;
+  bookingsRevenueGoal: number; // in cents
+  cashGoal: number; // in cents
   inqYtd: number;
   callsYtd: number;
   bookingsYtd: number;
+  bookingsRevenueYtd: number; // in cents
+  cashYtd: number; // in cents
 }
 
 interface CalculatorProps {
@@ -38,12 +42,15 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
         inquiries: 0,
         callsTaken: 0,
         bookings: 0,
+        bookingsRevenue: 0,
+        cash: 0,
       };
     }
 
     try {
       const funnelData = dataManager.funnelData || [];
       const bookings = dataManager.bookings || [];
+      const payments = dataManager.payments || [];
       const serviceTypes = dataManager.serviceTypes || [];
       
       // Get trackable service type IDs (for closes calculation)
@@ -68,11 +75,41 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
           return false;
         }
       }).length;
+
+      // Calculate bookings revenue YTD - sum of all bookedRevenue from current year
+      const bookingsRevenueYtd = bookings
+        .filter((b: any) => {
+          if (!b?.dateBooked) return false;
+          try {
+            const [y] = b.dateBooked.split('-');
+            return parseInt(y, 10) === currentYear;
+          } catch {
+            return false;
+          }
+        })
+        .reduce((sum: number, b: any) => sum + (b?.bookedRevenue || 0), 0);
+
+      // Calculate cash YTD - sum of all payments expected for current year
+      const cashYtd = payments
+        .filter((p: any) => {
+          // Check paymentDate, expectedDate, or dueDate
+          const dateStr = p?.paymentDate || p?.expectedDate || p?.dueDate;
+          if (!dateStr) return false;
+          try {
+            const [y] = dateStr.split('-');
+            return parseInt(y, 10) === currentYear;
+          } catch {
+            return false;
+          }
+        })
+        .reduce((sum: number, p: any) => sum + (p?.amount || p?.amountCents || 0), 0);
       
       return {
         inquiries: totalInquiries,
         callsTaken: totalCallsTaken,
         bookings: totalCloses, // Use closes count as bookings
+        bookingsRevenue: bookingsRevenueYtd,
+        cash: cashYtd,
       };
     } catch (error) {
       console.error('Error calculating YTD totals:', error);
@@ -80,6 +117,8 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
         inquiries: 0,
         callsTaken: 0,
         bookings: 0,
+        bookingsRevenue: 0,
+        cash: 0,
       };
     }
   }, [dataManager, currentYear]);
@@ -88,9 +127,13 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
     bookingsGoal: 0,
     inquiryToCall: 0,
     callToBooking: 0,
+    bookingsRevenueGoal: 0,
+    cashGoal: 0,
     inqYtd: 0,
     callsYtd: 0,
     bookingsYtd: 0,
+    bookingsRevenueYtd: 0,
+    cashYtd: 0,
   });
 
   // Load goals from database on mount
@@ -105,6 +148,8 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
           bookingsGoal: goals.bookingsGoal,
           inquiryToCall: goals.inquiryToCall,
           callToBooking: goals.callToBooking,
+          bookingsRevenueGoal: goals.bookingsRevenueGoal || 0,
+          cashGoal: goals.cashGoal || 0,
         }));
       }
     };
@@ -118,7 +163,9 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
       // Only update if values actually changed to prevent infinite loops
       if (prev.inqYtd === ytdTotals.inquiries && 
           prev.callsYtd === ytdTotals.callsTaken && 
-          prev.bookingsYtd === ytdTotals.bookings) {
+          prev.bookingsYtd === ytdTotals.bookings &&
+          prev.bookingsRevenueYtd === ytdTotals.bookingsRevenue &&
+          prev.cashYtd === ytdTotals.cash) {
         return prev;
       }
       return {
@@ -126,9 +173,11 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
         inqYtd: ytdTotals.inquiries,
         callsYtd: ytdTotals.callsTaken,
         bookingsYtd: ytdTotals.bookings,
+        bookingsRevenueYtd: ytdTotals.bookingsRevenue,
+        cashYtd: ytdTotals.cash,
       };
     });
-  }, [ytdTotals.inquiries, ytdTotals.callsTaken, ytdTotals.bookings]);
+  }, [ytdTotals.inquiries, ytdTotals.callsTaken, ytdTotals.bookings, ytdTotals.bookingsRevenue, ytdTotals.cash]);
 
   // Calculate months elapsed in current year
   const getMonthsElapsed = () => {
@@ -144,6 +193,9 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
   const formatNumber = (value: number) => {
     return isNaN(value) ? "—" : Math.round(value).toLocaleString();
   };
+
+  // Format currency helper
+  const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
   // Calculate all metrics using useMemo to prevent infinite loops
   const calculations = useMemo(() => {
@@ -161,6 +213,8 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
     const paceInq = (data.inqYtd / months) * 12;
     const paceCalls = (data.callsYtd / months) * 12;
     const paceBookings = (data.bookingsYtd / months) * 12;
+    const paceBookingsRevenue = (data.bookingsRevenueYtd / months) * 12;
+    const paceCash = (data.cashYtd / months) * 12;
 
     return {
       requiredCalls,
@@ -168,8 +222,10 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
       paceInq,
       paceCalls,
       paceBookings,
+      paceBookingsRevenue,
+      paceCash,
     };
-  }, [data.bookingsGoal, data.inquiryToCall, data.callToBooking, data.inqYtd, data.callsYtd, data.bookingsYtd]);
+  }, [data.bookingsGoal, data.inquiryToCall, data.callToBooking, data.inqYtd, data.callsYtd, data.bookingsYtd, data.bookingsRevenueYtd, data.cashYtd]);
 
   // Debounced save function for goals
   const saveGoalsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -186,7 +242,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
       dataRef.current = updated;
       
       // Save goals to database (debounced)
-      if (field === 'bookingsGoal' || field === 'inquiryToCall' || field === 'callToBooking') {
+      if (field === 'bookingsGoal' || field === 'inquiryToCall' || field === 'callToBooking' || field === 'bookingsRevenueGoal' || field === 'cashGoal') {
         if (saveGoalsTimeoutRef.current) {
           clearTimeout(saveGoalsTimeoutRef.current);
         }
@@ -195,11 +251,18 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
           if (user?.id) {
             // Use ref to get latest value
             const currentData = dataRef.current;
-            await UnifiedDataService.saveCalculatorGoals(user.id, {
+            const success = await UnifiedDataService.saveCalculatorGoals(user.id, {
               bookingsGoal: currentData.bookingsGoal,
               inquiryToCall: currentData.inquiryToCall,
               callToBooking: currentData.callToBooking,
+              bookingsRevenueGoal: currentData.bookingsRevenueGoal,
+              cashGoal: currentData.cashGoal,
             });
+            
+            // Dispatch event to notify other components that goals were updated
+            if (success) {
+              window.dispatchEvent(new CustomEvent('calculatorGoalsUpdated'));
+            }
           }
         }, 500);
       }
@@ -229,7 +292,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
       border: '1px solid #e5e7eb',
       boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
       minWidth: 0,
-      overflow: 'hidden',
+      overflow: 'visible',
       height: '100%'
     }}>
       <div style={{ 
@@ -263,7 +326,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
           color: '#374151', 
           marginBottom: '6px' 
         }}>
-          Bookings Goal (Number of Weddings)
+          Bookings Number Goal (Number of Weddings)
         </label>
         <input
           type="text"
@@ -323,7 +386,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
         />
       </div>
 
-      <div>
+      <div style={{ marginBottom: '20px' }}>
         <label style={{ 
           display: 'block', 
           fontSize: '14px', 
@@ -345,6 +408,80 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
               updateData('callToBooking', numValue);
             }
           }}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: '8px',
+            border: '1px solid #d1d5db',
+            fontSize: '16px',
+            backgroundColor: 'white',
+            boxSizing: 'border-box'
+          }}
+        />
+      </div>
+
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '14px', 
+          fontWeight: '500', 
+          color: '#374151', 
+          marginBottom: '6px' 
+        }}>
+          Bookings Revenue Goal (Total Booked Revenue $)
+        </label>
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9.]*"
+          value={data.bookingsRevenueGoal === 0 ? '' : (data.bookingsRevenueGoal / 100).toFixed(2).replace(/\.?0+$/, '')}
+          onChange={(e) => {
+            const value = e.target.value;
+            // Allow decimal numbers
+            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+              const dollarValue = value === '' ? 0 : parseFloat(value) || 0;
+              const centsValue = Math.round(dollarValue * 100);
+              updateData('bookingsRevenueGoal', centsValue);
+            }
+          }}
+          placeholder="0"
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: '8px',
+            border: '1px solid #d1d5db',
+            fontSize: '16px',
+            backgroundColor: 'white',
+            boxSizing: 'border-box'
+          }}
+        />
+      </div>
+
+      <div>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '14px', 
+          fontWeight: '500', 
+          color: '#374151', 
+          marginBottom: '6px' 
+        }}>
+          Cash Goal (Total Cash Projected $)
+        </label>
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9.]*"
+          value={data.cashGoal === 0 ? '' : (data.cashGoal / 100).toFixed(2).replace(/\.?0+$/, '')}
+          onChange={(e) => {
+            const value = e.target.value;
+            // Allow decimal numbers
+            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+              const dollarValue = value === '' ? 0 : parseFloat(value) || 0;
+              const centsValue = Math.round(dollarValue * 100);
+              updateData('cashGoal', centsValue);
+            }
+          }}
+          placeholder="0"
           style={{
             width: '100%',
             padding: '10px 12px',
@@ -544,40 +681,41 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
         </div>
       </div>
 
-      <div>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '16px',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb',
-          backgroundColor: isOnTrack ? '#d1fae5' : '#fef2f2'
-        }}>
-          <div>
-            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>
-              Bookings Pace
-            </div>
-            <div style={{ 
-              fontSize: '20px', 
-              fontWeight: '700', 
-              color: isOnTrack ? '#065f46' : '#991b1b'
-            }}>
-              {formatNumber(calculations.paceBookings)}
-            </div>
-            {isOnTrack ? (
-              <div style={{ fontSize: '12px', color: '#065f46', marginTop: '4px' }}>
-                ✓ On track for goal
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '16px',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb',
+                backgroundColor: isOnTrack ? '#d1fae5' : '#fef2f2'
+              }}>
+                <div>
+                  <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>
+                    Bookings Pace
+                  </div>
+                  <div style={{ 
+                    fontSize: '20px', 
+                    fontWeight: '700', 
+                    color: isOnTrack ? '#065f46' : '#991b1b'
+                  }}>
+                    {formatNumber(calculations.paceBookings)}
+                  </div>
+                  {isOnTrack ? (
+                    <div style={{ fontSize: '12px', color: '#065f46', marginTop: '4px' }}>
+                      ✓ On track for goal
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '12px', color: '#991b1b', marginTop: '4px' }}>
+                      ⚠ Behind goal
+                    </div>
+                  )}
+                </div>
+                <CheckCircle size={24} color={isOnTrack ? '#10b981' : '#ef4444'} />
               </div>
-            ) : (
-              <div style={{ fontSize: '12px', color: '#991b1b', marginTop: '4px' }}>
-                ⚠ Behind goal
-              </div>
-            )}
-          </div>
-          <CheckCircle size={24} color={isOnTrack ? '#10b981' : '#ef4444'} />
-        </div>
-      </div>
+            </div>
+
     </>
   );
 
@@ -608,7 +746,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
         gap: isMobile ? '12px' : '16px',
         gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
         maxWidth: '100%',
-        overflow: 'hidden'
+        marginBottom: '0'
       }}>
         {renderSection('Annual Goals', <Target size={20} color="#3b82f6" />, annualGoalsContent)}
         {renderSection('Required Activity', <TrendingUp size={20} color="#10b981" />, requiredActivityContent)}
@@ -689,7 +827,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
                 color: '#374151', 
                 marginBottom: '6px' 
               }}>
-                Bookings Goal (Number of Weddings)
+                Bookings Number Goal (Number of Weddings)
               </label>
               <input
                 type="text"
@@ -749,7 +887,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
               />
             </div>
 
-            <div>
+            <div style={{ marginBottom: '20px' }}>
               <label style={{ 
                 display: 'block', 
                 fontSize: '14px', 
@@ -771,6 +909,80 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
                     updateData('callToBooking', numValue);
                   }
                 }}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  fontSize: '16px',
+                  backgroundColor: 'white',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '500', 
+                color: '#374151', 
+                marginBottom: '6px' 
+              }}>
+                Bookings Revenue Goal (Total Booked Revenue $)
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9.]*"
+                value={data.bookingsRevenueGoal === 0 ? '' : (data.bookingsRevenueGoal / 100).toFixed(2).replace(/\.?0+$/, '')}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Allow decimal numbers
+                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                    const dollarValue = value === '' ? 0 : parseFloat(value) || 0;
+                    const centsValue = Math.round(dollarValue * 100);
+                    updateData('bookingsRevenueGoal', centsValue);
+                  }
+                }}
+                placeholder="0"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  fontSize: '16px',
+                  backgroundColor: 'white',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '500', 
+                color: '#374151', 
+                marginBottom: '6px' 
+              }}>
+                Cash Goal (Total Cash Projected $)
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9.]*"
+                value={data.cashGoal === 0 ? '' : (data.cashGoal / 100).toFixed(2).replace(/\.?0+$/, '')}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Allow decimal numbers
+                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                    const dollarValue = value === '' ? 0 : parseFloat(value) || 0;
+                    const centsValue = Math.round(dollarValue * 100);
+                    updateData('cashGoal', centsValue);
+                  }
+                }}
+                placeholder="0"
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -948,6 +1160,34 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
               />
             </div>
 
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '500', 
+                color: '#374151', 
+                marginBottom: '6px' 
+              }}>
+                Bookings YTD
+              </label>
+              <input
+                type="number"
+                value={data.bookingsYtd}
+                readOnly
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  fontSize: '16px',
+                  backgroundColor: '#f9fafb',
+                  color: '#6b7280',
+                  boxSizing: 'border-box',
+                  cursor: 'not-allowed'
+                }}
+              />
+            </div>
+
             <div>
               <label style={{ 
                 display: 'block', 
@@ -1048,7 +1288,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
               </div>
             </div>
 
-            <div>
+            <div style={{ marginBottom: '16px' }}>
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -1082,6 +1322,7 @@ const Calculator: React.FC<CalculatorProps> = ({ dataManager, compact = false })
                 <CheckCircle size={24} color={isOnTrack ? '#10b981' : '#ef4444'} />
               </div>
             </div>
+
           </div>
         </div>
       </div>

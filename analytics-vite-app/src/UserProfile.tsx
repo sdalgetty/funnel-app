@@ -28,13 +28,14 @@ import {
   XCircle,
   CheckCircle,
   Clock,
-  Phone
+  Phone,
+  LogOut
 } from 'lucide-react';
 
 type ProfileSection = 'account' | 'subscription' | 'billing' | 'privacy' | 'support' | 'sharing';
 
 export default function UserProfile() {
-  const { user, upgradeToPro, downgradeToFree, updateProfile } = useAuth();
+  const { user, upgradeToPro, downgradeToFree, updateProfile, signOut } = useAuth();
   const [activeSection, setActiveSection] = useState<ProfileSection>('account');
   const [isEditing, setIsEditing] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -291,6 +292,41 @@ export default function UserProfile() {
                 </button>
               );
             })}
+            
+            {/* Logout Button */}
+            <div style={{ 
+              marginTop: '24px', 
+              paddingTop: '24px', 
+              borderTop: '1px solid #e5e7eb' 
+            }}>
+              <button
+                onClick={signOut}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '400',
+                  color: '#ef4444',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fef2f2';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <LogOut size={18} />
+                Logout
+              </button>
+            </div>
           </nav>
         </div>
       )}

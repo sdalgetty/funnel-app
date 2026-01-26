@@ -75,6 +75,13 @@ const LoginForm: React.FC = () => {
     checkInvitation()
   }, [urlToken])
 
+  useEffect(() => {
+    document.body.classList.add('auth-page')
+    return () => {
+      document.body.classList.remove('auth-page')
+    }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -115,7 +122,7 @@ const LoginForm: React.FC = () => {
   }
 
   return (
-    <div style={{
+    <div className="auth-surface" style={{
       maxWidth: '400px',
       margin: '50px auto',
       padding: '20px',

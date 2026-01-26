@@ -1360,15 +1360,17 @@ export class UnifiedDataService {
     bookingsGoal: number;
     inquiryToCall: number;
     callToBooking: number;
+    bookingsRevenueGoal: number;
+    cashGoal: number;
   } | null> {
     if (!this.isSupabaseConfigured()) {
-      return { bookingsGoal: 0, inquiryToCall: 0, callToBooking: 0 };
+      return { bookingsGoal: 0, inquiryToCall: 0, callToBooking: 0, bookingsRevenueGoal: 0, cashGoal: 0 };
     }
 
     try {
       const { data, error } = await supabase
         .from('funnels')
-        .select('bookings_goal, inquiry_to_call, call_to_booking')
+        .select('bookings_goal, inquiry_to_call, call_to_booking, bookings_revenue_goal_cents, cash_goal_cents')
         .eq('user_id', userId)
         .eq('year', 0)
         .eq('month', 0)
@@ -1387,6 +1389,8 @@ export class UnifiedDataService {
         bookingsGoal: data.bookings_goal || 0,
         inquiryToCall: data.inquiry_to_call || 0,
         callToBooking: data.call_to_booking || 0,
+        bookingsRevenueGoal: data.bookings_revenue_goal_cents || 0,
+        cashGoal: data.cash_goal_cents || 0,
       };
     } catch (error) {
       logger.error('Error fetching calculator goals:', error);
@@ -1396,7 +1400,7 @@ export class UnifiedDataService {
 
   static async saveCalculatorGoals(
     userId: string,
-    goals: { bookingsGoal: number; inquiryToCall: number; callToBooking: number },
+    goals: { bookingsGoal: number; inquiryToCall: number; callToBooking: number; bookingsRevenueGoal?: number; cashGoal?: number },
     isViewOnly: boolean = false
   ): Promise<boolean> {
     this.checkWritePermission(isViewOnly);
@@ -1432,6 +1436,14 @@ export class UnifiedDataService {
         call_to_booking: goals.callToBooking,
         updated_at: new Date().toISOString(),
       };
+
+      // Add new goal fields if provided
+      if (goals.bookingsRevenueGoal !== undefined) {
+        upsertData.bookings_revenue_goal_cents = goals.bookingsRevenueGoal;
+      }
+      if (goals.cashGoal !== undefined) {
+        upsertData.cash_goal_cents = goals.cashGoal;
+      }
 
       let error;
       if (recordId) {

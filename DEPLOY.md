@@ -33,7 +33,7 @@ netlify deploy --dir=analytics-vite-app/dist
 
 **Option B: Using site ID directly (no linking needed)**
 ```bash
-netlify deploy --site=4e44bee4-893e-494e-be35-1a12f341b6c9 --dir=analytics-vite-app/dist
+netlify deploy --site=4e44bee4-893e-494e-be35-1a12f341b6c9 --dir=analytics-vite-app/dist --prod
 ```
 
 **Test Site:** `https://fnnl-app-test.netlify.app`
@@ -56,18 +56,16 @@ netlify deploy --site=8313f660-c306-4d5e-af13-eeeb793bfd87 --dir=analytics-vite-
 
 **Production Site:** `https://app.fnnlapp.com`
 
-## Quick Deploy Script
-
-You can also use these one-liners:
+## Quick Deploy (build + deploy)
 
 **Test:**
 ```bash
-cd analytics-vite-app && npm run build && cd .. && netlify link --name fnnl-app-test && netlify deploy --dir=analytics-vite-app/dist
+cd analytics-vite-app && npm run build && cd .. && netlify deploy --site=4e44bee4-893e-494e-be35-1a12f341b6c9 --dir=analytics-vite-app/dist --prod
 ```
 
 **Production:**
 ```bash
-cd analytics-vite-app && npm run build && cd .. && netlify link --name fnnl-app-prod && netlify deploy --dir=analytics-vite-app/dist --prod
+cd analytics-vite-app && npm run build && cd .. && netlify deploy --site=8313f660-c306-4d5e-af13-eeeb793bfd87 --dir=analytics-vite-app/dist --prod
 ```
 
 ## Site IDs
@@ -108,3 +106,5 @@ After deployment:
 - Use `netlify link --name <site-name>` to switch sites
 - Verify with `netlify status`
 
+**EPERM when running deploy from Cursor (or other sandboxed terminal):**
+- Run the same deploy command in your **local terminal** (outside Cursor), or use the optional API-based script: `NETLIFY_AUTH_TOKEN=<token> node scripts/deploy-to-netlify.mjs --test` (or `--prod`). Create a token at [Netlify Personal access tokens](https://app.netlify.com/user/applications#personal-access-tokens).

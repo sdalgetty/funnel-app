@@ -80,7 +80,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
       justifyContent: 'center',
       zIndex: 1000,
     }}>
-      <div style={{
+      <div className="auth-surface" style={{
         backgroundColor: 'white',
         borderRadius: '12px',
         padding: '32px',

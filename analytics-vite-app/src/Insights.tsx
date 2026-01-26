@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from './contexts/AuthContext'
-import Forecast from './Forecast'
-import ForecastModeling from './ForecastModeling'
-import Calculator from './Calculator'
-import type { FunnelData, Booking, Payment, ServiceType, AdCampaign, LeadSource, ForecastModel } from './types'
-import { Users, Phone, CheckCircle, DollarSign, TrendingUp, Target, BarChart3, Plus, ArrowRight } from 'lucide-react'
+// Forecast components kept for potential future Tools page
+// import Forecast from './Forecast'
+// import ForecastModeling from './ForecastModeling'
+import type { FunnelData, Booking, Payment, ServiceType, AdCampaign, LeadSource } from './types'
+// ForecastModel type kept for potential future Tools page
+import { Users, Phone, CheckCircle, DollarSign, TrendingUp, Target, BarChart3, Plus, ArrowRight, Clock, Calendar } from 'lucide-react'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { UnifiedDataService } from './services/unifiedDataService'
 import { logger } from './utils/logger'
 
 type MonthRange = { start: number; end: number }
@@ -48,8 +51,13 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     leadSources: 'past30Days',
     advertising: 'past30Days'
   })
-  const [forecastModels, setForecastModels] = useState<ForecastModel[]>([])
-  const [loadingForecastModels, setLoadingForecastModels] = useState(true)
+  // Forecast models state removed - keeping for potential future Tools page
+  // const [forecastModels, setForecastModels] = useState<ForecastModel[]>([])
+  // const [loadingForecastModels, setLoadingForecastModels] = useState(true)
+  const [calculatorGoals, setCalculatorGoals] = useState<{
+    bookingsRevenueGoal: number;
+    cashGoal: number;
+  } | null>(null)
 
   const funnelData: FunnelData[] = dataManager?.funnelData || []
   const bookings: Booking[] = dataManager?.bookings || []
@@ -58,32 +66,74 @@ export default function Insights({ dataManager }: { dataManager: any }) {
   const adCampaigns: AdCampaign[] = dataManager?.adCampaigns || []
   const leadSources: LeadSource[] = dataManager?.leadSources || []
 
-  // Load forecast models to check for active forecast
-  useEffect(() => {
-    const loadForecastModels = async () => {
-      const userId = effectiveUserId || user?.id
-      if (!userId) {
-        setLoadingForecastModels(false)
-        return
+  // Forecast models loading removed - keeping for potential future Tools page
+  // useEffect(() => {
+  //   const loadForecastModels = async () => {
+  //     const userId = effectiveUserId || user?.id
+  //     if (!userId) {
+  //       setLoadingForecastModels(false)
+  //       return
+  //     }
+  //     try {
+  //       const { UnifiedDataService } = await import('./services/unifiedDataService')
+  //       const models = await UnifiedDataService.getForecastModels(userId)
+  //       setForecastModels(models)
+  //     } catch (error) {
+  //       console.error('Error loading forecast models:', error)
+  //       setForecastModels([])
+  //     } finally {
+  //       setLoadingForecastModels(false)
+  //     }
+  //   }
+  //   loadForecastModels()
+  // }, [user?.id, effectiveUserId])
+
+  // Load calculator goals
+  const loadCalculatorGoals = React.useCallback(async () => {
+    const userId = effectiveUserId || user?.id
+    if (!userId) return
+    try {
+      const goals = await UnifiedDataService.getCalculatorGoals(userId)
+      if (goals) {
+        setCalculatorGoals({
+          bookingsRevenueGoal: goals.bookingsRevenueGoal || 0,
+          cashGoal: goals.cashGoal || 0,
+        })
+      } else {
+        // Set to empty object if no goals found
+        setCalculatorGoals({
+          bookingsRevenueGoal: 0,
+          cashGoal: 0,
+        })
       }
-      try {
-        const { UnifiedDataService } = await import('./services/unifiedDataService')
-        const models = await UnifiedDataService.getForecastModels(userId)
-        setForecastModels(models)
-      } catch (error) {
-        console.error('Error loading forecast models:', error)
-        setForecastModels([])
-      } finally {
-        setLoadingForecastModels(false)
-      }
+    } catch (error) {
+      console.error('Error loading calculator goals:', error)
+      // Set to empty object on error as well
+      setCalculatorGoals({
+        bookingsRevenueGoal: 0,
+        cashGoal: 0,
+      })
     }
-    loadForecastModels()
   }, [user?.id, effectiveUserId])
 
-  // Check if there's an active forecast model
-  const hasActiveForecast = useMemo(() => {
-    return forecastModels.some(m => m.isActive)
-  }, [forecastModels])
+  useEffect(() => {
+    loadCalculatorGoals()
+    
+    // Listen for goal updates from Calculator
+    const handleGoalUpdate = () => {
+      loadCalculatorGoals()
+    }
+    window.addEventListener('calculatorGoalsUpdated', handleGoalUpdate)
+    
+    return () => {
+      window.removeEventListener('calculatorGoalsUpdated', handleGoalUpdate)
+    }
+  }, [loadCalculatorGoals])
+
+  // Forecast check removed - keeping for potential future Tools page
+  // const hasActiveForecast = useMemo(() => {
+  //   return forecastModels.some(m => m.isActive)
+  // }, [forecastModels])
 
   // Debug logging (development only)
   logger.group('Insights Component Debug', {
@@ -423,6 +473,73 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     return { totalCallsBooked, totalCallsTaken, inquiryToBooked, inquiryToTaken, showUpRate, takenToClose, revenuePerCallTaken, avgCallsBooked, avgCallsTaken }
   }, [salesFunnelMonths, sectionFilters.salesFunnel])
 
+  // Calculate average time metrics for bookings in the selected range
+  const bookingTimeMetrics = useMemo(() => {
+    // Filter bookings by the selected time range (based on dateBooked)
+    const filteredBookings = bookings.filter(b => {
+      if (!b.dateBooked) return false
+      return isDateInRange(b.dateBooked, salesFunnelRange)
+    })
+
+    // Calculate average days from inquiry to booking
+    const inquiryToBookingDays: number[] = []
+    filteredBookings.forEach(b => {
+      if (b.dateInquired && b.dateBooked) {
+        try {
+          const inquiredDate = new Date(b.dateInquired)
+          const bookedDate = new Date(b.dateBooked)
+          if (!isNaN(inquiredDate.getTime()) && !isNaN(bookedDate.getTime())) {
+            const diffTime = bookedDate.getTime() - inquiredDate.getTime()
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+            if (diffDays >= 0) { // Only count positive differences
+              inquiryToBookingDays.push(diffDays)
+            }
+          }
+        } catch (e) {
+          // Skip invalid dates
+        }
+      }
+    })
+    const avgDaysInquiryToBooking = inquiryToBookingDays.length > 0
+      ? Math.round(inquiryToBookingDays.reduce((sum, days) => sum + days, 0) / inquiryToBookingDays.length)
+      : null
+
+    // Calculate average months from booking to wedding/project date
+    const bookingToWeddingMonths: number[] = []
+    filteredBookings.forEach(b => {
+      if (b.dateBooked && b.projectDate) {
+        try {
+          const bookedDate = new Date(b.dateBooked)
+          const projectDate = new Date(b.projectDate)
+          if (!isNaN(bookedDate.getTime()) && !isNaN(projectDate.getTime())) {
+            // Calculate months more accurately
+            const yearDiff = projectDate.getFullYear() - bookedDate.getFullYear()
+            const monthDiff = projectDate.getMonth() - bookedDate.getMonth()
+            const dayDiff = projectDate.getDate() - bookedDate.getDate()
+            
+            // Total months = years * 12 + months, with day adjustment
+            let totalMonths = yearDiff * 12 + monthDiff
+            if (dayDiff < 0) {
+              // If the day hasn't passed yet this month, subtract a month
+              totalMonths -= 1
+            }
+            
+            if (totalMonths >= 0) { // Only count positive differences
+              bookingToWeddingMonths.push(totalMonths)
+            }
+          }
+        } catch (e) {
+          // Skip invalid dates
+        }
+      }
+    })
+    const avgMonthsBookingToWedding = bookingToWeddingMonths.length > 0
+      ? Math.round((bookingToWeddingMonths.reduce((sum, months) => sum + months, 0) / bookingToWeddingMonths.length) * 10) / 10 // Round to 1 decimal
+      : null
+
+    return { avgDaysInquiryToBooking, avgMonthsBookingToWedding }
+  }, [bookings, salesFunnelRange])
+
   // LEAD SOURCES
   const leadSourcesRange = useMemo(() => buildMonthRange(sectionFilters.leadSources), [buildMonthRange, sectionFilters.leadSources])
   const leadSourceBookings = useMemo(
@@ -443,13 +560,15 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       const name = leadSources.find(l => l.id === lsId)?.name || 'Unknown'
       const count = byCount[lsId] || 0
       const revenue = byRevenue[lsId] || 0
+      const avgRevenue = count > 0 ? Math.round(revenue / count) : 0
       const pctCount = totalCount > 0 ? Math.round((count / totalCount) * 100) : 0
       const pctRevenue = totalRevenue > 0 ? Math.round((revenue / totalRevenue) * 100) : 0
-      return { id: lsId, name, count, revenue, pctCount, pctRevenue }
+      return { id: lsId, name, count, revenue, avgRevenue, pctCount, pctRevenue }
     })
     const byCountDesc = [...items].sort((a, b) => b.count - a.count)
     const byRevenueDesc = [...items].sort((a, b) => b.revenue - a.revenue)
-    return { items, totalCount, totalRevenue, byCountDesc, byRevenueDesc }
+    const byAvgRevenueDesc = [...items].sort((a, b) => b.avgRevenue - a.avgRevenue)
+    return { items, totalCount, totalRevenue, byCountDesc, byRevenueDesc, byAvgRevenueDesc }
   }, [leadSourceBookings, leadSources])
 
   // ADVERTISING
@@ -480,20 +599,21 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     return ids
   }, [dedupedAdCampaigns])
   const advertisingTotals = useMemo<{
+    totalAdLeads: number
     totalAdSpend: number
     totalBookedFromAds: number
     overallROI: number | null
     costPerClose: number
   }>(() => {
     if (!dataManager || dataManager.loading) {
-      return { totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 }
+      return { totalAdLeads: 0, totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 }
     }
     // If ads tracking is enabled, use funnel data instead of ad_campaigns
     if (user?.adsTrackingEnabled) {
-      // Calculate from funnelData.adsSpend for months in the selected range
-      const totalAdSpend = funnelData
-        .filter(month => isMonthInRange(month.year, month.month, advertisingRange))
-        .reduce((sum, month) => sum + (month.adsSpend || 0), 0)
+      // Calculate from funnelData for months in the selected range
+      const filteredMonths = funnelData.filter(month => isMonthInRange(month.year, month.month, advertisingRange))
+      const totalAdSpend = filteredMonths.reduce((sum, month) => sum + (month.adsSpend || 0), 0)
+      const totalAdLeads = filteredMonths.reduce((sum, month) => sum + (month.adsLead || 0), 0)
       
       // Filter bookings by ad lead sources
       const adLeadSourceIds = new Set(leadSources.filter(ls => ls.isAdSource).map(ls => ls.id))
@@ -502,23 +622,24 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       const closesFromAds = bookingsFromAds.length
       const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? totalBookedFromAds / totalAdSpend : null
       const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0
-      return { totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
+      return { totalAdLeads, totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
     }
     
     // Fallback to old ad_campaigns approach (for backwards compatibility)
     if (dedupedAdCampaigns.length === 0) {
-      return { totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 }
+      return { totalAdLeads: 0, totalAdSpend: 0, totalBookedFromAds: 0, overallROI: null, costPerClose: 0 }
     }
     const totalAdSpend = dedupedAdCampaigns.reduce((sum, campaign) => {
       const spend = campaign.spend ?? campaign.adSpendCents ?? 0
       return sum + spend
     }, 0)
+    const totalAdLeads = dedupedAdCampaigns.reduce((sum, campaign) => sum + (campaign.leadsGenerated || 0), 0)
     const bookingsFromAds = advertisingBookings.filter(b => advertisingLeadSourceIds.has(b.leadSourceId))
     const totalBookedFromAds = bookingsFromAds.reduce((sum, booking) => sum + (booking.revenue || booking.bookedRevenue || 0), 0)
     const closesFromAds = bookingsFromAds.length
     const overallROI = totalAdSpend > 0 && totalBookedFromAds > 0 ? totalBookedFromAds / totalAdSpend : null
     const costPerClose = closesFromAds > 0 ? Math.round(totalAdSpend / closesFromAds) : 0
-    return { totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
+    return { totalAdLeads, totalAdSpend, totalBookedFromAds, overallROI, costPerClose }
   }, [dataManager, dataManager?.loading, user?.adsTrackingEnabled, funnelData, advertisingRange, leadSources, dedupedAdCampaigns, advertisingBookings, advertisingLeadSourceIds])
 
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' })
@@ -544,14 +665,11 @@ export default function Insights({ dataManager }: { dataManager: any }) {
         user={user}
         funnelData={funnelData}
         dataManager={dataManager}
+        calculatorGoals={calculatorGoals}
+        bookings={bookings}
+        payments={payments}
+        currentYear={currentDateInfo.year}
       />
-
-      {/* CALCULATOR */}
-      <Section title="Sales Calculator">
-        <div style={{ display: isMobile ? 'block' : 'block' }}>
-          <Calculator dataManager={dataManager} compact />
-        </div>
-      </Section>
 
       {/* SALES FUNNEL */}
       <Section
@@ -582,89 +700,14 @@ export default function Insights({ dataManager }: { dataManager: any }) {
           <Card icon={<CheckCircle size={20} color="#ef4444" />} label="Call Taken to Close %" value={`${callTotals.takenToClose}%`} sub="Call completion" />
           <Card icon={<TrendingUp size={20} color="#06b6d4" />} label="Inquiry to Close %" value={`${salesTotals.inquiryToClose}%`} sub="Overall conversion" />
           <Card icon={<Target size={20} color="#8b5cf6" />} label="Call Show Up Rate" value={`${callTotals.showUpRate}%`} sub="Call attendance" />
+
+          {/* Row 4 */}
+          <Card icon={<Clock size={20} color="#ec4899" />} label="Time from Inquiry to Booking" value={bookingTimeMetrics.avgDaysInquiryToBooking !== null ? `${bookingTimeMetrics.avgDaysInquiryToBooking} days` : 'N/A'} sub="Average days" />
+          <Card icon={<Calendar size={20} color="#14b8a6" />} label="Time from Booking to Wedding" value={bookingTimeMetrics.avgMonthsBookingToWedding !== null ? `${bookingTimeMetrics.avgMonthsBookingToWedding} months` : 'N/A'} sub="Average months" />
         </Cards>
       </Section>
 
-      {/* SALES FORECAST - Tracker from Forecast Modeling (use existing component for now) */}
-      <Section title="Sales Forecast">
-        <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12 }}>
-          {dataManager?.loading || loadingForecastModels ? (
-            <div style={{ padding: '24px', textAlign: 'center', color: '#666' }}>
-              Loading forecast data...
-            </div>
-          ) : !hasActiveForecast && !isViewOnly ? (
-            <div style={{ padding: '32px', textAlign: 'center' }}>
-              <p style={{ 
-                fontSize: '16px', 
-                color: '#374151', 
-                margin: '0 0 24px 0',
-                lineHeight: '1.6'
-              }}>
-                You haven't built or activated a Sales Forecast for the current year. Build and activate a Sales Forecast now so you can track your goals and progress throughout the year.
-              </p>
-              <button
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('navigateToPage', {
-                    detail: { action: 'view-forecast' }
-                  }))
-                }}
-                style={{
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '12px 24px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#2563eb'
-                  e.currentTarget.style.transform = 'translateY(-1px)'
-                  e.currentTarget.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.4)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#3b82f6'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.3)'
-                }}
-              >
-                Create and Activate Forecast
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          ) : (
-            <ForecastModeling 
-              serviceTypes={serviceTypes}
-              setServiceTypes={() => {}}
-              bookings={bookings}
-              payments={payments}
-              showTrackerOnly
-              dataManager={dataManager}
-            />
-          )}
-        </div>
-      </Section>
-
-      {/* FORECAST TRENDS */}
-      <Section title="Forecast Trends">
-        <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12 }}>
-          <Forecast 
-            funnelData={funnelData}
-            serviceTypes={serviceTypes}
-            setServiceTypes={() => {}}
-            bookings={bookings}
-            payments={payments}
-            showTrendsOnly
-            dataManager={dataManager}
-          />
-        </div>
-      </Section>
+      {/* Forecast sections removed - keeping code for potential future Tools page */}
 
       {/* LEAD SOURCES */}
       <Section
@@ -677,51 +720,72 @@ export default function Insights({ dataManager }: { dataManager: any }) {
           />
         }
       >
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 12 : 16 }}>
-          <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-            <h3 style={{ margin: '0 0 12px 0', fontSize: 14, color: '#374151' }}>Bookings by Lead Source</h3>
-            {leadSourceBreakdown.items.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <div>
-                {leadSourceBreakdown.byCountDesc.map(item => (
-                  <div key={item.id} style={{ marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <div style={{ flex: 1, color: '#374151' }}>{item.name}</div>
-                      <div style={{ color: '#6b7280', fontSize: 12 }}>{formatNumber(item.count)} ({item.pctCount}%)</div>
-                    </div>
-                    {/* Bar */}
-                    <div style={{ height: 6, background: '#eef2ff', borderRadius: 4 }}>
-                      <div style={{ width: `${item.pctCount}%`, height: '100%', background: '#3b82f6', borderRadius: 4 }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+        {/* Pie Chart Visualizations */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: isMobile ? 12 : 16, marginBottom: isMobile ? 12 : 16 }}>
+            {/* Bookings by Lead Source Pie Chart */}
+            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 16 : 24 }}>
+              <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Number of Bookings by Lead Source</h3>
+              {leadSourceBreakdown.items.length === 0 ? (
+                <p style={{ fontSize: 13, color: '#6b7280' }}>
+                  No lead source data exists for the selected time range. You can either adjust the time range or add new sales data.
+                </p>
+              ) : (
+                <LeadSourcePieChart data={leadSourceBreakdown.byCountDesc} isMobile={isMobile} toUSD={toUSD} formatNumber={formatNumber} />
+              )}
+            </div>
+            
+            {/* Revenue by Lead Source Pie Chart */}
+            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 16 : 24 }}>
+              <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Total Booked Revenue by Lead Source</h3>
+              {leadSourceBreakdown.items.length === 0 ? (
+                <p style={{ fontSize: 13, color: '#6b7280' }}>
+                  No lead source data exists for the selected time range. You can either adjust the time range or add new sales data.
+                </p>
+              ) : (
+                <LeadSourcePieChart 
+                  data={leadSourceBreakdown.byRevenueDesc.map(item => ({ 
+                    id: item.id,
+                    name: item.name, 
+                    count: item.count,
+                    revenue: item.revenue,
+                    pctCount: item.pctRevenue 
+                  }))} 
+                  isMobile={isMobile} 
+                  showRevenue 
+                  toUSD={toUSD}
+                  formatNumber={formatNumber}
+                />
+              )}
+            </div>
+
+            {/* Average Booking by Lead Source Bar Chart */}
+            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 16 : 24 }}>
+              <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Average Booking Amount by Lead Source</h3>
+              {leadSourceBreakdown.items.length === 0 ? (
+                <p style={{ fontSize: 13, color: '#6b7280' }}>
+                  No lead source data exists for the selected time range. You can either adjust the time range or add new sales data.
+                </p>
+              ) : (
+                <div>
+                  {leadSourceBreakdown.byAvgRevenueDesc.map(item => {
+                    const maxAvg = leadSourceBreakdown.byAvgRevenueDesc[0]?.avgRevenue || 0
+                    const widthPct = maxAvg > 0 ? Math.round((item.avgRevenue / maxAvg) * 100) : 0
+                    return (
+                      <div key={item.id} style={{ marginBottom: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                          <div style={{ flex: 1, color: '#374151' }}>{item.name}</div>
+                          <div style={{ color: '#6b7280', fontSize: 12 }}>{toUSD(item.avgRevenue)}</div>
+                        </div>
+                        <div style={{ height: 8, background: '#ecfdf5', borderRadius: 4 }}>
+                          <div style={{ width: `${widthPct}%`, height: '100%', background: '#10b981', borderRadius: 4 }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-          <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-            <h3 style={{ margin: '0 0 12px 0', fontSize: 14, color: '#374151' }}>Revenue by Lead Source</h3>
-            {leadSourceBreakdown.items.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <div>
-                {leadSourceBreakdown.byRevenueDesc.map(item => (
-                  <div key={item.id} style={{ marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <div style={{ flex: 1, color: '#374151' }}>{item.name}</div>
-                      <div style={{ color: '#6b7280', fontSize: 12 }}>{toUSD(item.revenue)} ({item.pctRevenue}%)</div>
-                    </div>
-                    {/* Bar */}
-                    <div style={{ height: 6, background: '#ecfdf5', borderRadius: 4 }}>
-                      <div style={{ width: `${item.pctRevenue}%`, height: '100%', background: '#10b981', borderRadius: 4 }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        <p style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>Includes only bookings whose service types are tracked in the Funnel.</p>
       </Section>
 
       {/* ADVERTISING - Only show if ads tracking is enabled */}
@@ -736,7 +800,8 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             />
           }
         >
-          <Cards columns={2}>
+          <Cards columns={2} desktopColumns={5}>
+            <Card icon={<Users size={20} color="#06b6d4" />} label="Total Ad Leads" value={formatNumber(advertisingTotals.totalAdLeads)} />
             <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value={toUSD(advertisingTotals.totalAdSpend)} />
             <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value={toUSD(advertisingTotals.totalBookedFromAds)} />
             <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value={advertisingTotals.overallROI !== null ? advertisingTotals.overallROI.toFixed(2) : 'N/A'} />
@@ -744,6 +809,143 @@ export default function Insights({ dataManager }: { dataManager: any }) {
           </Cards>
         </Section>
       )}
+    </div>
+  )
+}
+
+// Lead Source Pie Chart Component using recharts
+function LeadSourcePieChart({ data, isMobile, showRevenue = false, toUSD, formatNumber }: { 
+  data: Array<{ id: string; name: string; count: number; revenue?: number; pctCount: number }>; 
+  isMobile: boolean; 
+  showRevenue?: boolean;
+  toUSD: (cents: number) => string;
+  formatNumber: (n: number) => string;
+}) {
+  // Color palette - vibrant colors similar to the sketch
+  const colors = [
+    '#3b82f6', // Blue
+    '#f59e0b', // Orange/Amber
+    '#10b981', // Green
+    '#8b5cf6', // Purple
+    '#ec4899', // Pink
+    '#06b6d4', // Cyan
+    '#f97316', // Orange
+    '#84cc16', // Lime
+    '#6366f1', // Indigo
+    '#ef4444', // Red
+  ]
+  
+  // Prepare data for recharts
+  const chartData = data.map((item, index) => ({
+    name: item.name,
+    value: showRevenue ? (item.revenue || 0) : item.count,
+    percentage: item.pctCount,
+    color: colors[index % colors.length],
+    count: item.count,
+    revenue: item.revenue || 0,
+  }))
+  
+  // Custom label formatter
+  const renderLabel = (entry: any) => {
+    return `${entry.percentage}%`
+  }
+  
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0]
+      return (
+        <div style={{
+          backgroundColor: 'white',
+          border: '1px solid #e5e7eb',
+          borderRadius: '8px',
+          padding: '12px',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+        }}>
+          <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#1f2937' }}>{data.payload.name}</p>
+          {showRevenue ? (
+            <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
+              {toUSD(data.payload.revenue)} ({data.payload.percentage}%)
+            </p>
+          ) : (
+            <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
+              {formatNumber(data.payload.count)} bookings ({data.payload.percentage}%)
+            </p>
+          )}
+        </div>
+      )
+    }
+    return null
+  }
+  
+  // Dynamic height for the pie itself (legend is rendered below the chart)
+  const chartHeight = useMemo(() => {
+    const radius = isMobile ? 80 : 100
+    const chartBase = radius * 2 + 60 // pie diameter + clearance for % labels outside
+    const minHeight = isMobile ? 220 : 260
+    return Math.max(minHeight, Math.round(chartBase))
+  }, [isMobile])
+  
+  return (
+    <div style={{ width: '100%' }}>
+      <ResponsiveContainer width="100%" height={chartHeight}>
+        <PieChart>
+          <Pie
+            data={chartData}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            label={data.length > 1 ? renderLabel : false}
+            outerRadius={isMobile ? 80 : 100}
+            fill="#8884d8"
+            dataKey="value"
+            animationBegin={0}
+            animationDuration={400}
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+          <Tooltip content={<CustomTooltip />} />
+        </PieChart>
+      </ResponsiveContainer>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
+        {chartData.map((entry, index) => (
+          <div
+            key={entry.name || index}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '8px',
+              borderRadius: '6px',
+            }}
+          >
+            <div
+              style={{
+                width: 16,
+                height: 16,
+                borderRadius: '50%',
+                backgroundColor: entry.color,
+                flexShrink: 0,
+                border: '2px solid #ffffff',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+              }}
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, color: '#1f2937', marginBottom: 2 }}>
+                {entry.name}
+              </div>
+              <div style={{ fontSize: 12, color: '#6b7280' }}>
+                {showRevenue
+                  ? `${toUSD(entry.revenue)} (${entry.percentage}%)`
+                  : `${formatNumber(entry.count)} bookings (${entry.percentage}%)`
+                }
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -758,9 +960,14 @@ function Section({ title, actions, children }: { title: string; actions?: React.
   }, [])
   
   return (
-    <div style={{ marginBottom: isMobile ? 24 : 32 }}>
+    <div style={{ 
+      marginBottom: isMobile ? '24px' : '32px', 
+      paddingBottom: isMobile ? '24px' : '32px',
+      position: 'relative',
+      boxSizing: 'border-box'
+    }}>
       <div style={{ 
-        marginBottom: 12, 
+        marginBottom: '12px', 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
@@ -772,7 +979,9 @@ function Section({ title, actions, children }: { title: string; actions?: React.
           <div style={{ flexShrink: 0 }}>{actions}</div>
         ) : null}
       </div>
-      {children}
+      <div style={{ position: 'relative' }}>
+        {children}
+      </div>
     </div>
   )
 }
@@ -796,7 +1005,7 @@ function TimeFilterSelect({ value, onChange, options }: { value: string; onChang
   )
 }
 
-function Cards({ children, columns = 4 }: { children: React.ReactNode; columns?: number }) {
+function Cards({ children, columns = 4, desktopColumns }: { children: React.ReactNode; columns?: number; desktopColumns?: number }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   
   useEffect(() => {
@@ -805,9 +1014,9 @@ function Cards({ children, columns = 4 }: { children: React.ReactNode; columns?:
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
   
-  // Mobile: use specified columns, Desktop: use 4
+  // Mobile: use specified columns, Desktop: use desktopColumns or default to 4
   const mobileColumns = columns === 1 ? 1 : 2
-  const gridColumns = isMobile ? mobileColumns : 4
+  const gridColumns = isMobile ? mobileColumns : (desktopColumns || 4)
   
   return (
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: isMobile ? 12 : 16 }}>
@@ -830,9 +1039,26 @@ function Card({ icon, label, value, sub }: { icon: React.ReactNode; label: strin
 }
 
 // Welcome and Tasks Component
-function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelData: FunnelData[]; dataManager: any }) {
+function WelcomeAndTasks({ 
+  user, 
+  funnelData, 
+  dataManager,
+  calculatorGoals,
+  bookings,
+  payments,
+  currentYear
+}: { 
+  user: any; 
+  funnelData: FunnelData[]; 
+  dataManager: any;
+  calculatorGoals?: { bookingsRevenueGoal: number; cashGoal: number } | null;
+  bookings?: Booking[];
+  payments?: Payment[];
+  currentYear?: number;
+}) {
   const [tasks, setTasks] = useState<Array<{ id: string; label: string; completed: boolean; action: string; month?: { year: number; month: number } }>>([])
-  const [forecastModels, setForecastModels] = useState<any[]>([])
+  // Forecast models state removed - keeping for potential future Tools page
+  // const [forecastModels, setForecastModels] = useState<any[]>([])
   const { user: authUser, effectiveUserId, isViewOnly } = useAuth()
 
   // Get current and last month info
@@ -854,22 +1080,21 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
-  // Load forecast models
-  useEffect(() => {
-    const loadForecastModels = async () => {
-      // Use effectiveUserId (owner's ID when viewing as guest, otherwise user's ID)
-      const userId = effectiveUserId || authUser?.id
-      if (!userId) return
-      try {
-        const { UnifiedDataService } = await import('./services/unifiedDataService')
-        const models = await UnifiedDataService.getForecastModels(userId)
-        setForecastModels(models)
-      } catch (error) {
-        console.error('Error loading forecast models:', error)
-      }
-    }
-    loadForecastModels()
-  }, [authUser?.id, effectiveUserId])
+  // Forecast models loading removed - keeping for potential future Tools page
+  // useEffect(() => {
+  //   const loadForecastModels = async () => {
+  //     const userId = effectiveUserId || authUser?.id
+  //     if (!userId) return
+  //     try {
+  //       const { UnifiedDataService } = await import('./services/unifiedDataService')
+  //       const models = await UnifiedDataService.getForecastModels(userId)
+  //       setForecastModels(models)
+  //     } catch (error) {
+  //       console.error('Error loading forecast models:', error)
+  //     }
+  //   }
+  //   loadForecastModels()
+  // }, [authUser?.id, effectiveUserId])
 
   // Check if current month has data
   const currentMonthHasData = useMemo(() => {
@@ -901,26 +1126,21 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
     )
   }, [funnelData, lastMonth])
 
-  // Check if forecast model exists and is active
-  const hasActiveForecastModel = useMemo(() => {
-    return forecastModels.some(m => m.isActive)
-  }, [forecastModels])
-
-  const hasForecastModel = useMemo(() => {
-    return forecastModels.length > 0
-  }, [forecastModels])
-
-  // Check if there's an active forecast model for the current year
-  const hasActiveForecastModelForCurrentYear = useMemo(() => {
-    const currentYear = new Date().getFullYear()
-    return forecastModels.some(m => m.isActive && m.year === currentYear)
-  }, [forecastModels])
-
-  // Check if it's January (the month, not just the 1st)
-  const isJanuary = useMemo(() => {
-    const now = new Date()
-    return now.getMonth() === 0 // January (month 0)
-  }, [])
+  // Forecast model checks removed - keeping for potential future Tools page
+  // const hasActiveForecastModel = useMemo(() => {
+  //   return forecastModels.some(m => m.isActive)
+  // }, [forecastModels])
+  // const hasForecastModel = useMemo(() => {
+  //   return forecastModels.length > 0
+  // }, [forecastModels])
+  // const hasActiveForecastModelForCurrentYear = useMemo(() => {
+  //   const currentYear = new Date().getFullYear()
+  //   return forecastModels.some(m => m.isActive && m.year === currentYear)
+  // }, [forecastModels])
+  // const isJanuary = useMemo(() => {
+  //   const now = new Date()
+  //   return now.getMonth() === 0
+  // }, [])
 
   // Generate tasks based on state
   useEffect(() => {
@@ -977,37 +1197,7 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
         }
       }
 
-      // Forecast model tasks
-      // New Year task: In January, always show if there's no active forecast model for current year
-      // This ensures users activate a new model even if last year's model is still active
-      if (isJanuary && !hasActiveForecastModelForCurrentYear) {
-        const currentYear = new Date().getFullYear()
-        newTasks.push({
-          id: `activate-forecast-${currentYear}`,
-          label: `Activate your ${currentYear} Forecast Model`,
-          completed: false,
-          action: 'view-forecast'
-        })
-      }
-      
-      // Regular forecast model tasks (only show if not January)
-      if (!isJanuary) {
-        if (!hasForecastModel) {
-          newTasks.push({
-            id: 'create-forecast',
-            label: 'Create a Forecast Model to plan your year',
-            completed: false,
-            action: 'view-forecast'
-          })
-        } else if (!hasActiveForecastModel) {
-          newTasks.push({
-            id: 'activate-forecast',
-            label: 'Activate A Forecast Model to track your goals in real time',
-            completed: false,
-            action: 'view-forecast'
-          })
-        }
-      }
+      // Forecast model tasks removed - keeping for potential future Tools page
 
       // Load completed tasks from localStorage
       const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '[]')
@@ -1018,8 +1208,7 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
         const lastMonthKey = `${lastMonth.year}-${lastMonth.month}`
         const cleanedTasks = completedTasks.filter((taskId: string) => {
           // Keep tasks that are for the current month or last month (finalize tasks)
-          return taskId.includes(currentMonthKey) || taskId.includes(lastMonthKey) || 
-                 taskId.includes('forecast') // Keep forecast tasks
+          return taskId.includes(currentMonthKey) || taskId.includes(lastMonthKey)
         })
         localStorage.setItem('completedTasks', JSON.stringify(cleanedTasks))
       }
@@ -1034,7 +1223,7 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
     }
 
     generateTasks()
-  }, [isNewMonth, currentMonthHasData, lastMonthHasData, hasForecastModel, hasActiveForecastModel, hasActiveForecastModelForCurrentYear, isJanuary, currentMonth, lastMonth, monthNames, forecastModels])
+  }, [isNewMonth, currentMonthHasData, lastMonthHasData, currentMonth, lastMonth, monthNames])
 
   // Toggle task completion
   const toggleTask = (taskId: string) => {
@@ -1063,6 +1252,7 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
   const firstName = user?.firstName || user?.name?.split(' ')[0] || 'there'
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [showAllTasks, setShowAllTasks] = useState(false)
   
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -1070,72 +1260,81 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
+  const displayedTasks = showAllTasks ? tasks : tasks.slice(0, 2)
+  const hasMoreTasks = tasks.length > 2
+
   return (
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
         gap: isMobile ? '16px' : '24px', 
         marginBottom: isMobile ? '24px' : '32px',
-        padding: isMobile ? '16px' : '0'
+        padding: isMobile ? '16px' : '0',
+        alignItems: 'start'
       }}>
-      {/* Welcome Section */}
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        padding: isMobile ? '20px' : '24px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-      }}>
-        <h2 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: '700', margin: '0 0 8px 0', color: '#1f2937' }}>
-          Welcome back {firstName}!
-        </h2>
-        <p style={{ fontSize: isMobile ? '14px' : '16px', color: '#6b7280', margin: '0 0 20px 0' }}>
-          Remember, winning is a numbers game.
-        </p>
-        <button
-          onClick={() => !isViewOnly && handleNavigate('edit-funnel', currentMonth)}
-          disabled={isViewOnly}
-          style={{
-            background: isViewOnly ? '#e5e7eb' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            color: isViewOnly ? '#9ca3af' : 'white',
-            border: 'none',
-            borderRadius: '8px',
-            padding: isMobile ? '14px 20px' : '12px 24px',
-            fontSize: isMobile ? '16px' : '14px',
-            fontWeight: '600',
-            cursor: isViewOnly ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            opacity: isViewOnly ? 0.5 : 1,
-            width: isMobile ? '100%' : 'auto',
-            boxShadow: isViewOnly ? 'none' : '0 2px 4px rgba(16, 185, 129, 0.3)',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => {
-            if (isViewOnly) return
-            e.currentTarget.style.transform = 'translateY(-1px)'
-            e.currentTarget.style.boxShadow = '0 4px 6px rgba(16, 185, 129, 0.4)'
-          }}
-          onMouseLeave={(e) => {
-            if (isViewOnly) return
-            e.currentTarget.style.transform = 'translateY(0)'
-            e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)'
-          }}
-        >
-          <Plus size={isMobile ? 18 : 16} />
-          Update This Month
-        </button>
-      </div>
+        {/* Top Row: Welcome + Tasks */}
+        {/* Welcome Section */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: isMobile ? '20px' : '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          border: '1px solid #e5e7eb',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <h2 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: '700', margin: '0 0 8px 0', color: '#1f2937' }}>
+            Welcome back {firstName}!
+          </h2>
+          <p style={{ fontSize: isMobile ? '14px' : '16px', color: '#6b7280', margin: '0 0 20px 0' }}>
+            Remember, winning is a numbers game. Go make some moves!
+          </p>
+          <button
+              onClick={() => !isViewOnly && handleNavigate('edit-funnel', currentMonth)}
+              disabled={isViewOnly}
+              style={{
+                background: isViewOnly ? '#e5e7eb' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: isViewOnly ? '#9ca3af' : 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: isMobile ? '14px 20px' : '12px 24px',
+                fontSize: isMobile ? '16px' : '14px',
+                fontWeight: '600',
+                cursor: isViewOnly ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                opacity: isViewOnly ? 0.5 : 1,
+                boxShadow: isViewOnly ? 'none' : '0 2px 4px rgba(16, 185, 129, 0.3)',
+                transition: 'all 0.2s',
+                alignSelf: 'flex-start'
+              }}
+              onMouseEnter={(e) => {
+                if (isViewOnly) return
+                e.currentTarget.style.transform = 'translateY(-1px)'
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(16, 185, 129, 0.4)'
+              }}
+              onMouseLeave={(e) => {
+                if (isViewOnly) return
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)'
+              }}
+            >
+              <Plus size={isMobile ? 18 : 16} />
+              New Data
+            </button>
+        </div>
 
-      {/* Tasks Section */}
-      <div style={{
-        backgroundColor: 'white',
-        border: '1px solid #e5e7eb',
-        borderRadius: '12px',
-        padding: isMobile ? '16px' : '20px',
-        marginBottom: '24px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-      }}>
+        {/* Tasks Section */}
+        <div style={{
+          backgroundColor: 'white',
+          border: '1px solid #e5e7eb',
+          borderRadius: '12px',
+          padding: isMobile ? '16px' : '20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? '8px' : '0' }}>
           <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
             This Month's Tasks
@@ -1164,8 +1363,9 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {tasks.map(task => (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+              {displayedTasks.map(task => (
               <div
                 key={task.id}
                 style={{
@@ -1225,11 +1425,601 @@ function WelcomeAndTasks({ user, funnelData, dataManager }: { user: any; funnelD
                   <ArrowRight size={isMobile ? 14 : 12} />
                 </button>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            {hasMoreTasks && (
+              <button
+                onClick={() => setShowAllTasks(!showAllTasks)}
+                style={{
+                  marginTop: '12px',
+                  padding: '8px 12px',
+                  fontSize: '13px',
+                  backgroundColor: 'transparent',
+                  color: '#3b82f6',
+                  border: '1px solid #3b82f6',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#eff6ff'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }}
+              >
+                {showAllTasks ? 'Show Less' : `Show ${tasks.length - 2} More`}
+              </button>
+            )}
+          </>
         )}
+        </div>
+
+        {/* Bottom Row: Goal Tracker + Annualized Pace */}
+        {(() => {
+          const hasGoals = calculatorGoals && 
+                             bookings && 
+                             payments && 
+                             currentYear && 
+                             ((calculatorGoals.bookingsRevenueGoal > 0) || (calculatorGoals.cashGoal > 0));
+          
+          if (isMobile) {
+            // On mobile, stack vertically
+            return (
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: isMobile ? '16px' : '20px', 
+                gridColumn: '1 / -1',
+                marginTop: isMobile ? '16px' : '24px'
+              }}>
+                {hasGoals ? (
+                  <GoalVisualization
+                    bookingsRevenueGoal={calculatorGoals.bookingsRevenueGoal || 0}
+                    cashGoal={calculatorGoals.cashGoal || 0}
+                    bookings={bookings}
+                    payments={payments}
+                    currentYear={currentYear}
+                    isMobile={isMobile}
+                  />
+                ) : (
+                  <GoalEmptyState onSetGoals={() => handleNavigate('view-goals')} isMobile={isMobile} />
+                )}
+                <AnnualizedPace 
+                  funnelData={funnelData}
+                  bookings={bookings || []}
+                  calculatorGoals={calculatorGoals}
+                  currentYear={currentYear}
+                  isMobile={isMobile}
+                />
+              </div>
+            );
+          } else {
+            // On desktop, show side-by-side
+            return (
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr', 
+                gap: '24px', 
+                gridColumn: '1 / -1',
+                marginTop: '24px'
+              }}>
+                {hasGoals ? (
+                  <GoalVisualization
+                    bookingsRevenueGoal={calculatorGoals.bookingsRevenueGoal || 0}
+                    cashGoal={calculatorGoals.cashGoal || 0}
+                    bookings={bookings}
+                    payments={payments}
+                    currentYear={currentYear}
+                    isMobile={isMobile}
+                  />
+                ) : (
+                  <GoalEmptyState onSetGoals={() => handleNavigate('view-goals')} isMobile={isMobile} />
+                )}
+                <AnnualizedPace 
+                  funnelData={funnelData}
+                  bookings={bookings || []}
+                  calculatorGoals={calculatorGoals}
+                  currentYear={currentYear}
+                  isMobile={isMobile}
+                />
+              </div>
+            );
+          }
+        })()}
+
+    </div>
+  )
+}
+
+function AnnualizedPace({
+  funnelData,
+  bookings,
+  calculatorGoals,
+  currentYear,
+  isMobile
+}: {
+  funnelData: FunnelData[];
+  bookings: Booking[];
+  calculatorGoals?: { bookingsRevenueGoal: number; cashGoal: number } | null;
+  currentYear?: number;
+  isMobile: boolean;
+}) {
+  const { user } = useAuth();
+  const [bookingsGoal, setBookingsGoal] = useState<number>(0);
+  const yearLabel = currentYear || new Date().getFullYear();
+
+  // Load bookings number goal
+  useEffect(() => {
+    const loadGoal = async () => {
+      if (!user?.id) return;
+      try {
+        const goals = await UnifiedDataService.getCalculatorGoals(user.id);
+        if (goals) {
+          setBookingsGoal(goals.bookingsGoal || 0);
+        }
+      } catch (error) {
+        console.error('Error loading bookings goal:', error);
+      }
+    };
+    loadGoal();
+  }, [user?.id]);
+
+  // Calculate YTD totals
+  const ytdTotals = useMemo(() => {
+    const currentYearValue = yearLabel;
+    
+    const inquiriesYtd = funnelData.reduce((sum, month) => {
+      if (month.year === currentYearValue) {
+        return sum + (month.inquiries || 0);
+      }
+      return sum;
+    }, 0);
+
+    const callsYtd = funnelData.reduce((sum, month) => {
+      if (month.year === currentYearValue) {
+        return sum + (month.callsTaken || 0);
+      }
+      return sum;
+    }, 0);
+
+    const bookingsYtd = bookings.filter(b => {
+      if (!b?.dateBooked) return false;
+      const year = parseInt(b.dateBooked.split('-')[0], 10);
+      return year === currentYearValue;
+    }).length;
+
+    return {
+      inquiries: inquiriesYtd,
+      callsTaken: callsYtd,
+      bookings: bookingsYtd,
+    };
+  }, [funnelData, bookings, currentYear]);
+
+  // Get months elapsed
+  const getMonthsElapsed = () => {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const months = (now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
+    return Math.max(0.01, Math.min(12, months));
+  };
+
+  // Calculate pace
+  const calculations = useMemo(() => {
+    const months = getMonthsElapsed();
+    const paceInq = (ytdTotals.inquiries / months) * 12;
+    const paceCalls = (ytdTotals.callsTaken / months) * 12;
+    const paceBookings = (ytdTotals.bookings / months) * 12;
+    
+    // Check if on track for bookings goal
+    const isOnTrack = bookingsGoal === 0 || paceBookings >= bookingsGoal;
+
+    return {
+      paceInq,
+      paceCalls,
+      paceBookings,
+      isOnTrack,
+    };
+  }, [ytdTotals, bookingsGoal]);
+
+  const formatNumber = (num: number): string => {
+    return new Intl.NumberFormat('en-US').format(Math.round(num));
+  };
+
+  return (
+    <div style={{
+      backgroundColor: 'white',
+      border: '1px solid #e5e7eb',
+      borderRadius: '12px',
+      padding: isMobile ? '16px' : '20px',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+    }}>
+      <div style={{ marginBottom: '8px' }}>
+        <h3 style={{ 
+          fontSize: isMobile ? '16px' : '18px', 
+          fontWeight: '600', 
+          margin: 0, 
+          color: '#1f2937' 
+        }}>
+          Sales Funnel Pace for {yearLabel}
+        </h3>
+      </div>
+      <p style={{ margin: '0 0 16px 0', fontSize: 12, color: '#6b7280' }}>
+        This calculates the pace you're on for the year based on the current sales funnel data YTD.
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '12px',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div>
+            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
+              Inquiries Pace
+            </div>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: '#1f2937' }}>
+              {formatNumber(calculations.paceInq)}
+            </div>
+          </div>
+          <Users size={20} color="#6b7280" />
+        </div>
+
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '12px',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div>
+            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
+              Calls Pace
+            </div>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: '#1f2937' }}>
+              {formatNumber(calculations.paceCalls)}
+            </div>
+          </div>
+          <Phone size={20} color="#6b7280" />
+        </div>
+
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '12px',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb',
+          backgroundColor: calculations.isOnTrack ? '#d1fae5' : '#fef2f2'
+        }}>
+          <div>
+            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
+              Number of Bookings Pace
+            </div>
+            <div style={{ 
+              fontSize: '18px', 
+              fontWeight: '700', 
+              color: calculations.isOnTrack ? '#065f46' : '#991b1b'
+            }}>
+              {formatNumber(calculations.paceBookings)}
+            </div>
+            {calculations.isOnTrack ? (
+              <div style={{ fontSize: '11px', color: '#065f46', marginTop: '4px' }}>
+                ✓ On track
+              </div>
+            ) : (
+              <div style={{ fontSize: '11px', color: '#991b1b', marginTop: '4px' }}>
+                ⚠ Behind goal
+              </div>
+            )}
+          </div>
+          <CheckCircle size={20} color={calculations.isOnTrack ? '#10b981' : '#ef4444'} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GoalVisualization({
+  bookingsRevenueGoal,
+  cashGoal,
+  bookings,
+  payments,
+  currentYear,
+  isMobile
+}: {
+  bookingsRevenueGoal: number;
+  cashGoal: number;
+  bookings: Booking[];
+  payments: Payment[];
+  currentYear: number;
+  isMobile: boolean;
+}) {
+  const [activeView, setActiveView] = useState<'bookings' | 'cash'>('bookings');
+
+  // Calculate YTD totals
+  const ytdData = useMemo(() => {
+    // Bookings Revenue YTD
+    const bookingsRevenueYtd = bookings
+      .filter((b) => {
+        if (!b?.dateBooked) return false;
+        try {
+          const [y] = b.dateBooked.split('-');
+          return parseInt(y, 10) === currentYear;
+        } catch {
+          return false;
+        }
+      })
+      .reduce((sum, b) => sum + (b?.bookedRevenue || 0), 0);
+
+    // Cash YTD - sum of all payments expected for current year
+    const cashYtd = payments
+      .filter((p) => {
+        const dateStr = p?.paymentDate || p?.expectedDate || p?.dueDate;
+        if (!dateStr) return false;
+        try {
+          const [y] = dateStr.split('-');
+          return parseInt(y, 10) === currentYear;
+        } catch {
+          return false;
+        }
+      })
+      .reduce((sum, p) => sum + (p?.amount || p?.amountCents || 0), 0);
+
+    return { bookingsRevenueYtd, cashYtd };
+  }, [bookings, payments, currentYear]);
+
+  // Calculate year progress percentage
+  const yearProgress = useMemo(() => {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const endOfYear = new Date(now.getFullYear(), 11, 31);
+    const totalDays = Math.ceil((endOfYear.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+    const daysElapsed = Math.ceil((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.round((daysElapsed / totalDays) * 100);
+  }, []);
+
+  // Calculate metrics for Bookings
+  const bookingsMetrics = useMemo(() => {
+    if (bookingsRevenueGoal === 0) return null;
+    const percentOfPlan = Math.round((ytdData.bookingsRevenueYtd / bookingsRevenueGoal) * 100);
+    const pacingDelta = percentOfPlan - yearProgress;
+    const remaining = bookingsRevenueGoal - ytdData.bookingsRevenueYtd;
+    
+    return {
+      actual: ytdData.bookingsRevenueYtd,
+      goal: bookingsRevenueGoal,
+      percentOfPlan,
+      pacingDelta,
+      remaining,
+    };
+  }, [ytdData.bookingsRevenueYtd, bookingsRevenueGoal, yearProgress]);
+
+  // Calculate metrics for Cash
+  const cashMetrics = useMemo(() => {
+    if (cashGoal === 0) return null;
+    const percentOfPlan = Math.round((ytdData.cashYtd / cashGoal) * 100);
+    const pacingDelta = percentOfPlan - yearProgress;
+    const remaining = cashGoal - ytdData.cashYtd;
+    
+    return {
+      actual: ytdData.cashYtd,
+      goal: cashGoal,
+      percentOfPlan,
+      pacingDelta,
+      remaining,
+    };
+  }, [ytdData.cashYtd, cashGoal, yearProgress]);
+
+  const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+
+  // Simple pie chart component with percentage in center
+  const PieChart = ({ percentage, size = 100 }: { percentage: number; size?: number }) => {
+    const radius = size / 2 - 5;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (percentage / 100) * circumference;
+    const displayPercentage = Math.min(percentage, 100);
+    
+    return (
+      <div style={{ position: 'relative', width: size, height: size }}>
+        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="#e5e7eb"
+            strokeWidth="8"
+          />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={displayPercentage >= 100 ? '#10b981' : '#3b82f6'}
+            strokeWidth="8"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            fontSize: size < 100 ? '20px' : '24px',
+            fontWeight: '700',
+            color: '#1f2937',
+            lineHeight: '1'
+          }}>
+            {displayPercentage}%
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Determine which metric to show
+  const currentMetrics = activeView === 'bookings' ? bookingsMetrics : cashMetrics;
+  const currentTitle = activeView === 'bookings' ? 'Bookings Goal' : 'Cash Goal';
+
+  if (!bookingsMetrics && !cashMetrics) return null;
+
+  // If only one metric exists, auto-select it
+  const hasBoth = bookingsMetrics && cashMetrics;
+  const effectiveView = !hasBoth 
+    ? (bookingsMetrics ? 'bookings' : 'cash')
+    : activeView;
+  const displayMetrics = effectiveView === 'bookings' ? bookingsMetrics : cashMetrics;
+
+  if (!displayMetrics) return null;
+
+  return (
+    <div style={{
+      backgroundColor: 'white',
+      borderRadius: '12px',
+      padding: isMobile ? '20px' : '24px',
+      border: '1px solid #e5e7eb',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+    }}>
+      <h3 style={{ 
+        fontSize: isMobile ? '18px' : '20px', 
+        fontWeight: '600', 
+        margin: '0 0 12px 0', 
+        color: '#1f2937' 
+      }}>
+        {currentYear} Goal Tracker
+      </h3>
+      
+      {hasBoth && (
+        <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '8px', backgroundColor: '#f3f4f6', borderRadius: '8px', padding: '4px' }}>
+            <button
+              onClick={() => setActiveView('bookings')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: effectiveView === 'bookings' ? 'white' : 'transparent',
+                color: effectiveView === 'bookings' ? '#1f2937' : '#6b7280',
+                fontWeight: effectiveView === 'bookings' ? '600' : '400',
+                fontSize: '14px',
+                cursor: 'pointer',
+                boxShadow: effectiveView === 'bookings' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              Bookings
+            </button>
+            <button
+              onClick={() => setActiveView('cash')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: effectiveView === 'cash' ? 'white' : 'transparent',
+                color: effectiveView === 'cash' ? '#1f2937' : '#6b7280',
+                fontWeight: effectiveView === 'cash' ? '600' : '400',
+                fontSize: '14px',
+                cursor: 'pointer',
+                boxShadow: effectiveView === 'cash' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              Cash
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '20px', flexDirection: isMobile ? 'column' : 'row' }}>
+        <div style={{ flexShrink: 0 }}>
+          <PieChart percentage={Math.min(displayMetrics.percentOfPlan, 100)} size={isMobile ? 100 : 120} />
+        </div>
+        
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
+            {toUSD(displayMetrics.actual)}
+          </div>
+          <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
+            of {toUSD(displayMetrics.goal)} goal
+          </div>
+        </div>
       </div>
 
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '12px',
+        paddingTop: '16px',
+        borderTop: '1px solid #e5e7eb'
+      }}>
+        <div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Remaining</div>
+          <div style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>
+            {toUSD(displayMetrics.remaining)}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Pacing</div>
+          <div style={{
+            fontSize: '16px',
+            fontWeight: '600',
+            color: displayMetrics.pacingDelta >= 0 ? '#10b981' : '#ef4444'
+          }}>
+            {displayMetrics.pacingDelta >= 0 ? '+' : ''}{displayMetrics.pacingDelta}%
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GoalEmptyState({ onSetGoals, isMobile }: { onSetGoals: () => void; isMobile: boolean }) {
+  return (
+    <div style={{
+      backgroundColor: 'white',
+      borderRadius: '12px',
+      padding: isMobile ? '20px' : '24px',
+      border: '1px solid #e5e7eb',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+    }}>
+      <h3 style={{ 
+        fontSize: isMobile ? '16px' : '18px', 
+        fontWeight: '600', 
+        margin: '0 0 12px 0', 
+        color: '#1f2937' 
+      }}>
+        Goal Tracker
+      </h3>
+      <p style={{ margin: '0 0 20px 0', fontSize: isMobile ? '14px' : '16px', color: '#6b7280' }}>
+        No goals have been set. Add your bookings and cash goals for the year to track your progress.
+      </p>
+      <button
+        onClick={onSetGoals}
+        style={{
+          padding: isMobile ? '14px 20px' : '12px 24px',
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontWeight: 600,
+          fontSize: isMobile ? '16px' : '14px',
+          boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
+        }}
+      >
+        Set Goals
+      </button>
     </div>
   )
 }

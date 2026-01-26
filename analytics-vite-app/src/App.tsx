@@ -5,7 +5,7 @@ import { useDataManager } from './hooks/useDataManager'
 import LoginForm from './components/LoginForm'
 import AcceptInvitation from './components/AcceptInvitation'
 import { UpgradePrompt } from './FeatureGate'
-import { User, Crown, LogOut, Settings, Shield, Plus, X, Menu } from 'lucide-react'
+import { User, Crown, Settings, Shield, Plus, X, Menu } from 'lucide-react'
 import type { Page } from './types'
 import AdminDashboard from './components/AdminDashboard'
 import { usePageView } from './hooks/usePostHog'
@@ -20,6 +20,7 @@ const Forecast = lazy(() => import('./Forecast'))
 const UserProfile = lazy(() => import('./UserProfile'))
 const Advertising = lazy(() => import('./Advertising'))
 const AuthModal = lazy(() => import('./AuthModal'))
+const Goals = lazy(() => import('./Goals'))
 
 function AppContent() {
   const { user, signOut, loading, features, viewingAsGuest, sharedAccountOwnerId, switchToOwnAccount, isViewOnly, effectiveUserId, isAdmin, impersonatingUserId, impersonatingUser, stopImpersonation } = useAuth()
@@ -138,8 +139,12 @@ function AppContent() {
           setNavigationAction({ page: 'advertising', action: 'edit-month', month })
           setTimeout(() => setNavigationAction(null), 100)
           break
+        case 'view-goals':
+          setCurrentPage('goals')
+          setTimeout(() => setNavigationAction(null), 100)
+          break
         case 'view-forecast':
-          setCurrentPage('forecast')
+          // Forecast page removed - keeping for potential future Tools page
           break
       }
     }
@@ -315,6 +320,22 @@ function AppContent() {
         {/* Desktop Navigation */}
         <div style={{ display: isMobile ? 'none' : 'flex', gap: '8px', marginLeft: 'auto' }}>
           <button
+            onClick={() => setCurrentPage('goals')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: currentPage === 'goals' ? '#3b82f6' : '#f3f4f6',
+              color: currentPage === 'goals' ? 'white' : '#374151',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Goals
+          </button>
+          <button
             onClick={() => setCurrentPage('insights')}
             style={{
               padding: '8px 16px',
@@ -345,22 +366,6 @@ function AppContent() {
             }}
           >
             Funnel
-          </button>
-          <button
-            onClick={() => setCurrentPage('forecast')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              backgroundColor: currentPage === 'forecast' ? '#3b82f6' : '#f3f4f6',
-              color: currentPage === 'forecast' ? 'white' : '#374151',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            Forecast
           </button>
           <button
             onClick={() => setCurrentPage('bookings')}
@@ -452,7 +457,7 @@ function AppContent() {
               }}
             >
               <Plus size={16} />
-              Update This Month
+              New Data
             </button>
           )}
         </div>
@@ -479,27 +484,7 @@ function AppContent() {
 
         {/* User Menu - Desktop */}
         <div style={{ display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
-          {user ? (
-            <button
-              onClick={signOut}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: '1px solid #d1d5db',
-                backgroundColor: 'white',
-                color: '#6b7280',
-                fontSize: '12px',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              <LogOut size={12} />
-              Logout
-            </button>
-          ) : (
+          {!user && (
             <button
               onClick={() => setShowAuthModal(true)}
               style={{
@@ -523,34 +508,6 @@ function AppContent() {
           )}
         </div>
 
-        {/* User Menu - Mobile (in hamburger menu) */}
-        {isMobile && user && (
-          <div style={{ 
-            display: isMobileMenuOpen ? 'flex' : 'none',
-            alignItems: 'center',
-            gap: '8px',
-            marginLeft: 'auto',
-            marginRight: '8px'
-          }}>
-            <button
-              onClick={signOut}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: '1px solid #d1d5db',
-                backgroundColor: 'white',
-                color: '#6b7280',
-                fontSize: '12px',
-                cursor: 'pointer'
-              }}
-            >
-              <LogOut size={12} />
-            </button>
-          </div>
-        )}
       </nav>
 
       {/* Mobile Menu Overlay */}
@@ -631,6 +588,26 @@ function AppContent() {
             {/* Mobile Menu Items */}
             <button
               onClick={() => {
+                setCurrentPage('goals')
+                setIsMobileMenuOpen(false)
+              }}
+              style={{
+                padding: '16px 24px',
+                border: 'none',
+                backgroundColor: currentPage === 'goals' ? '#eff6ff' : 'transparent',
+                color: currentPage === 'goals' ? '#3b82f6' : '#374151',
+                fontSize: '16px',
+                fontWeight: currentPage === 'goals' ? '600' : '500',
+                textAlign: 'left',
+                cursor: 'pointer',
+                borderLeft: currentPage === 'goals' ? '4px solid #3b82f6' : '4px solid transparent',
+                transition: 'all 0.2s'
+              }}
+            >
+              Goals
+            </button>
+            <button
+              onClick={() => {
                 setCurrentPage('insights')
                 setIsMobileMenuOpen(false)
               }}
@@ -668,26 +645,6 @@ function AppContent() {
               }}
             >
               Funnel
-            </button>
-            <button
-              onClick={() => {
-                setCurrentPage('forecast')
-                setIsMobileMenuOpen(false)
-              }}
-              style={{
-                padding: '16px 24px',
-                border: 'none',
-                backgroundColor: currentPage === 'forecast' ? '#eff6ff' : 'transparent',
-                color: currentPage === 'forecast' ? '#3b82f6' : '#374151',
-                fontSize: '16px',
-                fontWeight: currentPage === 'forecast' ? '600' : '500',
-                textAlign: 'left',
-                cursor: 'pointer',
-                borderLeft: currentPage === 'forecast' ? '4px solid #3b82f6' : '4px solid transparent',
-                transition: 'all 0.2s'
-              }}
-            >
-              Forecast
             </button>
             <button
               onClick={() => {
@@ -787,7 +744,7 @@ function AppContent() {
                   }}
                 >
                   <Plus size={20} />
-                  Update This Month
+                  New Data
                 </button>
               </div>
             )}
@@ -827,6 +784,11 @@ function AppContent() {
       {/* Page Content */}
       <div style={{ padding: '0', marginTop: isMobile ? '56px' : '0' }}>
         <Suspense fallback={<div style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>Loading...</div>}>
+          {currentPage === 'goals' && (
+            <Goals 
+              dataManager={dataManager}
+            />
+          )}
           {currentPage === 'insights' && (
             <Insights 
               dataManager={dataManager}
@@ -841,19 +803,20 @@ function AppContent() {
             navigationAction={navigationAction}
             isViewOnly={isViewOnly}
           />}
-          {currentPage === 'forecast' && (
+          {/* Forecast page removed - keeping code for potential future Tools page */}
+          {/* {currentPage === 'forecast' && (
             <FeatureGate feature="forecast">
               <Forecast 
                 funnelData={dataManager.funnelData} 
                 serviceTypes={dataManager.serviceTypes} 
-                setServiceTypes={() => {}} // Handled by data manager
+                setServiceTypes={() => {}}
                 bookings={dataManager.bookings} 
                 payments={dataManager.payments}
                 showModelingOnly
                 dataManager={dataManager}
               />
             </FeatureGate>
-          )}
+          )} */}
           {currentPage === 'advertising' && (
             <FeatureGate feature="advertising">
               <Advertising 

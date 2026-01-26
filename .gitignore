@@ -1,5 +1,7 @@
 # Local Netlify folder
 .netlify
+.netlify-deploy.zip
+**/.netlify-deploy.zip
 
 # Environment variables
 .env
