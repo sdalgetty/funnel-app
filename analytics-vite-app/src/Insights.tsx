@@ -1834,10 +1834,11 @@ function GoalVisualization({
     // Remove cash already locked in from prior-year bookings for pacing only
     const adjustedGoal = Math.max(cashGoal - ytdData.lockedInCash, 0);
     const adjustedActual = Math.max(ytdData.cashYtd - ytdData.lockedInCash, 0);
-    const percentOfPlan = adjustedGoal === 0
+    const percentOfPlan = Math.round((ytdData.cashYtd / cashGoal) * 100);
+    const pacingPercent = adjustedGoal === 0
       ? 100
       : Math.round((adjustedActual / adjustedGoal) * 100);
-    const pacingDelta = percentOfPlan - yearProgress;
+    const pacingDelta = pacingPercent - yearProgress;
     const remaining = cashGoal - ytdData.cashYtd;
     
     return {
