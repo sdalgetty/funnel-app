@@ -19,7 +19,6 @@ import {
   Download,
   MessageSquare,
   Star,
-  PlayCircle,
   ChevronRight,
   Edit,
   Save,
@@ -1623,26 +1622,6 @@ function SupportSection({ user }: { user: any }) {
           >
             <HelpCircle size={16} />
             View Documentation
-          </button>
-
-          <button
-            onClick={() => window.open('https://vimeo.com/1158563687?share=copy&fl=sv&fe=ci', '_blank')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '12px 16px',
-              backgroundColor: '#f9fafb',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              color: '#374151',
-              width: 'fit-content'
-            }}
-          >
-            <PlayCircle size={16} />
-            Getting Started Video
           </button>
           
           <button
