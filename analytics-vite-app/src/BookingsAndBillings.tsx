@@ -2243,7 +2243,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
           <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', margin: 0 }}>
-                Payment Schedule (for Forecast)
+                Payment Schedule (For Cash Tracking)
               </label>
               <button
                 type="button"
@@ -3247,7 +3247,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
           <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', margin: 0 }}>
-                Payment Schedule (for Forecast)
+                Payment Schedule (For Cash Tracking)
               </label>
               <button
                 type="button"
