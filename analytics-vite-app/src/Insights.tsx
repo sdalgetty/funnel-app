@@ -857,14 +857,15 @@ export default function Insights({ dataManager }: { dataManager: any }) {
                   {leadSourceBreakdown.byAvgRevenueDesc.map(item => {
                     const maxAvg = leadSourceBreakdown.byAvgRevenueDesc[0]?.avgRevenue || 0
                     const widthPct = maxAvg > 0 ? Math.round((item.avgRevenue / maxAvg) * 100) : 0
+                    const barColor = getLeadSourceColor(item.id)
                     return (
                       <div key={item.id} style={{ marginBottom: 12 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                           <div style={{ flex: 1, color: '#374151' }}>{item.name}</div>
                           <div style={{ color: '#6b7280', fontSize: 12 }}>{toUSD(item.avgRevenue)}</div>
                         </div>
-                        <div style={{ height: 8, background: '#ecfdf5', borderRadius: 4 }}>
-                          <div style={{ width: `${widthPct}%`, height: '100%', background: '#10b981', borderRadius: 4 }} />
+                        <div style={{ height: 8, background: hexToRgba(barColor, 0.12), borderRadius: 4 }}>
+                          <div style={{ width: `${widthPct}%`, height: '100%', background: barColor, borderRadius: 4 }} />
                         </div>
                       </div>
                     )
