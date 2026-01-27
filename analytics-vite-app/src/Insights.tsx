@@ -13,6 +13,35 @@ import { logger } from './utils/logger'
 type MonthRange = { start: number; end: number }
 type TimeFilterOption = { key: string; label: string }
 
+const LEAD_SOURCE_COLORS = [
+  '#3b82f6', // Blue
+  '#f59e0b', // Orange/Amber
+  '#10b981', // Green
+  '#8b5cf6', // Purple
+  '#ec4899', // Pink
+  '#06b6d4', // Cyan
+  '#f97316', // Orange
+  '#84cc16', // Lime
+  '#6366f1', // Indigo
+  '#ef4444', // Red
+]
+
+const hexToRgba = (hex: string, alpha: number) => {
+  const value = hex.replace('#', '')
+  const r = parseInt(value.substring(0, 2), 16)
+  const g = parseInt(value.substring(2, 4), 16)
+  const b = parseInt(value.substring(4, 6), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+const getLeadSourceColorByIndex = (index: number) => {
+  const base = LEAD_SOURCE_COLORS[index % LEAD_SOURCE_COLORS.length]
+  const cycle = Math.floor(index / LEAD_SOURCE_COLORS.length)
+  if (cycle === 0) return base
+  const alpha = Math.max(0.4, 0.75 - cycle * 0.15)
+  return hexToRgba(base, alpha)
+}
+
 const monthToIndex = (year: number, month: number) => year * 12 + (month - 1)
 
 const isMonthInRange = (year: number, month: number, range: MonthRange) => {
@@ -65,6 +94,56 @@ export default function Insights({ dataManager }: { dataManager: any }) {
   const serviceTypes: ServiceType[] = dataManager?.serviceTypes || []
   const adCampaigns: AdCampaign[] = dataManager?.adCampaigns || []
   const leadSources: LeadSource[] = dataManager?.leadSources || []
+
+  const leadSourceColorKey = useMemo(() => {
+    const id = effectiveUserId || user?.id
+    return id ? `fnnl:leadSourceColors:${id}` : null
+  }, [effectiveUserId, user?.id])
+  const [leadSourceColors, setLeadSourceColors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (!leadSourceColorKey) return
+    try {
+      const stored = localStorage.getItem(leadSourceColorKey)
+      if (stored) {
+        const parsed = JSON.parse(stored) as Record<string, string>
+        setLeadSourceColors(parsed || {})
+        return
+      }
+    } catch {
+      // Ignore storage errors
+    }
+    setLeadSourceColors({})
+  }, [leadSourceColorKey])
+
+  useEffect(() => {
+    if (!leadSourceColorKey || leadSources.length === 0) return
+    const nextColors: Record<string, string> = { ...leadSourceColors }
+    let nextIndex = Object.keys(nextColors).length
+    let changed = false
+
+    leadSources.forEach((source) => {
+      if (!nextColors[source.id]) {
+        nextColors[source.id] = getLeadSourceColorByIndex(nextIndex)
+        nextIndex += 1
+        changed = true
+      }
+    })
+
+    if (changed) {
+      setLeadSourceColors(nextColors)
+      try {
+        localStorage.setItem(leadSourceColorKey, JSON.stringify(nextColors))
+      } catch {
+        // Ignore storage errors
+      }
+    }
+  }, [leadSources, leadSourceColors, leadSourceColorKey])
+
+  const getLeadSourceColor = useCallback(
+    (id: string) => leadSourceColors[id] || LEAD_SOURCE_COLORS[0],
+    [leadSourceColors]
+  )
 
   // Forecast models loading removed - keeping for potential future Tools page
   // useEffect(() => {
@@ -731,7 +810,13 @@ export default function Insights({ dataManager }: { dataManager: any }) {
                   No lead source data exists for the selected time range. You can either adjust the time range or add new sales data.
                 </p>
               ) : (
-                <LeadSourcePieChart data={leadSourceBreakdown.byCountDesc} isMobile={isMobile} toUSD={toUSD} formatNumber={formatNumber} />
+                <LeadSourcePieChart
+                  data={leadSourceBreakdown.byCountDesc}
+                  isMobile={isMobile}
+                  toUSD={toUSD}
+                  formatNumber={formatNumber}
+                  getColor={getLeadSourceColor}
+                />
               )}
             </div>
             
@@ -743,7 +828,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
                   No lead source data exists for the selected time range. You can either adjust the time range or add new sales data.
                 </p>
               ) : (
-                <LeadSourcePieChart 
+                <LeadSourcePieChart
                   data={leadSourceBreakdown.byRevenueDesc.map(item => ({ 
                     id: item.id,
                     name: item.name, 
@@ -755,6 +840,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
                   showRevenue 
                   toUSD={toUSD}
                   formatNumber={formatNumber}
+                  getColor={getLeadSourceColor}
                 />
               )}
             </div>
@@ -815,33 +901,20 @@ export default function Insights({ dataManager }: { dataManager: any }) {
 }
 
 // Lead Source Pie Chart Component using recharts
-function LeadSourcePieChart({ data, isMobile, showRevenue = false, toUSD, formatNumber }: { 
+function LeadSourcePieChart({ data, isMobile, showRevenue = false, toUSD, formatNumber, getColor }: { 
   data: Array<{ id: string; name: string; count: number; revenue?: number; pctCount: number }>; 
   isMobile: boolean; 
   showRevenue?: boolean;
   toUSD: (cents: number) => string;
   formatNumber: (n: number) => string;
+  getColor: (id: string) => string;
 }) {
-  // Color palette - vibrant colors similar to the sketch
-  const colors = [
-    '#3b82f6', // Blue
-    '#f59e0b', // Orange/Amber
-    '#10b981', // Green
-    '#8b5cf6', // Purple
-    '#ec4899', // Pink
-    '#06b6d4', // Cyan
-    '#f97316', // Orange
-    '#84cc16', // Lime
-    '#6366f1', // Indigo
-    '#ef4444', // Red
-  ]
-  
   // Prepare data for recharts
-  const chartData = data.map((item, index) => ({
+  const chartData = data.map((item) => ({
     name: item.name,
     value: showRevenue ? (item.revenue || 0) : item.count,
     percentage: item.pctCount,
-    color: colors[index % colors.length],
+    color: getColor(item.id),
     count: item.count,
     revenue: item.revenue || 0,
   }))
