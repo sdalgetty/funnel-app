@@ -352,22 +352,6 @@ function AppContent() {
         {/* Desktop Navigation */}
         <div style={{ display: isMobile ? 'none' : 'flex', gap: '8px', marginLeft: 'auto' }}>
           <button
-            onClick={() => setCurrentPage('goals')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              backgroundColor: currentPage === 'goals' ? '#3b82f6' : '#f3f4f6',
-              color: currentPage === 'goals' ? 'white' : '#374151',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            Goals
-          </button>
-          <button
             onClick={() => setCurrentPage('insights')}
             style={{
               padding: '8px 16px',
@@ -382,6 +366,22 @@ function AppContent() {
             }}
           >
             Insights
+          </button>
+          <button
+            onClick={() => setCurrentPage('goals')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: currentPage === 'goals' ? '#3b82f6' : '#f3f4f6',
+              color: currentPage === 'goals' ? 'white' : '#374151',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Goals
           </button>
           <button
             onClick={() => setCurrentPage('funnel')}
@@ -620,26 +620,6 @@ function AppContent() {
             {/* Mobile Menu Items */}
             <button
               onClick={() => {
-                setCurrentPage('goals')
-                setIsMobileMenuOpen(false)
-              }}
-              style={{
-                padding: '16px 24px',
-                border: 'none',
-                backgroundColor: currentPage === 'goals' ? '#eff6ff' : 'transparent',
-                color: currentPage === 'goals' ? '#3b82f6' : '#374151',
-                fontSize: '16px',
-                fontWeight: currentPage === 'goals' ? '600' : '500',
-                textAlign: 'left',
-                cursor: 'pointer',
-                borderLeft: currentPage === 'goals' ? '4px solid #3b82f6' : '4px solid transparent',
-                transition: 'all 0.2s'
-              }}
-            >
-              Goals
-            </button>
-            <button
-              onClick={() => {
                 setCurrentPage('insights')
                 setIsMobileMenuOpen(false)
               }}
@@ -657,6 +637,26 @@ function AppContent() {
               }}
             >
               Insights
+            </button>
+            <button
+              onClick={() => {
+                setCurrentPage('goals')
+                setIsMobileMenuOpen(false)
+              }}
+              style={{
+                padding: '16px 24px',
+                border: 'none',
+                backgroundColor: currentPage === 'goals' ? '#eff6ff' : 'transparent',
+                color: currentPage === 'goals' ? '#3b82f6' : '#374151',
+                fontSize: '16px',
+                fontWeight: currentPage === 'goals' ? '600' : '500',
+                textAlign: 'left',
+                cursor: 'pointer',
+                borderLeft: currentPage === 'goals' ? '4px solid #3b82f6' : '4px solid transparent',
+                transition: 'all 0.2s'
+              }}
+            >
+              Goals
             </button>
             <button
               onClick={() => {
