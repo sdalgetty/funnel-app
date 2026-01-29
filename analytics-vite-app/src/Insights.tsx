@@ -950,15 +950,16 @@ function LeadSourcePieChart({ data, isMobile, showRevenue = false, toUSD, format
   // Dynamic height for the pie itself (legend is rendered below the chart)
   const chartHeight = useMemo(() => {
     const radius = isMobile ? 80 : 100
-    const chartBase = radius * 2 + 60 // pie diameter + clearance for % labels outside
-    const minHeight = isMobile ? 220 : 260
+    const labelPadding = isMobile ? 80 : 96
+    const chartBase = radius * 2 + labelPadding // pie diameter + clearance for % labels outside
+    const minHeight = isMobile ? 260 : 320
     return Math.max(minHeight, Math.round(chartBase))
   }, [isMobile])
   
   return (
     <div style={{ width: '100%' }}>
       <ResponsiveContainer width="100%" height={chartHeight}>
-        <PieChart>
+        <PieChart margin={{ top: 24, right: 24, bottom: 24, left: 24 }}>
           <Pie
             data={chartData}
             cx="50%"
