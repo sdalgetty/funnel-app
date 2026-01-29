@@ -76,9 +76,9 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     leadSources: string
     advertising: string
   }>({
-    salesFunnel: 'past30Days',
-    leadSources: 'past30Days',
-    advertising: 'past30Days'
+    salesFunnel: 'past90Days',
+    leadSources: 'past90Days',
+    advertising: 'past90Days'
   })
   // Forecast models state removed - keeping for potential future Tools page
   // const [forecastModels, setForecastModels] = useState<ForecastModel[]>([])
@@ -245,8 +245,8 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     const yearBeforeThat2 = currentYear - 3
     
     const baseOptions = [
-      { key: 'past30Days', label: 'Past 30 Days' },
-      { key: 'past90Days', label: 'Past 90 Days' },
+      { key: 'past30Days', label: 'Current Month' },
+      { key: 'past90Days', label: 'Past 3 Months' },
       { key: 'past6Months', label: 'Past 6 Months' },
       { key: 'past12Months', label: 'Past 12 Months' },
       { key: 'currentYear', label: `${currentYear}` },
@@ -271,7 +271,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       const next = { ...prev }
       ;(['salesFunnel', 'leadSources', 'advertising'] as const).forEach(section => {
         if (!validFilterKeys.has(prev[section])) {
-          next[section] = 'past30Days'
+          next[section] = 'past90Days'
           changed = true
         }
       })
@@ -287,21 +287,12 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     
     switch (filterKey) {
       case 'past30Days': {
-        // Calculate 30 days ago
-        const thirtyDaysAgo = new Date(now)
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-        const startYear = thirtyDaysAgo.getFullYear()
-        const startMonth = thirtyDaysAgo.getMonth() + 1
-        const start = monthToIndex(startYear, startMonth)
-        return { start: Math.max(0, start), end: currentMonthIndex }
+        // Current month only
+        return { start: currentMonthIndex, end: currentMonthIndex }
       }
       case 'past90Days': {
-        // Calculate 90 days ago
-        const ninetyDaysAgo = new Date(now)
-        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
-        const startYear = ninetyDaysAgo.getFullYear()
-        const startMonth = ninetyDaysAgo.getMonth() + 1
-        const start = monthToIndex(startYear, startMonth)
+        // Past 3 months: current + previous 2
+        const start = currentMonthIndex - 2
         return { start: Math.max(0, start), end: currentMonthIndex }
       }
       case 'past6Months': {
@@ -327,13 +318,8 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             }
           }
         }
-        // Default to past 30 days if unknown filter
-        const thirtyDaysAgo = new Date(now)
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-        const startYear = thirtyDaysAgo.getFullYear()
-        const startMonth = thirtyDaysAgo.getMonth() + 1
-        const start = monthToIndex(startYear, startMonth)
-        return { start: Math.max(0, start), end: currentMonthIndex }
+        // Default to current month if unknown filter
+        return { start: currentMonthIndex, end: currentMonthIndex }
     }
   }, [currentDateInfo])
 
@@ -448,7 +434,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
         }
       })
     } else {
-      // For date ranges (past 3/6/12 months), only use existing months
+      // For month ranges, only use existing months
       return existingMonths.map(month => {
         const key = `${month.year}-${month.month}`
         const dynamicData = calculateDynamicDataForRange[key] || { bookings: 0, closes: 0, cash: 0 }
@@ -737,7 +723,15 @@ export default function Insights({ dataManager }: { dataManager: any }) {
   return (
     <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 700, margin: 0, color: '#1f2937' }}>Insights</h1>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: 700, margin: 0, color: '#1f2937' }}>Insights</h1>
+          <div style={{ marginTop: '6px', fontSize: '15px', fontWeight: 500, color: '#4b5563' }}>
+            Know where your business stands — and where it’s headed.
+          </div>
+          <div style={{ marginTop: '4px', fontSize: '14px', fontWeight: 400, color: '#6b7280', maxWidth: '720px' }}>
+            This page turns your sales data into signals about performance, momentum, and focus.
+          </div>
+        </div>
       </div>
 
       {/* Welcome Section and Tasks */}
@@ -1080,7 +1074,7 @@ function TimeFilterSelect({ value, onChange, options }: { value: string; onChang
   )
 }
 
-function Cards({ children, columns = 4, desktopColumns }: { children: React.ReactNode; columns?: number; desktopColumns?: number }) {
+function Cards({ children, columns = 4, desktopColumns, mobileColumns }: { children: React.ReactNode; columns?: number; desktopColumns?: number; mobileColumns?: number }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   
   useEffect(() => {
@@ -1090,8 +1084,8 @@ function Cards({ children, columns = 4, desktopColumns }: { children: React.Reac
   }, [])
   
   // Mobile: use specified columns, Desktop: use desktopColumns or default to 4
-  const mobileColumns = columns === 1 ? 1 : 2
-  const gridColumns = isMobile ? mobileColumns : (desktopColumns || 4)
+  const defaultMobileColumns = columns === 1 ? 1 : 2
+  const gridColumns = isMobile ? (mobileColumns ?? defaultMobileColumns) : (desktopColumns || 4)
   
   return (
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, gap: isMobile ? 12 : 16 }}>
@@ -1100,7 +1094,7 @@ function Cards({ children, columns = 4, desktopColumns }: { children: React.Reac
   )
 }
 
-function Card({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string | number; sub?: string }) {
+function Card({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string | number; sub?: React.ReactNode }) {
   return (
     <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -1131,7 +1125,6 @@ function WelcomeAndTasks({
   payments?: Payment[];
   currentYear?: number;
 }) {
-  const [tasks, setTasks] = useState<Array<{ id: string; label: string; completed: boolean; action: string; month?: { year: number; month: number } }>>([])
   // Forecast models state removed - keeping for potential future Tools page
   // const [forecastModels, setForecastModels] = useState<any[]>([])
   const { user: authUser, effectiveUserId, isViewOnly } = useAuth()
@@ -1141,19 +1134,6 @@ function WelcomeAndTasks({
     const now = new Date()
     return { year: now.getFullYear(), month: now.getMonth() + 1 }
   }, [])
-
-  const lastMonth = useMemo(() => {
-    const now = new Date()
-    const last = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    return { year: last.getFullYear(), month: last.getMonth() + 1 }
-  }, [])
-
-  const isNewMonth = useMemo(() => {
-    const now = new Date()
-    return now.getDate() === 1 // First day of the month
-  }, [])
-
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
   // Forecast models loading removed - keeping for potential future Tools page
   // useEffect(() => {
@@ -1171,35 +1151,29 @@ function WelcomeAndTasks({
   //   loadForecastModels()
   // }, [authUser?.id, effectiveUserId])
 
-  // Check if current month has data
-  const currentMonthHasData = useMemo(() => {
-    const monthData = funnelData.find(
-      f => f.year === currentMonth.year && f.month === currentMonth.month
-    )
-    return monthData && (
-      (monthData.inquiries || 0) > 0 ||
-      (monthData.callsBooked || 0) > 0 ||
-      (monthData.callsTaken || 0) > 0 ||
-      (monthData.closes || 0) > 0 ||
-      (monthData.bookings || 0) > 0 ||
-      (monthData.cash || 0) > 0
-    )
-  }, [funnelData, currentMonth])
+  const lastEntryDate = useMemo(() => {
+    let latest: Date | null = null
+    funnelData.forEach(month => {
+      if (!month.lastUpdated) return
+      const parsed = new Date(month.lastUpdated)
+      if (Number.isNaN(parsed.getTime())) return
+      if (!latest || parsed > latest) {
+        latest = parsed
+      }
+    })
+    return latest
+  }, [funnelData])
 
-  // Check if last month has data
-  const lastMonthHasData = useMemo(() => {
-    const monthData = funnelData.find(
-      f => f.year === lastMonth.year && f.month === lastMonth.month
-    )
-    return monthData && (
-      (monthData.inquiries || 0) > 0 ||
-      (monthData.callsBooked || 0) > 0 ||
-      (monthData.callsTaken || 0) > 0 ||
-      (monthData.closes || 0) > 0 ||
-      (monthData.bookings || 0) > 0 ||
-      (monthData.cash || 0) > 0
-    )
-  }, [funnelData, lastMonth])
+  const lastEntryLabel = lastEntryDate
+    ? lastEntryDate.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    })
+    : 'Not recorded yet'
+  const isEntryStale = !lastEntryDate || (Date.now() - lastEntryDate.getTime()) > (30 * 24 * 60 * 60 * 1000)
 
   // Forecast model checks removed - keeping for potential future Tools page
   // const hasActiveForecastModel = useMemo(() => {
@@ -1217,105 +1191,6 @@ function WelcomeAndTasks({
   //   return now.getMonth() === 0
   // }, [])
 
-  // Generate tasks based on state
-  useEffect(() => {
-    const generateTasks = () => {
-      const newTasks: Array<{ id: string; label: string; completed: boolean; action: string; month?: { year: number; month: number } }> = []
-
-      if (isNewMonth) {
-        // Finalize tasks for last month
-        newTasks.push({
-          id: `finalize-funnel-${lastMonth.year}-${lastMonth.month}`,
-          label: `Finalize ${monthNames[lastMonth.month - 1]}'s Sales Funnel Data`,
-          completed: false,
-          action: 'edit-funnel',
-          month: lastMonth
-        })
-        newTasks.push({
-          id: `finalize-sales-${lastMonth.year}-${lastMonth.month}`,
-          label: `Finalize ${monthNames[lastMonth.month - 1]}'s Sales Data`,
-          completed: false,
-          action: 'view-sales',
-          month: lastMonth
-        })
-        newTasks.push({
-          id: `finalize-advertising-${lastMonth.year}-${lastMonth.month}`,
-          label: `Finalize ${monthNames[lastMonth.month - 1]}'s Advertising Data`,
-          completed: false,
-          action: 'edit-advertising',
-          month: lastMonth
-        })
-      } else {
-        // Regular tasks for current month
-        if (!currentMonthHasData) {
-          newTasks.push({
-            id: `enter-funnel-${currentMonth.year}-${currentMonth.month}`,
-            label: `Enter ${monthNames[currentMonth.month - 1]}'s Sales Funnel Data`,
-            completed: false,
-            action: 'edit-funnel',
-            month: currentMonth
-          })
-          newTasks.push({
-            id: `enter-sales-${currentMonth.year}-${currentMonth.month}`,
-            label: `Enter ${monthNames[currentMonth.month - 1]}'s Sales Data`,
-            completed: false,
-            action: 'view-sales',
-            month: currentMonth
-          })
-          newTasks.push({
-            id: `enter-advertising-${currentMonth.year}-${currentMonth.month}`,
-            label: `Enter ${monthNames[currentMonth.month - 1]}'s Advertising Data`,
-            completed: false,
-            action: 'edit-advertising',
-            month: currentMonth
-          })
-        }
-      }
-
-      // Forecast model tasks removed - keeping for potential future Tools page
-
-      // Load completed tasks from localStorage
-      const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '[]')
-      
-      // If it's a new month, clear old month's tasks from localStorage
-      if (isNewMonth) {
-        const currentMonthKey = `${currentMonth.year}-${currentMonth.month}`
-        const lastMonthKey = `${lastMonth.year}-${lastMonth.month}`
-        const cleanedTasks = completedTasks.filter((taskId: string) => {
-          // Keep tasks that are for the current month or last month (finalize tasks)
-          return taskId.includes(currentMonthKey) || taskId.includes(lastMonthKey)
-        })
-        localStorage.setItem('completedTasks', JSON.stringify(cleanedTasks))
-      }
-      
-      const finalCompletedTasks = JSON.parse(localStorage.getItem('completedTasks') || '[]')
-      const tasksWithCompletion = newTasks.map(task => ({
-        ...task,
-        completed: finalCompletedTasks.includes(task.id)
-      }))
-
-      setTasks(tasksWithCompletion)
-    }
-
-    generateTasks()
-  }, [isNewMonth, currentMonthHasData, lastMonthHasData, currentMonth, lastMonth, monthNames])
-
-  // Toggle task completion
-  const toggleTask = (taskId: string) => {
-    const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '[]')
-    const isCompleted = completedTasks.includes(taskId)
-    
-    if (isCompleted) {
-      localStorage.setItem('completedTasks', JSON.stringify(completedTasks.filter((id: string) => id !== taskId)))
-    } else {
-      localStorage.setItem('completedTasks', JSON.stringify([...completedTasks, taskId]))
-    }
-
-    setTasks(prev => prev.map(task => 
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    ))
-  }
-
   // Handle navigation
   const handleNavigate = (action: string, month?: { year: number; month: number }) => {
     // Dispatch custom event for navigation
@@ -1327,7 +1202,6 @@ function WelcomeAndTasks({
   const firstName = user?.firstName || user?.name?.split(' ')[0] || 'there'
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const [showAllTasks, setShowAllTasks] = useState(false)
   
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -1335,19 +1209,16 @@ function WelcomeAndTasks({
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  const displayedTasks = showAllTasks ? tasks : tasks.slice(0, 2)
-  const hasMoreTasks = tasks.length > 2
 
   return (
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
+        gridTemplateColumns: '1fr', 
         gap: isMobile ? '16px' : '24px', 
-        marginBottom: isMobile ? '24px' : '32px',
-        padding: isMobile ? '16px' : '0',
+        marginBottom: isMobile ? '36px' : '48px',
+        padding: 0,
         alignItems: 'start'
       }}>
-        {/* Top Row: Welcome + Tasks */}
         {/* Welcome Section */}
         <div style={{
           backgroundColor: 'white',
@@ -1361,9 +1232,18 @@ function WelcomeAndTasks({
           <h2 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: '700', margin: '0 0 8px 0', color: '#1f2937' }}>
             Welcome back {firstName}!
           </h2>
-          <p style={{ fontSize: isMobile ? '14px' : '16px', color: '#6b7280', margin: '0 0 20px 0' }}>
+          <p style={{ fontSize: isMobile ? '14px' : '16px', color: '#6b7280', margin: '0 0 12px 0' }}>
             Remember, winning is a numbers game. Go make some moves!
           </p>
+          <div style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: 500, color: '#6b7280', margin: '0 0 4px 0' }}>
+            Last data entry: {lastEntryLabel}
+          </div>
+          <div style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: 400, color: '#9ca3af', margin: '0 0 16px 0' }}>
+            {isEntryStale
+              ? 'Some insights may be incomplete until your latest data is added.'
+              : 'Your insights reflect your most recently added data.'
+            }
+          </div>
           <button
               onClick={() => !isViewOnly && handleNavigate('edit-funnel', currentMonth)}
               disabled={isViewOnly}
@@ -1400,137 +1280,6 @@ function WelcomeAndTasks({
             </button>
         </div>
 
-        {/* Tasks Section */}
-        <div style={{
-          backgroundColor: 'white',
-          border: '1px solid #e5e7eb',
-          borderRadius: '12px',
-          padding: isMobile ? '16px' : '20px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? '8px' : '0' }}>
-          <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
-            This Month's Tasks
-          </h3>
-          {tasks.length > 0 && (
-            <div style={{
-              fontSize: '14px',
-              color: '#6b7280',
-              fontWeight: '500'
-            }}>
-              {tasks.filter(t => t.completed).length} of {tasks.length} complete
-            </div>
-          )}
-        </div>
-        {tasks.length === 0 ? (
-          <div style={{
-            padding: '16px',
-            backgroundColor: '#d1fae5',
-            borderRadius: '8px',
-            border: '1px solid #10b981',
-            textAlign: 'center'
-          }}>
-            <CheckCircle size={24} color="#065f46" style={{ marginBottom: '8px' }} />
-            <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#065f46' }}>
-              You're fully caught up through last month's data. Great job! 🎉
-            </p>
-          </div>
-        ) : (
-          <>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-              {displayedTasks.map(task => (
-              <div
-                key={task.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px',
-                  backgroundColor: task.completed ? '#f9fafb' : 'white',
-                  border: `1px solid ${task.completed ? '#d1d5db' : '#e5e7eb'}`,
-                  borderRadius: '8px',
-                  opacity: task.completed ? 0.7 : 1
-                }}
-              >
-                <div
-                  onClick={() => toggleTask(task.id)}
-                  style={{
-                    width: '20px',
-                    height: '20px',
-                    borderRadius: '4px',
-                    border: task.completed ? 'none' : '2px solid #d1d5db',
-                    backgroundColor: task.completed ? '#10b981' : 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    flexShrink: 0
-                  }}
-                >
-                  {task.completed && <CheckCircle size={14} color="white" />}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <span style={{
-                    fontSize: '14px',
-                    color: task.completed ? '#6b7280' : '#1f2937',
-                    textDecoration: task.completed ? 'line-through' : 'none'
-                  }}>
-                    {task.label}
-                  </span>
-                </div>
-                <button
-                  onClick={() => handleNavigate(task.action, task.month)}
-                  style={{
-                    padding: isMobile ? '8px 12px' : '4px 8px',
-                    fontSize: isMobile ? '13px' : '11px',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  Do Now
-                  <ArrowRight size={isMobile ? 14 : 12} />
-                </button>
-              </div>
-              ))}
-            </div>
-            {hasMoreTasks && (
-              <button
-                onClick={() => setShowAllTasks(!showAllTasks)}
-                style={{
-                  marginTop: '12px',
-                  padding: '8px 12px',
-                  fontSize: '13px',
-                  backgroundColor: 'transparent',
-                  color: '#3b82f6',
-                  border: '1px solid #3b82f6',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#eff6ff'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                }}
-              >
-                {showAllTasks ? 'Show Less' : `Show ${tasks.length - 2} More`}
-              </button>
-            )}
-          </>
-        )}
-        </div>
-
         {/* Bottom Row: Goal Tracker + Annualized Pace */}
         {(() => {
           const hasGoals = calculatorGoals && 
@@ -1545,9 +1294,9 @@ function WelcomeAndTasks({
               <div style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
-                gap: isMobile ? '16px' : '20px', 
+                gap: isMobile ? '24px' : '30px', 
                 gridColumn: '1 / -1',
-                marginTop: isMobile ? '16px' : '24px'
+                marginTop: isMobile ? '24px' : '36px'
               }}>
                 {hasGoals ? (
                   <GoalVisualization
@@ -1577,9 +1326,9 @@ function WelcomeAndTasks({
               <div style={{ 
                 display: 'grid', 
                 gridTemplateColumns: '1fr 1fr', 
-                gap: '24px', 
+                gap: '36px', 
                 gridColumn: '1 / -1',
-                marginTop: '24px'
+                marginTop: '36px'
               }}>
                 {hasGoals ? (
                   <GoalVisualization
@@ -1650,52 +1399,38 @@ function AnnualizedPace({
     [serviceTypes]
   );
 
-  // Calculate YTD totals
-  const ytdTotals = useMemo(() => {
-    const currentYearValue = yearLabel;
-    
-    const inquiriesYtd = funnelData.reduce((sum, month) => {
-      if (month.year === currentYearValue) {
-        return sum + (month.inquiries || 0);
-      }
-      return sum;
-    }, 0);
-
-    const callsYtd = funnelData.reduce((sum, month) => {
-      if (month.year === currentYearValue) {
-        return sum + (month.callsTaken || 0);
-      }
-      return sum;
-    }, 0);
-
-    const bookingsYtd = bookings.filter(b => {
-      if (!b?.dateBooked) return false;
-      if (!trackableServiceIds.has(b.serviceTypeId)) return false;
-      const year = parseInt(b.dateBooked.split('-')[0], 10);
-      return year === currentYearValue;
-    }).length;
-
-    return {
-      inquiries: inquiriesYtd,
-      callsTaken: callsYtd,
-      bookings: bookingsYtd,
-    };
-  }, [funnelData, bookings, currentYear, trackableServiceIds]);
-
-  // Get months elapsed
-  const getMonthsElapsed = () => {
-    const now = new Date();
-    const startOfYear = new Date(now.getFullYear(), 0, 1);
-    const months = (now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
-    return Math.max(0.01, Math.min(12, months));
-  };
-
   // Calculate pace
   const calculations = useMemo(() => {
-    const months = getMonthsElapsed();
-    const paceInq = (ytdTotals.inquiries / months) * 12;
-    const paceCalls = (ytdTotals.callsTaken / months) * 12;
-    const paceBookings = (ytdTotals.bookings / months) * 12;
+    const now = new Date();
+    const ninetyDaysAgo = new Date(now);
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    const startIdx = ninetyDaysAgo.getFullYear() * 12 + ninetyDaysAgo.getMonth();
+    const endIdx = now.getFullYear() * 12 + now.getMonth();
+
+    const inquiriesLast90 = funnelData.reduce((sum, month) => {
+      const idx = month.year * 12 + (month.month - 1);
+      if (idx < startIdx || idx > endIdx) return sum;
+      return sum + (month.inquiries || 0);
+    }, 0);
+
+    const callsLast90 = funnelData.reduce((sum, month) => {
+      const idx = month.year * 12 + (month.month - 1);
+      if (idx < startIdx || idx > endIdx) return sum;
+      return sum + (month.callsTaken || 0);
+    }, 0);
+
+    const bookingsLast90 = bookings.filter(b => {
+      if (!b?.dateBooked) return false;
+      if (!trackableServiceIds.has(b.serviceTypeId)) return false;
+      const bookedDate = new Date(b.dateBooked);
+      if (Number.isNaN(bookedDate.getTime())) return false;
+      return bookedDate >= ninetyDaysAgo && bookedDate <= now;
+    }).length;
+
+    const paceInq = Math.round((inquiriesLast90 / 90) * 365);
+    const paceCalls = Math.round((callsLast90 / 90) * 365);
+    const paceBookings = Math.round((bookingsLast90 / 90) * 365);
     
     // Check if on track for bookings goal
     const isOnTrack = bookingsGoal === 0 || paceBookings >= bookingsGoal;
@@ -1706,7 +1441,7 @@ function AnnualizedPace({
       paceBookings,
       isOnTrack,
     };
-  }, [ytdTotals, bookingsGoal]);
+  }, [bookings, bookingsGoal, funnelData, trackableServiceIds]);
 
   const formatNumber = (num: number): string => {
     return new Intl.NumberFormat('en-US').format(Math.round(num));
@@ -1727,87 +1462,37 @@ function AnnualizedPace({
           margin: 0, 
           color: '#1f2937' 
         }}>
-          Sales Funnel Pace for {yearLabel}
+          Sales Activity Pace for {yearLabel}
         </h3>
       </div>
-      <p style={{ margin: '0 0 16px 0', fontSize: 12, color: '#6b7280' }}>
-        This calculates the pace you're on for the year based on the current sales funnel data YTD.
+      <p style={{ margin: '4px 0 16px 0', fontSize: 12, color: '#6b7280', lineHeight: 1.6 }}>
+        Track your pace for the year based on your activity over the last 90 days.
       </p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '12px',
-          backgroundColor: '#f9fafb',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb'
-        }}>
-          <div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
-              Inquiries Pace
-            </div>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: '#1f2937' }}>
-              {formatNumber(calculations.paceInq)}
-            </div>
-          </div>
-          <Users size={20} color="#6b7280" />
-        </div>
-
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '12px',
-          backgroundColor: '#f9fafb',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb'
-        }}>
-          <div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
-              Calls Pace
-            </div>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: '#1f2937' }}>
-              {formatNumber(calculations.paceCalls)}
-            </div>
-          </div>
-          <Phone size={20} color="#6b7280" />
-        </div>
-
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '12px',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb',
-          backgroundColor: calculations.isOnTrack ? '#d1fae5' : '#fef2f2'
-        }}>
-          <div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
-              Number of Bookings Pace
-            </div>
-            <div style={{ 
-              fontSize: '18px', 
-              fontWeight: '700', 
-              color: calculations.isOnTrack ? '#065f46' : '#991b1b'
-            }}>
-              {formatNumber(calculations.paceBookings)}
-            </div>
-            {calculations.isOnTrack ? (
-              <div style={{ fontSize: '11px', color: '#065f46', marginTop: '4px' }}>
-                ✓ On track
-              </div>
+      <Cards columns={2} desktopColumns={2} mobileColumns={1}>
+        <Card
+          icon={<Users size={20} color="#3b82f6" />}
+          label="Inquiries Pace"
+          value={formatNumber(calculations.paceInq)}
+        />
+        <Card
+          icon={<Phone size={20} color="#10b981" />}
+          label="Calls Pace"
+          value={formatNumber(calculations.paceCalls)}
+        />
+        <div style={{ gridColumn: '1 / -1' }}>
+          <Card
+            icon={<CheckCircle size={20} color="#ef4444" />}
+            label="Bookings Pace"
+            value={formatNumber(calculations.paceBookings)}
+            sub={calculations.isOnTrack ? (
+              <span style={{ color: '#065f46' }}>✓ On track</span>
             ) : (
-              <div style={{ fontSize: '11px', color: '#991b1b', marginTop: '4px' }}>
-                ⚠ Behind goal
-              </div>
+              <span style={{ color: '#991b1b' }}>⚠ Behind goal</span>
             )}
-          </div>
-          <CheckCircle size={20} color={calculations.isOnTrack ? '#10b981' : '#ef4444'} />
+          />
         </div>
-      </div>
+      </Cards>
     </div>
   );
 }
@@ -1927,8 +1612,9 @@ function GoalVisualization({
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
   // Simple pie chart component with percentage in center
-  const PieChart = ({ percentage, size = 100 }: { percentage: number; size?: number }) => {
-    const radius = size / 2 - 5;
+    const PieChart = ({ percentage, size = 100 }: { percentage: number; size?: number }) => {
+    const strokeWidth = 16;
+    const radius = size / 2 - strokeWidth / 2 - 2;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (percentage / 100) * circumference;
     const displayPercentage = Math.min(percentage, 100);
@@ -1942,7 +1628,7 @@ function GoalVisualization({
             r={radius}
             fill="none"
             stroke="#e5e7eb"
-            strokeWidth="8"
+            strokeWidth={strokeWidth}
           />
           <circle
             cx={size / 2}
@@ -1950,7 +1636,7 @@ function GoalVisualization({
             r={radius}
             fill="none"
             stroke={displayPercentage >= 100 ? '#10b981' : '#3b82f6'}
-            strokeWidth="8"
+            strokeWidth={strokeWidth}
             strokeDasharray={circumference}
             strokeDashoffset={offset}
             strokeLinecap="round"
@@ -1964,7 +1650,7 @@ function GoalVisualization({
           textAlign: 'center'
         }}>
           <div style={{
-            fontSize: size < 100 ? '20px' : '24px',
+            fontSize: size < 150 ? '26px' : '36px',
             fontWeight: '700',
             color: '#1f2937',
             lineHeight: '1'
@@ -2049,11 +1735,11 @@ function GoalVisualization({
 
       <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '20px', flexDirection: isMobile ? 'column' : 'row' }}>
         <div style={{ flexShrink: 0 }}>
-          <PieChart percentage={Math.min(displayMetrics.percentOfPlan, 100)} size={isMobile ? 100 : 120} />
+          <PieChart percentage={Math.min(displayMetrics.percentOfPlan, 100)} size={isMobile ? 240 : 200} />
         </div>
         
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
+          <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>
             {toUSD(displayMetrics.actual)}
           </div>
           <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
@@ -2071,14 +1757,14 @@ function GoalVisualization({
       }}>
         <div>
           <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Remaining</div>
-          <div style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>
+          <div style={{ fontSize: '14px', fontWeight: '600', color: '#4b5563' }}>
             {toUSD(displayMetrics.remaining)}
           </div>
         </div>
         <div>
           <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Pacing</div>
           <div style={{
-            fontSize: '16px',
+            fontSize: '14px',
             fontWeight: '600',
             color: displayMetrics.pacingDelta >= 0 ? '#10b981' : '#ef4444'
           }}>
