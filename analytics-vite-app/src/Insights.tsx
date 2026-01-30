@@ -729,7 +729,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             Know where your business stands — and where it’s headed.
           </div>
           <div style={{ marginTop: '4px', fontSize: '14px', fontWeight: 400, color: '#6b7280', maxWidth: '720px' }}>
-            This page turns your sales data into signals about performance, momentum, and focus.
+            This page unlocks the understanding of how your business is actually performing. Turn that understanding into action and momentum towards achieving your goals.
           </div>
         </div>
       </div>
