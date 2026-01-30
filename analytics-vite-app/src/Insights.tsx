@@ -723,15 +723,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
   return (
     <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 700, margin: 0, color: '#1f2937' }}>Insights</h1>
-          <div style={{ marginTop: '6px', fontSize: '15px', fontWeight: 500, color: '#4b5563' }}>
-            Know where your business stands — and where it’s headed.
-          </div>
-          <div style={{ marginTop: '4px', fontSize: '14px', fontWeight: 400, color: '#6b7280', maxWidth: '720px' }}>
-            This page unlocks the understanding of how your business is actually performing. Turn that understanding into action and momentum towards achieving your goals.
-          </div>
-        </div>
+        <h1 style={{ fontSize: '28px', fontWeight: 700, margin: 0, color: '#1f2937' }}>Insights</h1>
       </div>
 
       {/* Welcome Section and Tasks */}
@@ -1233,9 +1225,12 @@ function WelcomeAndTasks({
           <h2 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: '700', margin: '0 0 8px 0', color: '#1f2937' }}>
             Welcome back {firstName}!
           </h2>
-          <p style={{ fontSize: isMobile ? '14px' : '16px', color: '#6b7280', margin: '0 0 12px 0' }}>
-            Remember, winning is a numbers game. Go make some moves!
-          </p>
+          <div style={{ fontSize: isMobile ? '13px' : '14px', fontWeight: 500, color: '#4b5563', margin: '0 0 6px 0' }}>
+            Know where your business stands — and where it’s headed.
+          </div>
+          <div style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: 400, color: '#6b7280', margin: '0 0 12px 0' }}>
+            This page unlocks the understanding of how your business is actually performing. Turn that understanding into action and momentum towards achieving your goals.
+          </div>
           <div style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: 500, color: '#6b7280', margin: '0 0 4px 0' }}>
             Last data entry: {lastEntryLabel}
           </div>
