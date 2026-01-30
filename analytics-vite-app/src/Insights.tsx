@@ -1463,7 +1463,7 @@ function AnnualizedPace({
         </h3>
       </div>
       <p style={{ margin: '4px 0 16px 0', fontSize: 12, color: '#6b7280', lineHeight: 1.6 }}>
-        Track your pace for the year based on your activity over the last 90 days.
+        Track your pace for the year based on your activity over the last 3 months.
       </p>
 
       <Cards columns={2} desktopColumns={2} mobileColumns={1}>
