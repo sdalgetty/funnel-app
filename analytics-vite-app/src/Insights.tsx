@@ -1231,6 +1231,7 @@ function WelcomeAndTasks({
           <div style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: 400, color: '#6b7280', margin: '0 0 12px 0' }}>
             This page unlocks the understanding of how your business is actually performing. Turn that understanding into action and momentum towards achieving your goals.
           </div>
+          <div style={{ height: 1, backgroundColor: '#e5e7eb', margin: '4px 0 12px 0' }} />
           <div style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: 500, color: '#6b7280', margin: '0 0 4px 0' }}>
             Last data entry: {lastEntryLabel}
           </div>
