@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { AdminService } from '../services/adminService';
 import type { UserProfile } from '../services/adminService';
@@ -13,6 +13,12 @@ interface AdminUserDetailProps {
 
 export default function AdminUserDetail({ user, onBack, onImpersonate }: AdminUserDetailProps) {
   const { isAdmin } = useAuth();
+  const [isResettingWelcomeVideo, setIsResettingWelcomeVideo] = useState(false);
+  const [welcomeVideoResetSuccess, setWelcomeVideoResetSuccess] = useState<string | null>(null);
+  const [welcomeVideoResetError, setWelcomeVideoResetError] = useState<string | null>(null);
+  const [welcomeVideoWatchedAt, setWelcomeVideoWatchedAt] = useState<string | null>(
+    user.welcome_video_watched_at || null
+  );
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -23,6 +29,27 @@ export default function AdminUserDetail({ user, onBack, onImpersonate }: AdminUs
       user_name: user.full_name || user.email,
     });
   }, [user.id, isAdmin]);
+
+  const handleResetWelcomeVideo = async () => {
+    if (!isAdmin || isResettingWelcomeVideo) return;
+    setIsResettingWelcomeVideo(true);
+    setWelcomeVideoResetSuccess(null);
+    setWelcomeVideoResetError(null);
+    try {
+      const resetValue = await AdminService.resetWelcomeVideo(user.id);
+      setWelcomeVideoWatchedAt(resetValue);
+      setWelcomeVideoResetSuccess('Welcome video has been reset for this user.');
+      AdminService.logAction('reset_welcome_video', user.id, {
+        user_email: user.email,
+        user_name: user.full_name || user.email,
+      });
+    } catch (error) {
+      console.error('Error resetting welcome video:', error);
+      setWelcomeVideoResetError('Unable to reset the welcome video. Please try again.');
+    } finally {
+      setIsResettingWelcomeVideo(false);
+    }
+  };
 
   if (!isAdmin) {
     return null;
@@ -118,6 +145,42 @@ export default function AdminUserDetail({ user, onBack, onImpersonate }: AdminUs
             Impersonate User
           </button>
         </div>
+      </div>
+
+      {/* Welcome Video Reset */}
+      <div style={{ ...cardStyle, marginBottom: '16px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0', color: '#1f2937' }}>
+          Welcome Video
+        </h2>
+        <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '12px' }}>
+          Status: {welcomeVideoWatchedAt ? `Watched on ${new Date(welcomeVideoWatchedAt).toLocaleDateString()}` : 'Not watched'}
+        </div>
+        <button
+          onClick={handleResetWelcomeVideo}
+          disabled={isResettingWelcomeVideo}
+          style={{
+            padding: '10px 16px',
+            backgroundColor: '#f3f4f6',
+            color: '#374151',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: isResettingWelcomeVideo ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {isResettingWelcomeVideo ? 'Resetting...' : 'Reset Welcome Video'}
+        </button>
+        {welcomeVideoResetSuccess && (
+          <div style={{ marginTop: '10px', fontSize: '13px', color: '#16a34a' }}>
+            {welcomeVideoResetSuccess}
+          </div>
+        )}
+        {welcomeVideoResetError && (
+          <div style={{ marginTop: '10px', fontSize: '13px', color: '#dc2626' }}>
+            {welcomeVideoResetError}
+          </div>
+        )}
       </div>
 
       {/* Note */}

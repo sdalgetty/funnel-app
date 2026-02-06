@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Target, TrendingUp, Users, Phone } from 'lucide-react';
+import { Target, TrendingUp, Users, Phone, PlayCircle } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { UnifiedDataService } from './services/unifiedDataService';
-import OnboardingVideoPanel from './components/OnboardingVideoPanel';
+import { useIsMobile } from './hooks/useIsMobile';
+import type { Booking, DataManager, FunnelData, Payment } from './types';
 
 interface CalculatorData {
   bookingsGoal: number;
@@ -18,20 +19,30 @@ interface CalculatorData {
 }
 
 interface GoalsProps {
-  dataManager?: any;
+  dataManager?: DataManager;
 }
 
 const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
-  const { user } = useAuth();
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  const { user, updateProfile, isViewOnly } = useAuth();
+  const isMobile = useIsMobile();
   
   const currentYear = new Date().getFullYear();
+  const [isMarkingWelcomeVideoWatched, setIsMarkingWelcomeVideoWatched] = useState(false);
+  const shouldShowWelcomeVideo = !!user && !user.welcomeVideoWatchedAt;
+  const welcomeVideoEmbedUrl = 'https://player.vimeo.com/video/1158563687';
+  const welcomeVideoLinkUrl = 'https://vimeo.com/1158563687?share=copy&fl=sv&fe=ci';
+
+  const markWelcomeVideoWatched = async () => {
+    if (!user || isViewOnly) return;
+    setIsMarkingWelcomeVideoWatched(true);
+    try {
+      await updateProfile({ welcomeVideoWatchedAt: new Date() });
+    } catch (error) {
+      console.error('Error marking welcome video watched:', error);
+    } finally {
+      setIsMarkingWelcomeVideoWatched(false);
+    }
+  };
 
   // Calculate YTD totals from actual funnel data
   const ytdTotals = useMemo(() => {
@@ -46,38 +57,39 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
     }
 
     try {
-      const bookings = dataManager.bookings || [];
-      const payments = dataManager.payments || [];
+      const bookings: Booking[] = dataManager.bookings || [];
+      const payments: Payment[] = dataManager.payments || [];
+      const funnelData: FunnelData[] = dataManager.funnelData || [];
       
-      const inquiriesYtd = (dataManager.funnelData || []).reduce((sum: number, month: any) => {
+      const inquiriesYtd = funnelData.reduce((sum, month) => {
         if (month.year === currentYear) {
           return sum + (month.inquiries || 0);
         }
         return sum;
       }, 0);
 
-      const callsYtd = (dataManager.funnelData || []).reduce((sum: number, month: any) => {
+      const callsYtd = funnelData.reduce((sum, month) => {
         if (month.year === currentYear) {
           return sum + (month.callsTaken || 0);
         }
         return sum;
       }, 0);
 
-      const bookingsYtd = bookings.filter((b: any) => {
+      const bookingsYtd = bookings.filter((b) => {
         if (!b?.dateBooked) return false;
         const year = parseInt(b.dateBooked.split('-')[0], 10);
         return year === currentYear;
       }).length;
 
       const bookingsRevenueYtd = bookings
-        .filter((b: any) => {
+        .filter((b) => {
           if (!b?.dateBooked) return false;
           const year = parseInt(b.dateBooked.split('-')[0], 10);
           return year === currentYear;
         })
-        .reduce((sum: number, b: any) => sum + (b.bookedRevenue || 0), 0);
+        .reduce((sum, b) => sum + (b.bookedRevenue || 0), 0);
 
-      const cashYtd = payments.reduce((sum: number, p: any) => {
+      const cashYtd = payments.reduce((sum, p) => {
         const dateStr = p.expectedDate || p.dueDate || p.paymentDate;
         if (!dateStr) return sum;
         const year = parseInt(dateStr.split('-')[0], 10);
@@ -153,14 +165,6 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
       cashYtd: ytdTotals.cash,
     }));
   }, [ytdTotals]);
-
-  // Helper to get months elapsed
-  const getMonthsElapsed = () => {
-    const now = new Date();
-    const startOfYear = new Date(now.getFullYear(), 0, 1);
-    const months = (now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
-    return Math.max(0.01, Math.min(12, months));
-  };
 
   // Calculate all metrics
   const calculations = useMemo(() => {
@@ -518,9 +522,100 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
         </p>
       </div>
 
-      <OnboardingVideoPanel userId={user?.id} />
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '64px' : '80px' }}>
+        {shouldShowWelcomeVideo && (
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: isMobile ? '16px' : '20px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between', 
+              gap: '12px',
+              flexWrap: 'wrap',
+              marginBottom: '16px'
+            }}>
+              <div>
+                <h2 style={{ 
+                  fontSize: '18px', 
+                  fontWeight: '600', 
+                  margin: '0 0 4px 0', 
+                  color: '#1f2937' 
+                }}>
+                  Welcome Video
+                </h2>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
+                  Start here to get the most out of your goals.
+                </p>
+              </div>
+              <button
+                onClick={() => window.open(welcomeVideoLinkUrl, '_blank')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  backgroundColor: '#f9fafb',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  color: '#374151'
+                }}
+              >
+                <PlayCircle size={16} />
+                Open in Vimeo
+              </button>
+            </div>
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              paddingTop: '56.25%',
+              borderRadius: '10px',
+              overflow: 'hidden',
+              border: '1px solid #e5e7eb',
+              backgroundColor: '#f3f4f6'
+            }}>
+              <iframe
+                src={welcomeVideoEmbedUrl}
+                title="Getting Started Video"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  border: 'none'
+                }}
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={markWelcomeVideoWatched}
+                disabled={isViewOnly || isMarkingWelcomeVideoWatched}
+                style={{
+                  backgroundColor: isViewOnly ? '#e5e7eb' : '#3b82f6',
+                  color: isViewOnly ? '#9ca3af' : 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: isViewOnly ? 'not-allowed' : 'pointer',
+                  opacity: isMarkingWelcomeVideoWatched ? 0.7 : 1
+                }}
+              >
+                {isMarkingWelcomeVideoWatched ? 'Saving...' : 'I watched this'}
+              </button>
+            </div>
+          </div>
+        )}
         {/* Two Column Layout */}
         <div style={{ 
           display: 'grid', 

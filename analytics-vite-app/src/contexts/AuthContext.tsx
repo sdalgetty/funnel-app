@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase'
 import { UnifiedDataService } from '../services/unifiedDataService'
 import { ShareService } from '../services/shareService'
 import { AdminService, type UserProfile } from '../services/adminService'
-import type { AuthUser, Session, SubscriptionFeatures, CRMType } from '../types'
+import type { AuthUser, CRMType, SubscriptionFeatures, SubscriptionTier, SubscriptionStatus } from '../types/auth'
+import type { Session as SupabaseSession, User as SupabaseUser } from '@supabase/supabase-js'
 import { logger } from '../utils/logger'
 import { TIMEOUTS } from '../constants/app'
 import { identifyUser, trackEvent, resetPostHog } from '../lib/posthog'
@@ -45,7 +46,7 @@ const isTestEnvironment = (): boolean => {
 
 interface AuthContextType {
   user: AuthUser | null
-  session: Session | null
+  session: SupabaseSession | null
   loading: boolean
   features: SubscriptionFeatures
   isTrialUser: boolean
@@ -87,7 +88,7 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
+  const [session, setSession] = useState<SupabaseSession | null>(null)
   const [loading, setLoading] = useState(true)
   // Guest viewing state
   const [viewingAsGuest, setViewingAsGuest] = useState(false)
@@ -97,11 +98,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [impersonatingUserId, setImpersonatingUserId] = useState<string | null>(null)
   const [impersonatingUser, setImpersonatingUser] = useState<UserProfile | null>(null)
   const impersonationSessionId = useRef<string | null>(null)
-  const inactivityTimer = useRef<NodeJS.Timeout | null>(null)
+  const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastActivityTime = useRef<number>(Date.now())
 
   // Helper function to build combined user from auth user and profile data
-  const buildCombinedUser = async (authUser: { id: string; email?: string; created_at: string; user_metadata?: { full_name?: string } }, profileData: { first_name: string | null; last_name: string | null; full_name: string | null; company_name: string | null; phone: string | null; website: string | null; crm: string | null; crm_other: string | null; ads_tracking_enabled: boolean | null; subscription_tier: string; subscription_status: string; trial_ends_at: string | null }): Promise<AuthUser> => {
+  const buildCombinedUser = async (authUser: SupabaseUser, profileData: { first_name: string | null; last_name: string | null; full_name: string | null; company_name: string | null; phone: string | null; website: string | null; crm: string | null; crm_other: string | null; ads_tracking_enabled: boolean | null; welcome_video_watched_at?: string | null; subscription_tier: string; subscription_status: string; trial_ends_at: string | null }): Promise<AuthUser> => {
     // Explicitly check for null/undefined to avoid falling back to email when name is intentionally empty
     const firstName = profileData.first_name !== null && profileData.first_name !== undefined 
       ? profileData.first_name 
@@ -117,6 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     const combinedUser = {
       ...authUser,
+      email: authUser.email || '',
       firstName,
       lastName,
       name: fullName,
@@ -132,8 +134,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       crm: (profileData.crm as CRMType | undefined) || undefined,
       crmOther: profileData.crm_other || undefined,
       adsTrackingEnabled: profileData.ads_tracking_enabled === true,
-      subscriptionTier: profileData.subscription_tier || 'pro',
-      subscriptionStatus: profileData.subscription_status || 'active',
+      welcomeVideoWatchedAt: profileData.welcome_video_watched_at ? new Date(profileData.welcome_video_watched_at) : null,
+      subscriptionTier: (profileData.subscription_tier as SubscriptionTier) || 'pro',
+      subscriptionStatus: (profileData.subscription_status as SubscriptionStatus) || 'active',
       createdAt: new Date(authUser.created_at),
       lastLoginAt: new Date(),
       trialEndsAt: profileData.trial_ends_at ? new Date(profileData.trial_ends_at) : null
@@ -155,7 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Helper function to load user profile data
-  const loadUserProfile = async (authUser: { id: string; email?: string; created_at: string; user_metadata?: { full_name?: string } } | null): Promise<AuthUser | null> => {
+  const loadUserProfile = async (authUser: SupabaseUser | null): Promise<AuthUser | null> => {
     logger.debug('Loading user profile for:', authUser?.id);
     
     if (!authUser) {
@@ -244,12 +247,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Return basic user if profile query fails
       return {
         ...authUser,
+        email: authUser.email || '',
         firstName: '',
         lastName: '',
-        name: authUser.user_metadata?.full_name || authUser.email,
+        name: authUser.user_metadata?.full_name || authUser.email || '',
         companyName: '',
         adsTrackingEnabled: false,
-        subscriptionTier: 'pro', // Set to pro for testing
+        welcomeVideoWatchedAt: null,
+        subscriptionTier: 'pro',
         subscriptionStatus: 'active',
         createdAt: new Date(authUser.created_at),
         lastLoginAt: new Date(),
@@ -305,7 +310,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   // Switch back to own account
-  const switchToOwnAccount = () => {
+  const switchToOwnAccount = async () => {
     setViewingAsGuest(false)
     setSharedAccountOwnerId(null)
     
@@ -461,7 +466,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 
   // Check for pending invitation token in URL or localStorage and auto-accept
-  const checkPendingInvitation = async (authUser: any) => {
+  const checkPendingInvitation = async (authUser: SupabaseUser) => {
     logger.debug('checkPendingInvitation called for user', { email: authUser.email })
     // Check URL first
     const urlParams = new URLSearchParams(window.location.search)
@@ -520,7 +525,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   // Restore guest viewing state from localStorage or auto-detect accepted shares
-  const restoreGuestViewingState = async (authUser: any) => {
+  const restoreGuestViewingState = async (authUser: SupabaseUser) => {
     const wasViewingAsGuest = localStorage.getItem('viewingAsGuest') === 'true'
     const storedOwnerId = localStorage.getItem('sharedAccountOwnerId')
     
@@ -593,11 +598,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (session?.user) {
         logger.debug('User found, loading profile...');
         // Set basic user first so UI can render, then load profile in background
-        const basicUser = {
+        const basicUser: AuthUser = {
           ...session.user,
+          email: session.user.email || '',
           firstName: '',
           lastName: '',
-          name: session.user.user_metadata?.full_name || session.user.email,
+          name: session.user.user_metadata?.full_name || session.user.email || '',
           companyName: '',
           subscriptionTier: 'pro',
           subscriptionStatus: 'active',
@@ -812,11 +818,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (session?.user) {
         logger.debug('User authenticated, loading profile...');
         // Set basic user first so UI can render immediately
-        const basicUser = {
+        const basicUser: AuthUser = {
           ...session.user,
+          email: session.user.email || '',
           firstName: '',
           lastName: '',
-          name: session.user.user_metadata?.full_name || session.user.email,
+          name: session.user.user_metadata?.full_name || session.user.email || '',
           companyName: '',
           subscriptionTier: 'pro',
           subscriptionStatus: 'active',
@@ -1082,7 +1089,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const updateProfile = async (updates: Partial<any>) => {
+  const updateProfile = async (updates: Partial<AuthUser>) => {
     logger.debug('updateProfile called', { updates, userId: user?.id });
     
     if (!user) {
@@ -1092,7 +1099,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Map frontend field names to database field names
     // Include empty strings explicitly to allow clearing values
-      const dbUpdates: any = {}
+      const dbUpdates: Record<string, unknown> = {}
     if (updates.firstName !== undefined) dbUpdates.first_name = updates.firstName || null
     if (updates.lastName !== undefined) dbUpdates.last_name = updates.lastName || null
     if (updates.name !== undefined) dbUpdates.full_name = updates.name || null
@@ -1115,24 +1122,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (updates.crmOther !== undefined) dbUpdates.crm_other = updates.crmOther || null
     // Include ads tracking enabled in updates if provided
     if (updates.adsTrackingEnabled !== undefined) dbUpdates.ads_tracking_enabled = updates.adsTrackingEnabled || false
+    if (updates.welcomeVideoWatchedAt !== undefined) {
+      dbUpdates.welcome_video_watched_at = updates.welcomeVideoWatchedAt
+        ? (updates.welcomeVideoWatchedAt instanceof Date
+          ? updates.welcomeVideoWatchedAt.toISOString()
+          : updates.welcomeVideoWatchedAt)
+        : null
+    }
 
       logger.debug('Updating user profile', { userId: user.id, updates: dbUpdates });
 
+      type UserProfileRow = {
+        id: string | null;
+        email: string | null;
+        first_name: string | null;
+        last_name: string | null;
+        full_name: string | null;
+        company_name: string | null;
+        phone?: string | null;
+        website?: string | null;
+        crm: string | null;
+        crm_other: string | null;
+        ads_tracking_enabled: boolean | null;
+        welcome_video_watched_at?: string | null;
+        subscription_tier: string | null;
+        subscription_status: string | null;
+        created_at: string | null;
+        updated_at: string | null;
+      };
+
       // Select all columns including phone/website (migration should have run)
-      const selectColumns = 'id, email, first_name, last_name, full_name, company_name, phone, website, crm, crm_other, ads_tracking_enabled, subscription_tier, subscription_status, created_at, updated_at'
+      const selectColumns = 'id, email, first_name, last_name, full_name, company_name, phone, website, crm, crm_other, ads_tracking_enabled, welcome_video_watched_at, subscription_tier, subscription_status, created_at, updated_at'
       
-      let { data, error } = await supabase
+      const updateResult = await supabase
         .from('user_profiles')
         .update(dbUpdates)
         .eq('id', user.id)
         .select(selectColumns)
-      .single()
+        .single()
+
+      let data = updateResult.data as UserProfileRow | null
+      let error = updateResult.error
 
       // If update fails with column error for phone/website, retry without them
-      if (error && (updates.phone !== undefined || updates.website !== undefined) && (error.message?.includes('column') || error.message?.includes('phone') || error.message?.includes('website') || error.code === '42703' || error.code === 'PGRST116')) {
+      if (error && (updates.phone !== undefined || updates.website !== undefined || updates.welcomeVideoWatchedAt !== undefined) && (error.message?.includes('column') || error.message?.includes('phone') || error.message?.includes('website') || error.message?.includes('welcome_video_watched_at') || error.code === '42703' || error.code === 'PGRST116')) {
         logger.debug('Update failed with phone/website, retrying without them', { error });
         
-        const dbUpdatesWithoutNewFields: any = {}
+        const dbUpdatesWithoutNewFields: Record<string, unknown> = {}
         if (updates.firstName !== undefined) dbUpdatesWithoutNewFields.first_name = updates.firstName || null
         if (updates.lastName !== undefined) dbUpdatesWithoutNewFields.last_name = updates.lastName || null
         if (updates.name !== undefined) dbUpdatesWithoutNewFields.full_name = updates.name || null
@@ -1157,8 +1193,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           .eq('id', user.id)
           .select('id, email, first_name, last_name, full_name, company_name, crm, crm_other, ads_tracking_enabled, subscription_tier, subscription_status, created_at, updated_at')
         .single()
-        
-        data = retryResult.data
+
+        data = retryResult.data as UserProfileRow | null
         error = retryResult.error
       }
 
@@ -1190,6 +1226,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const updatedCrm = (data.crm as CRMType | undefined) || undefined;
     const updatedCrmOther = data.crm_other !== null && data.crm_other !== undefined ? data.crm_other : undefined;
     const updatedAdsTrackingEnabled = data.ads_tracking_enabled === true;
+    const updatedWelcomeVideoWatchedAt = data.welcome_video_watched_at ? new Date(data.welcome_video_watched_at) : null;
     
     // Update local state immediately with the data returned from the update
     const updatedUser = {
@@ -1203,7 +1240,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       website: updatedWebsite,
       crm: updatedCrm,
       crmOther: updatedCrmOther,
-      adsTrackingEnabled: updatedAdsTrackingEnabled
+      adsTrackingEnabled: updatedAdsTrackingEnabled,
+      welcomeVideoWatchedAt: updatedWelcomeVideoWatchedAt
     };
     
     logger.debug('Updating user state', {
