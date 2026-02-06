@@ -7,7 +7,7 @@ export type AdminAccessLog = {
   admin_user_id: string;
   target_user_id: string | null;
   action_type: string;
-  action_details: any;
+  action_details: Record<string, unknown> | null;
   impersonation_session_id: string | null;
   created_at: string;
 };
@@ -21,6 +21,7 @@ export type UserProfile = {
   company_name: string | null;
   phone: string | null;
   website: string | null;
+  welcome_video_watched_at?: string | null;
   subscription_tier: string;
   subscription_status: string;
   is_admin: boolean;
@@ -96,12 +97,31 @@ export class AdminService {
   }
 
   /**
+   * Reset welcome video watched flag for a user (admin only)
+   */
+  static async resetWelcomeVideo(userId: string): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update({ welcome_video_watched_at: null })
+      .eq('id', userId)
+      .select('welcome_video_watched_at')
+      .single();
+
+    if (error) {
+      logger.error('Error resetting welcome video:', error);
+      throw error;
+    }
+
+    return data?.welcome_video_watched_at ?? null;
+  }
+
+  /**
    * Log an admin action
    */
   static async logAction(
     actionType: string,
     targetUserId?: string | null,
-    actionDetails?: any,
+    actionDetails?: Record<string, unknown> | null,
     impersonationSessionId?: string | null
   ): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
@@ -146,7 +166,9 @@ export class AdminService {
   /**
    * Get impersonation sessions (start and end events grouped)
    */
-  static async getImpersonationSessions(limit: number = LIMITS.IMPERSONATION_SESSIONS_DEFAULT): Promise<any[]> {
+  static async getImpersonationSessions(
+    limit: number = LIMITS.IMPERSONATION_SESSIONS_DEFAULT
+  ): Promise<ImpersonationSession[]> {
     const { data, error } = await supabase
       .from('admin_access_logs')
       .select('*')
@@ -160,7 +182,7 @@ export class AdminService {
     }
 
     // Group by session_id and pair start/end events
-    const sessions: { [key: string]: any } = {};
+    const sessions: Record<string, ImpersonationSession> = {};
     
     (data || []).forEach(log => {
       if (!log.impersonation_session_id) return;
@@ -184,9 +206,9 @@ export class AdminService {
       }
     });
 
-    return Object.values(sessions).filter(s => s.start_time).sort((a, b) => 
-      new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
-    );
+    return Object.values(sessions)
+      .filter((session) => Boolean(session.start_time))
+      .sort((a, b) => new Date(b.start_time || 0).getTime() - new Date(a.start_time || 0).getTime());
   }
 
   /**
@@ -209,3 +231,11 @@ export class AdminService {
   }
 }
 
+type ImpersonationSession = {
+  session_id: string;
+  admin_user_id: string;
+  target_user_id: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  actions: AdminAccessLog[];
+};
