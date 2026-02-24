@@ -271,7 +271,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
     </div>
   );
 
-  // Annual Financial Goals card - two-column layout with intro text
+  // Annual Revenue Goals card - two-column layout with intro text
   const annualFinancialGoalsCard = (
     <div style={{
       backgroundColor: 'white',
@@ -285,7 +285,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <DollarSign size={20} color="#3b82f6" />
         <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
-          Annual Financial Goals
+          Annual Revenue Goals
         </h2>
       </div>
       <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#374151', lineHeight: 1.5 }}>
@@ -457,6 +457,9 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
   // Required Activity Section Content (Read-only)
   const requiredActivityContent = (
     <>
+      <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#6b7280', lineHeight: 1.5 }}>
+        Based on your revenue and conversion assumptions
+      </p>
       <div style={{ marginBottom: '16px' }}>
         <div style={{
           display: 'flex',
@@ -601,7 +604,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
             </div>
           </div>
         )}
-        {/* Annual Financial Goals - full width */}
+        {/* Annual Revenue Goals - full width */}
         <div style={{ width: '100%', marginBottom: isMobile ? 16 : 24 }}>
           {annualFinancialGoalsCard}
         </div>
@@ -613,7 +616,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
           gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
           maxWidth: '100%'
         }}>
-          {renderSection('Sales Calculator', <Calculator size={20} color="#3b82f6" />, salesCalculatorContent)}
+          {renderSection('Sales Activity Calculator', <Calculator size={20} color="#3b82f6" />, salesCalculatorContent)}
           {renderSection('Required Activity', <TrendingUp size={20} color="#10b981" />, requiredActivityContent)}
         </div>
 
