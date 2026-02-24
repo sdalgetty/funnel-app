@@ -2220,12 +2220,11 @@ function GoalVisualization({
   const MetricRow = ({ label, value, pacingValue }: { label: string; value?: React.ReactNode; pacingValue?: { delta: number; color: string } }) => (
     <div style={{
       display: 'flex',
-      justifyContent: 'space-between',
       alignItems: 'center',
       gap: 12,
       padding: '4px 0'
     }}>
-      <span style={{ fontSize: '13px', color: '#6b7280' }}>{label}</span>
+      <span style={{ fontSize: '13px', color: '#6b7280', minWidth: 72 }}>{label}</span>
       {pacingValue !== undefined ? (
         <span style={{ fontSize: '15px', fontWeight: '600', color: pacingValue.color }}>
           {pacingValue.delta >= 0 ? '+' : ''}{pacingValue.delta}%
