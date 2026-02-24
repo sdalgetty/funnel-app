@@ -483,6 +483,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
         confirmedAvailable: existingData?.confirmedAvailable ?? 0,
         callsBooked: existingData?.callsBooked || 0,
         callsCancelled: existingData?.callsCancelled ?? 0,
+        callsNoShows: existingData?.callsNoShows,
         callsTaken: existingData?.callsTaken || 0,
         closes: existingData?.closesManual ? (existingData.closes || 0) : dynamicData.closes,
         bookings: existingData?.bookingsManual ? (existingData.bookings || 0) : dynamicData.bookings,
@@ -559,11 +560,16 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     const avgCallsTaken = divisor > 0 ? Math.round(totalCallsTaken / divisor) : 0
     const inquiryToBooked = totalInquiries > 0 ? ((totalCallsBooked / totalInquiries) * 100).toFixed(1) : '0.0'
     const inquiryToTaken = totalInquiries > 0 ? ((totalCallsTaken / totalInquiries) * 100).toFixed(1) : '0.0'
-    const netCallsBooked = totalCallsBooked - totalCallsCancelled
-    const showUpRate = netCallsBooked > 0 ? ((totalCallsTaken / netCallsBooked) * 100).toFixed(1) : '0.0'
+    const totalEffectiveNoShows = salesFunnelMonths.reduce((sum, month) => {
+      const noShows = month.callsNoShows ?? (month.callsBooked - (month.callsCancelled ?? 0) - month.callsTaken)
+      return sum + Math.max(0, noShows)
+    }, 0)
+    const showUpRate = totalCallsTaken > 0
+      ? ((totalCallsTaken / (totalCallsTaken + totalEffectiveNoShows)) * 100).toFixed(1)
+      : '0.0'
     const takenToClose = totalCallsTaken > 0 ? ((totalCloses / totalCallsTaken) * 100).toFixed(1) : '0.0'
     const revenuePerCallTaken = totalCallsTaken > 0 ? Math.round(totalBookings / totalCallsTaken) : 0
-    return { totalCallsBooked, totalCallsCancelled, totalCallsTaken, inquiryToBooked, inquiryToTaken, showUpRate, takenToClose, revenuePerCallTaken, avgCallsBooked, avgCallsTaken }
+    return { totalCallsBooked, totalCallsCancelled, totalEffectiveNoShows, totalCallsTaken, inquiryToBooked, inquiryToTaken, showUpRate, takenToClose, revenuePerCallTaken, avgCallsBooked, avgCallsTaken }
   }, [salesFunnelMonths])
 
   // Calculate average time metrics for bookings in the selected range
@@ -897,6 +903,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             <CallPerformanceCard
               callsBooked={callTotals.totalCallsBooked}
               callsCancelled={callTotals.totalCallsCancelled}
+              callsNoShows={callTotals.totalEffectiveNoShows}
               callsTaken={callTotals.totalCallsTaken}
               showUpRate={callTotals.showUpRate}
               formatNumber={formatNumber}
@@ -909,54 +916,73 @@ export default function Insights({ dataManager }: { dataManager: any }) {
               isMobile={isMobile}
             />
             <Cards columns={2}>
-              <Card icon={<Clock size={20} color="#ec4899" />} label="Time from Inquiry to Booking" value={bookingTimeMetrics.avgDaysInquiryToBooking !== null ? `${bookingTimeMetrics.avgDaysInquiryToBooking} days` : 'N/A'} sub="Average days" compact />
-              <Card icon={<Calendar size={20} color="#14b8a6" />} label="Time from Booking to Wedding" value={bookingTimeMetrics.avgMonthsBookingToWedding !== null ? `${bookingTimeMetrics.avgMonthsBookingToWedding} months` : 'N/A'} sub="Average months" compact />
+              <Card icon={<Clock size={20} color="#ec4899" />} label="Time from Inquiry to Booking" value={bookingTimeMetrics.avgDaysInquiryToBooking !== null ? `${bookingTimeMetrics.avgDaysInquiryToBooking} days` : 'N/A'} sub="Average days" compact valueFontSize={18} />
+              <Card icon={<Calendar size={20} color="#14b8a6" />} label="Time from Booking to Wedding" value={bookingTimeMetrics.avgMonthsBookingToWedding !== null ? `${bookingTimeMetrics.avgMonthsBookingToWedding} months` : 'N/A'} sub="Average months" compact valueFontSize={18} />
             </Cards>
           </div>
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gridTemplateRows: 'auto auto',
-              gap: 16,
-              marginBottom: 16,
-            }}
-          >
-            {/* Row 1: Inquiries | Sales Metrics */}
-            <InquiriesCard
-              totalInquiries={salesTotals.totalInquiries}
-              confirmedAvailable={salesTotals.totalConfirmedAvailable}
-              formatNumber={formatNumber}
-              isMobile={isMobile}
-            />
-            <SalesMetricsCard
-              closes={salesTotals.totalCloses}
-              bookings={salesTotals.totalBookings}
-              cash={salesTotals.totalCash}
-              formatNumber={formatNumber}
-              toUSD={toUSD}
-              isMobile={isMobile}
-            />
-            {/* Row 2: Call Performance | Conversion Rates + Time cards */}
-            <CallPerformanceCard
-              callsBooked={callTotals.totalCallsBooked}
-              callsCancelled={callTotals.totalCallsCancelled}
-              callsTaken={callTotals.totalCallsTaken}
-              showUpRate={callTotals.showUpRate}
-              formatNumber={formatNumber}
-              isMobile={isMobile}
-            />
-            <div style={{ display: 'grid', gridTemplateRows: 'auto auto', gap: 16 }}>
-              <ConversionRatesCard
-                inquiryToTaken={callTotals.inquiryToTaken}
-                takenToClose={callTotals.takenToClose}
-                inquiryToClose={salesTotals.inquiryToClose}
+          <div style={{ marginBottom: 16 }}>
+            {/* Row 1: Inquiries | Sales Performance */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <InquiriesCard
+                totalInquiries={salesTotals.totalInquiries}
+                confirmedAvailable={salesTotals.totalConfirmedAvailable}
+                formatNumber={formatNumber}
                 isMobile={isMobile}
               />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <Card icon={<Clock size={20} color="#ec4899" />} label="Time from Inquiry to Booking" value={bookingTimeMetrics.avgDaysInquiryToBooking !== null ? `${bookingTimeMetrics.avgDaysInquiryToBooking} days` : 'N/A'} sub="Average days" compact />
-                <Card icon={<Calendar size={20} color="#14b8a6" />} label="Time from Booking to Wedding" value={bookingTimeMetrics.avgMonthsBookingToWedding !== null ? `${bookingTimeMetrics.avgMonthsBookingToWedding} months` : 'N/A'} sub="Average months" compact />
+              <SalesMetricsCard
+                closes={salesTotals.totalCloses}
+                bookings={salesTotals.totalBookings}
+                cash={salesTotals.totalCash}
+                formatNumber={formatNumber}
+                toUSD={toUSD}
+                isMobile={isMobile}
+              />
+            </div>
+            {/* Row 2: Call Performance | Conversion Rates | Time cards stacked (3 equal columns, matched height via grid) */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr 1fr',
+                gap: 16,
+                width: '100%',
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <CallPerformanceCard
+                  callsBooked={callTotals.totalCallsBooked}
+                  callsCancelled={callTotals.totalCallsCancelled}
+                  callsNoShows={callTotals.totalEffectiveNoShows}
+                  callsTaken={callTotals.totalCallsTaken}
+                  showUpRate={callTotals.showUpRate}
+                  formatNumber={formatNumber}
+                  isMobile={isMobile}
+                />
+              </div>
+              <div style={{ minWidth: 0, height: '100%' }}>
+                <ConversionRatesCard
+                  inquiryToTaken={callTotals.inquiryToTaken}
+                  takenToClose={callTotals.takenToClose}
+                  inquiryToClose={salesTotals.inquiryToClose}
+                  isMobile={isMobile}
+                  style={{ height: '100%' }}
+                />
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateRows: '1fr 1fr',
+                  gap: 16,
+                  minHeight: 0,
+                  minWidth: 0,
+                }}
+              >
+                <div style={{ minHeight: 0 }}>
+                  <Card icon={<Clock size={20} color="#ec4899" />} label="Time from Inquiry to Booking" value={bookingTimeMetrics.avgDaysInquiryToBooking !== null ? `${bookingTimeMetrics.avgDaysInquiryToBooking} days` : 'N/A'} sub="Average days" compact valueFontSize={18} style={{ height: '100%', boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ minHeight: 0 }}>
+                  <Card icon={<Calendar size={20} color="#14b8a6" />} label="Time from Booking to Wedding" value={bookingTimeMetrics.avgMonthsBookingToWedding !== null ? `${bookingTimeMetrics.avgMonthsBookingToWedding} months` : 'N/A'} sub="Average months" compact valueFontSize={18} style={{ height: '100%', boxSizing: 'border-box' }} />
+                </div>
               </div>
             </div>
           </div>
@@ -1122,7 +1148,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
 
       {/* ADVERTISING - Only show if ads tracking is enabled */}
       {user?.adsTrackingEnabled && (
-        <Section title="Advertising">
+        <Section title="Advertising Performance Metrics">
           <Cards columns={2} desktopColumns={5}>
             <Card icon={<Users size={20} color="#06b6d4" />} label="Total Ad Leads" value={formatNumber(advertisingTotals.totalAdLeads)} />
             <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value={toUSD(advertisingTotals.totalAdSpend)} />
@@ -1286,7 +1312,7 @@ function SalesMetricsCard({
     <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <DollarSign size={20} color="#10b981" />
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Sales Metrics</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Sales Performance</h3>
       </div>
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap' }}>
         {items.map(({ label, value }, index) => (
@@ -1304,7 +1330,7 @@ function SalesMetricsCard({
             }}
           >
             <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{label}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#1f2937' }}>{value}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: '#1f2937' }}>{value}</div>
           </div>
         ))}
       </div>
@@ -1331,7 +1357,7 @@ function InquiriesCard({
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: '#1f2937' }}>{formatNumber(totalInquiries)} Total</div>
+          <div style={{ fontSize: 18, fontWeight: 600, color: '#1f2937' }}>{formatNumber(totalInquiries)} Total</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <CheckCircle size={16} color="#10b981" />
@@ -1345,6 +1371,7 @@ function InquiriesCard({
 function CallPerformanceCard({
   callsBooked,
   callsCancelled,
+  callsNoShows,
   callsTaken,
   showUpRate,
   formatNumber,
@@ -1352,30 +1379,36 @@ function CallPerformanceCard({
 }: {
   callsBooked: number
   callsCancelled: number
+  callsNoShows: number
   callsTaken: number
   showUpRate: string
   formatNumber: (n: number) => string
   isMobile: boolean
 }) {
-  const items = [
-    { label: 'Calls Booked', value: formatNumber(callsBooked) },
-    { label: 'Calls Cancelled', value: formatNumber(callsCancelled) },
-    { label: 'Calls Taken', value: formatNumber(callsTaken) },
-    { label: 'Call Show Up Rate', value: `${showUpRate}%` },
-  ]
+  const row = (label: string, value: string) => (
+    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+      <span style={{ fontSize: 14, color: '#374151' }}>{label}:</span>
+      <span style={{ fontSize: 18, fontWeight: 700, color: '#1f2937' }}>{value}</span>
+    </div>
+  )
   return (
     <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <Phone size={20} color="#10b981" />
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Call Performance</h3>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {items.map(({ label, value }) => (
-          <div key={label}>
-            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>{label}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#1f2937' }}>{value}</div>
-          </div>
-        ))}
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ marginBottom: 24 }}>
+          {row('Calls Booked', formatNumber(callsBooked))}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 40 }}>
+          {row('Calls Taken', formatNumber(callsTaken))}
+          {row('Call Show Up Rate', `${showUpRate}%`)}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {row('Cancelled Calls', formatNumber(callsCancelled))}
+          {row('No-Shows', formatNumber(callsNoShows))}
+        </div>
       </div>
     </div>
   )
@@ -1385,12 +1418,14 @@ function ConversionRatesCard({
   inquiryToTaken,
   takenToClose,
   inquiryToClose,
-  isMobile
+  isMobile,
+  style: styleProp
 }: {
   inquiryToTaken: string
   takenToClose: string
   inquiryToClose: string
   isMobile: boolean
+  style?: React.CSSProperties
 }) {
   const items = [
     { label: 'Inquiry to Call Taken %', value: `${inquiryToTaken}%` },
@@ -1398,26 +1433,27 @@ function ConversionRatesCard({
     { label: 'Inquiry to Close %', value: `${inquiryToClose}%` },
   ]
   return (
-    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24 }}>
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24, boxSizing: 'border-box', ...styleProp }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <CheckCircle size={20} color="#ef4444" />
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Conversion Rates</h3>
       </div>
-      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 16, flexWrap: 'wrap' }}>
-        {items.map(({ label, value }) => (
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {items.map(({ label, value }, index) => (
           <div
             key={label}
             style={{
-              flex: isMobile ? undefined : 1,
-              minWidth: isMobile ? undefined : 0,
               display: 'flex',
-              flexDirection: 'column',
-              gap: 4,
-              padding: isMobile ? 0 : '8px 0',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              gap: 8,
+              paddingTop: index === 0 ? 0 : 16,
+              paddingBottom: 16,
+              borderTop: index === 0 ? 'none' : '1px solid #e5e7eb'
             }}
           >
-            <span style={{ fontSize: 12, color: '#6b7280' }}>{label}</span>
-            <span style={{ fontSize: 20, fontWeight: 700, color: '#1f2937' }}>{value}</span>
+            <span style={{ fontSize: 14, color: '#374151' }}>{label}</span>
+            <span style={{ fontSize: 18, fontWeight: 700, color: '#1f2937' }}>{value}</span>
           </div>
         ))}
       </div>
@@ -1468,9 +1504,9 @@ function OperationalTimeRangeSelector({
               style={{
                 padding: isMobile ? '8px 14px' : '10px 18px',
                 borderRadius: 8,
-                border: isSelected ? '2px solid #10b981' : '1px solid #d1d5db',
-                background: isSelected ? '#ecfdf5' : 'white',
-                color: isSelected ? '#059669' : '#374151',
+                border: isSelected ? 'none' : '1px solid #d1d5db',
+                background: isSelected ? '#10b981' : 'white',
+                color: isSelected ? 'white' : '#374151',
                 fontWeight: isSelected ? 600 : 500,
                 fontSize: isMobile ? 13 : 14,
                 cursor: 'pointer',
@@ -1487,9 +1523,9 @@ function OperationalTimeRangeSelector({
             style={{
               padding: isMobile ? '8px 14px' : '10px 18px',
               borderRadius: 8,
-              border: selectedMoreOption ? '2px solid #10b981' : '1px solid #d1d5db',
-              background: selectedMoreOption ? '#ecfdf5' : 'white',
-              color: selectedMoreOption ? '#059669' : '#374151',
+              border: selectedMoreOption ? 'none' : '1px solid #d1d5db',
+              background: selectedMoreOption ? '#10b981' : 'white',
+              color: selectedMoreOption ? 'white' : '#374151',
               fontWeight: selectedMoreOption ? 600 : 500,
               fontSize: isMobile ? 13 : 14,
               cursor: 'pointer',
@@ -1537,8 +1573,8 @@ function OperationalTimeRangeSelector({
                       width: '100%',
                       padding: '10px 16px',
                       border: 'none',
-                      background: value === opt.key ? '#f0fdf4' : 'transparent',
-                      color: value === opt.key ? '#059669' : '#374151',
+                      background: value === opt.key ? '#10b981' : 'transparent',
+                      color: value === opt.key ? 'white' : '#374151',
                       fontWeight: value === opt.key ? 600 : 400,
                       fontSize: 14,
                       textAlign: 'left',
@@ -1636,14 +1672,14 @@ function Cards({ children, columns = 4, desktopColumns, mobileColumns }: { child
   )
 }
 
-function Card({ icon, label, value, sub, compact }: { icon: React.ReactNode; label: string; value: string | number; sub?: React.ReactNode; compact?: boolean }) {
+function Card({ icon, label, value, sub, compact, style: styleProp, valueFontSize }: { icon: React.ReactNode; label: string; value: string | number; sub?: React.ReactNode; compact?: boolean; style?: React.CSSProperties; valueFontSize?: number }) {
   return (
-    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: compact ? 16 : 20 }}>
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: compact ? 16 : 20, ...styleProp }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         {icon}
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{label}</h3>
       </div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#1f2937' }}>{value}</div>
+      <div style={{ fontSize: valueFontSize ?? 20, fontWeight: 700, color: '#1f2937' }}>{value}</div>
       {sub && <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>{sub}</div>}
     </div>
   )
@@ -1826,79 +1862,44 @@ function WelcomeAndTasks({
             </button>
         </div>
 
-        {/* Bottom Row: Goal Tracker + Annualized Pace */}
+        {/* Goal Tracker (full width) + Pace Card (full width, 3 items side-by-side on desktop) */}
         {(() => {
-          const hasGoals = calculatorGoals && 
-                             bookings && 
-                             payments && 
-                             currentYear && 
+          const hasGoals = calculatorGoals &&
+                             bookings &&
+                             payments &&
+                             currentYear &&
                              ((calculatorGoals.bookingsRevenueGoal > 0) || (calculatorGoals.cashGoal > 0));
-          
-          if (isMobile) {
-            // On mobile, stack vertically
-            return (
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: isMobile ? '24px' : '30px', 
-                gridColumn: '1 / -1',
-                marginTop: isMobile ? '24px' : '36px'
-              }}>
-                {hasGoals ? (
-                  <GoalVisualization
-                    bookingsRevenueGoal={calculatorGoals.bookingsRevenueGoal || 0}
-                    cashGoal={calculatorGoals.cashGoal || 0}
-                    bookings={bookings}
-                    payments={payments}
-                    currentYear={currentYear}
-                    isMobile={isMobile}
-                  />
-                ) : (
-                  <GoalEmptyState onSetGoals={() => handleNavigate('view-goals')} isMobile={isMobile} />
-                )}
-                <AnnualizedPace 
-                  funnelData={funnelData}
-                  bookings={bookings || []}
-                  serviceTypes={dataManager?.serviceTypes || []}
-                  calculatorGoals={calculatorGoals}
+
+          return (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: isMobile ? 24 : 36,
+              gridColumn: '1 / -1',
+              marginTop: isMobile ? 24 : 36
+            }}>
+              {hasGoals ? (
+                <GoalVisualization
+                  bookingsRevenueGoal={calculatorGoals.bookingsRevenueGoal || 0}
+                  cashGoal={calculatorGoals.cashGoal || 0}
+                  bookings={bookings}
+                  payments={payments}
                   currentYear={currentYear}
                   isMobile={isMobile}
                 />
-              </div>
-            );
-          } else {
-            // On desktop, show side-by-side
-            return (
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '1fr 1fr', 
-                gap: '36px', 
-                gridColumn: '1 / -1',
-                marginTop: '36px'
-              }}>
-                {hasGoals ? (
-                  <GoalVisualization
-                    bookingsRevenueGoal={calculatorGoals.bookingsRevenueGoal || 0}
-                    cashGoal={calculatorGoals.cashGoal || 0}
-                    bookings={bookings}
-                    payments={payments}
-                    currentYear={currentYear}
-                    isMobile={isMobile}
-                  />
-                ) : (
-                  <GoalEmptyState onSetGoals={() => handleNavigate('view-goals')} isMobile={isMobile} />
-                )}
-                <AnnualizedPace 
-                  funnelData={funnelData}
-                  bookings={bookings || []}
-                  serviceTypes={dataManager?.serviceTypes || []}
-                  calculatorGoals={calculatorGoals}
-                  currentYear={currentYear}
-                  isMobile={isMobile}
-                />
-              </div>
-            );
-          }
+              ) : (
+                <GoalEmptyState onSetGoals={() => handleNavigate('view-goals')} isMobile={isMobile} />
+              )}
+              <AnnualizedPace
+                funnelData={funnelData}
+                bookings={bookings || []}
+                serviceTypes={dataManager?.serviceTypes || []}
+                calculatorGoals={calculatorGoals}
+                currentYear={currentYear}
+                isMobile={isMobile}
+              />
+            </div>
+          );
         })()}
 
     </div>
@@ -2003,7 +2004,9 @@ function AnnualizedPace({
       border: '1px solid #e5e7eb',
       borderRadius: '12px',
       padding: isMobile ? '16px' : '20px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+      width: '100%',
+      boxSizing: 'border-box'
     }}>
       <div style={{ marginBottom: '8px' }}>
         <h3 style={{ 
@@ -2019,7 +2022,11 @@ function AnnualizedPace({
         Track your pace for the year based on your activity over the last 3 complete months.
       </p>
 
-      <Cards columns={2} desktopColumns={2} mobileColumns={1}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr',
+        gap: isMobile ? 12 : 20
+      }}>
         <Card
           icon={<Users size={20} color="#3b82f6" />}
           label="Inquiries Pace"
@@ -2030,19 +2037,17 @@ function AnnualizedPace({
           label="Calls Pace"
           value={formatNumber(calculations.paceCalls)}
         />
-        <div style={{ gridColumn: '1 / -1' }}>
-          <Card
-            icon={<CheckCircle size={20} color="#ef4444" />}
-            label="Bookings Pace"
-            value={formatNumber(calculations.paceBookings)}
-            sub={calculations.isOnTrack ? (
-              <span style={{ color: '#065f46' }}>✓ On track</span>
-            ) : (
-              <span style={{ color: '#991b1b' }}>⚠ Behind goal</span>
-            )}
-          />
-        </div>
-      </Cards>
+        <Card
+          icon={<CheckCircle size={20} color="#ef4444" />}
+          label="Bookings Pace"
+          value={formatNumber(calculations.paceBookings)}
+          sub={calculations.isOnTrack ? (
+            <span style={{ color: '#065f46' }}>✓ On track</span>
+          ) : (
+            <span style={{ color: '#991b1b' }}>⚠ Behind goal</span>
+          )}
+        />
+      </div>
     </div>
   );
 }
@@ -2062,8 +2067,6 @@ function GoalVisualization({
   currentYear: number;
   isMobile: boolean;
 }) {
-  const [activeView, setActiveView] = useState<'bookings' | 'cash'>('bookings');
-
   // Calculate YTD totals
   const ytdData = useMemo(() => {
     const bookingYearById = new Map<string, number>();
@@ -2126,7 +2129,7 @@ function GoalVisualization({
     const percentOfPlan = Math.round((ytdData.bookingsRevenueYtd / bookingsRevenueGoal) * 100);
     const pacingDelta = percentOfPlan - yearProgress;
     const remaining = bookingsRevenueGoal - ytdData.bookingsRevenueYtd;
-    
+
     return {
       actual: ytdData.bookingsRevenueYtd,
       goal: bookingsRevenueGoal,
@@ -2136,24 +2139,22 @@ function GoalVisualization({
     };
   }, [ytdData.bookingsRevenueYtd, bookingsRevenueGoal, yearProgress]);
 
-  // Calculate metrics for Cash
+  // Calculate metrics for Cash (adjusted for locked-in from prior-year bookings for pacing)
   const cashMetrics = useMemo(() => {
     if (cashGoal === 0) return null;
 
-    // Remove cash already locked in from prior-year bookings for pacing only
     const adjustedGoal = Math.max(cashGoal - ytdData.lockedInCash, 0);
     const adjustedActual = Math.max(ytdData.cashYtd - ytdData.lockedInCash, 0);
-    const percentOfPlan = Math.round((ytdData.cashYtd / cashGoal) * 100);
     const pacingPercent = adjustedGoal === 0
       ? 100
       : Math.round((adjustedActual / adjustedGoal) * 100);
     const pacingDelta = pacingPercent - yearProgress;
     const remaining = cashGoal - ytdData.cashYtd;
-    
+
     return {
       actual: ytdData.cashYtd,
       goal: cashGoal,
-      percentOfPlan,
+      percentOfPlan: Math.round((ytdData.cashYtd / cashGoal) * 100),
       pacingDelta,
       remaining,
     };
@@ -2161,14 +2162,16 @@ function GoalVisualization({
 
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
-  // Simple pie chart component with percentage in center
-    const PieChart = ({ percentage, size = 100 }: { percentage: number; size?: number }) => {
+  if (!bookingsMetrics && !cashMetrics) return null;
+
+  // Cash circle chart (always for Cash)
+  const PieChart = ({ percentage, size = 100 }: { percentage: number; size?: number }) => {
     const strokeWidth = 16;
     const radius = size / 2 - strokeWidth / 2 - 2;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (percentage / 100) * circumference;
     const displayPercentage = Math.min(percentage, 100);
-    
+
     return (
       <div style={{ position: 'relative', width: size, height: size }}>
         <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
@@ -2212,20 +2215,51 @@ function GoalVisualization({
     );
   };
 
-  // Determine which metric to show
-  const currentMetrics = activeView === 'bookings' ? bookingsMetrics : cashMetrics;
-  const currentTitle = activeView === 'bookings' ? 'Bookings Goal' : 'Cash Goal';
+  const cashPercent = cashGoal > 0 ? Math.min(Math.round((ytdData.cashYtd / cashGoal) * 100), 100) : 0;
 
-  if (!bookingsMetrics && !cashMetrics) return null;
+  const rowGap = 18;
+  const labelValueGap = 8;
 
-  // If only one metric exists, auto-select it
-  const hasBoth = bookingsMetrics && cashMetrics;
-  const effectiveView = !hasBoth 
-    ? (bookingsMetrics ? 'bookings' : 'cash')
-    : activeView;
-  const displayMetrics = effectiveView === 'bookings' ? bookingsMetrics : cashMetrics;
+  const MetricRow = ({ label, value, pacingValue }: { label: string; value?: React.ReactNode; pacingValue?: { delta: number; color: string } }) => (
+    <div style={{ marginBottom: rowGap }}>
+      <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: labelValueGap }}>{label}</div>
+      {pacingValue !== undefined ? (
+        <div style={{ fontSize: '16px', fontWeight: '600', color: pacingValue.color }}>
+          {pacingValue.delta >= 0 ? '+' : ''}{pacingValue.delta}%
+        </div>
+      ) : (
+        <div style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{value}</div>
+      )}
+    </div>
+  );
 
-  if (!displayMetrics) return null;
+  const GoalBlock = ({
+    title,
+    goal,
+    achieved,
+    remaining,
+    pacingDelta,
+  }: {
+    title: string;
+    goal: number;
+    achieved: number;
+    remaining: number;
+    pacingDelta: number;
+  }) => (
+    <div>
+      <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937', marginBottom: rowGap }}>{title}</div>
+      <MetricRow label="Goal" value={toUSD(goal)} />
+      <MetricRow label="Achieved" value={toUSD(achieved)} />
+      <MetricRow label="Remaining" value={toUSD(remaining)} />
+      <MetricRow
+        label="Pacing"
+        pacingValue={{
+          delta: pacingDelta,
+          color: pacingDelta >= 0 ? '#10b981' : '#ef4444',
+        }}
+      />
+    </div>
+  );
 
   return (
     <div style={{
@@ -2233,93 +2267,48 @@ function GoalVisualization({
       borderRadius: '12px',
       padding: isMobile ? '20px' : '24px',
       border: '1px solid #e5e7eb',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+      width: '100%',
+      boxSizing: 'border-box'
     }}>
-      <h3 style={{ 
-        fontSize: isMobile ? '18px' : '20px', 
-        fontWeight: '600', 
-        margin: '0 0 12px 0', 
-        color: '#1f2937' 
+      <h3 style={{
+        fontSize: isMobile ? '18px' : '20px',
+        fontWeight: '600',
+        margin: '0 0 20px 0',
+        color: '#1f2937'
       }}>
         {currentYear} Goal Tracker
       </h3>
-      
-      {hasBoth && (
-        <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', gap: '8px', backgroundColor: '#f3f4f6', borderRadius: '8px', padding: '4px' }}>
-            <button
-              onClick={() => setActiveView('bookings')}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: effectiveView === 'bookings' ? 'white' : 'transparent',
-                color: effectiveView === 'bookings' ? '#1f2937' : '#6b7280',
-                fontWeight: effectiveView === 'bookings' ? '600' : '400',
-                fontSize: '14px',
-                cursor: 'pointer',
-                boxShadow: effectiveView === 'bookings' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
-              }}
-            >
-              Bookings
-            </button>
-            <button
-              onClick={() => setActiveView('cash')}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: effectiveView === 'cash' ? 'white' : 'transparent',
-                color: effectiveView === 'cash' ? '#1f2937' : '#6b7280',
-                fontWeight: effectiveView === 'cash' ? '600' : '400',
-                fontSize: '14px',
-                cursor: 'pointer',
-                boxShadow: effectiveView === 'cash' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
-              }}
-            >
-              Cash
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '20px', flexDirection: isMobile ? 'column' : 'row' }}>
-        <div style={{ flexShrink: 0 }}>
-          <PieChart percentage={Math.min(displayMetrics.percentOfPlan, 100)} size={isMobile ? 240 : 200} />
-        </div>
-        
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>
-            {toUSD(displayMetrics.actual)}
-          </div>
-          <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
-            of {toUSD(displayMetrics.goal)} goal
-          </div>
-        </div>
-      </div>
 
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '12px',
-        paddingTop: '16px',
-        borderTop: '1px solid #e5e7eb'
+        display: 'flex',
+        gap: isMobile ? 24 : 40,
+        alignItems: 'flex-start',
+        flexDirection: isMobile ? 'column' : 'row'
       }}>
-        <div>
-          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Remaining</div>
-          <div style={{ fontSize: '14px', fontWeight: '600', color: '#4b5563' }}>
-            {toUSD(displayMetrics.remaining)}
-          </div>
+        <div style={{ flexShrink: 0 }}>
+          <PieChart percentage={cashPercent} size={isMobile ? 200 : 180} />
         </div>
-        <div>
-          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Pacing</div>
-          <div style={{
-            fontSize: '14px',
-            fontWeight: '600',
-            color: displayMetrics.pacingDelta >= 0 ? '#10b981' : '#ef4444'
-          }}>
-            {displayMetrics.pacingDelta >= 0 ? '+' : ''}{displayMetrics.pacingDelta}%
-          </div>
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: isMobile ? 28 : 32, minWidth: 0 }}>
+          {cashMetrics && (
+            <GoalBlock
+              title="Cash Goal"
+              goal={cashMetrics.goal}
+              achieved={cashMetrics.actual}
+              remaining={cashMetrics.remaining}
+              pacingDelta={cashMetrics.pacingDelta}
+            />
+          )}
+          {bookingsMetrics && (
+            <GoalBlock
+              title="Bookings Goal"
+              goal={bookingsMetrics.goal}
+              achieved={bookingsMetrics.actual}
+              remaining={bookingsMetrics.remaining}
+              pacingDelta={bookingsMetrics.pacingDelta}
+            />
+          )}
         </div>
       </div>
     </div>
