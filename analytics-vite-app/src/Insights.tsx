@@ -876,29 +876,24 @@ export default function Insights({ dataManager }: { dataManager: any }) {
         </div>
       </div>
 
-      {/* SALES FUNNEL METRICS */}
+      {/* SALES FUNNEL METRICS - 3x3 grid: Row1 Inquiries|SalesMetrics, Row2-3 CallPerf|ConversionRates+TimeCards */}
       <Section title="Sales Funnel Metrics">
-        {/* Row 1: Inquiries + Sales Metrics (matches Call Performance + Conversion Rates layout) */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.5fr 2.5fr', gap: isMobile ? 12 : 16, marginBottom: isMobile ? 12 : 16 }}>
-          <InquiriesCard
-            totalInquiries={salesTotals.totalInquiries}
-            confirmedAvailable={salesTotals.totalConfirmedAvailable}
-            formatNumber={formatNumber}
-            isMobile={isMobile}
-          />
-          <SalesMetricsCard
-            closes={salesTotals.totalCloses}
-            bookings={salesTotals.totalBookings}
-            cash={salesTotals.totalCash}
-            formatNumber={formatNumber}
-            toUSD={toUSD}
-            isMobile={isMobile}
-          />
-        </div>
-
-        {/* Row 2+3: Call Performance (tall) | Conversion Rates + Time cards */}
         {isMobile ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 12 }}>
+            <InquiriesCard
+              totalInquiries={salesTotals.totalInquiries}
+              confirmedAvailable={salesTotals.totalConfirmedAvailable}
+              formatNumber={formatNumber}
+              isMobile={isMobile}
+            />
+            <SalesMetricsCard
+              closes={salesTotals.totalCloses}
+              bookings={salesTotals.totalBookings}
+              cash={salesTotals.totalCash}
+              formatNumber={formatNumber}
+              toUSD={toUSD}
+              isMobile={isMobile}
+            />
             <CallPerformanceCard
               callsBooked={callTotals.totalCallsBooked}
               callsCancelled={callTotals.totalCallsCancelled}
@@ -922,14 +917,34 @@ export default function Insights({ dataManager }: { dataManager: any }) {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1.5fr 2.5fr',
-              gridTemplateRows: 'auto',
+              gridTemplateColumns: '1.5fr 1.25fr 1.25fr',
+              gridTemplateRows: 'auto auto auto',
               gap: 16,
               marginBottom: 16,
               alignItems: 'stretch',
             }}
           >
-            <div style={{ minHeight: 0 }}>
+            {/* Row 1 */}
+            <div style={{ gridColumn: 1 }}>
+              <InquiriesCard
+                totalInquiries={salesTotals.totalInquiries}
+                confirmedAvailable={salesTotals.totalConfirmedAvailable}
+                formatNumber={formatNumber}
+                isMobile={isMobile}
+              />
+            </div>
+            <div style={{ gridColumn: '2 / 4' }}>
+              <SalesMetricsCard
+                closes={salesTotals.totalCloses}
+                bookings={salesTotals.totalBookings}
+                cash={salesTotals.totalCash}
+                formatNumber={formatNumber}
+                toUSD={toUSD}
+                isMobile={isMobile}
+              />
+            </div>
+            {/* Row 2-3: Call Performance spans 2 rows, right side has Conversion Rates + Time cards */}
+            <div style={{ gridRow: '2 / 4', gridColumn: 1, minHeight: 0 }}>
               <CallPerformanceCard
                 callsBooked={callTotals.totalCallsBooked}
                 callsCancelled={callTotals.totalCallsCancelled}
@@ -941,6 +956,8 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             </div>
             <div
               style={{
+                gridRow: '2 / 4',
+                gridColumn: '2 / 4',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 16,
