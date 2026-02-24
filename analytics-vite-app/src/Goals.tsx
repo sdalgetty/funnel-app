@@ -271,7 +271,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
     </div>
   );
 
-  // Annual Financial Goals card - single column with condensed hints
+  // Annual Financial Goals card - two-column layout with intro text
   const annualFinancialGoalsCard = (
     <div style={{
       backgroundColor: 'white',
@@ -282,80 +282,90 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
       width: '100%',
       boxSizing: 'border-box'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <DollarSign size={20} color="#3b82f6" />
         <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
           Annual Financial Goals
         </h2>
       </div>
+      <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#374151', lineHeight: 1.5 }}>
+        Set your revenue targets for the year.
+      </p>
+      <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#6b7280', lineHeight: 1.5 }}>
+        Bookings track what you sell. Cash tracks what you collect.
+      </p>
 
-      <div>
-        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-          Bookings Goal ($)
-        </label>
-        <input
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9.]*"
-          value={data.bookingsRevenueGoal === 0 ? '' : (data.bookingsRevenueGoal / 100).toFixed(2).replace(/\.?0+$/, '')}
-          onChange={(e) => {
-            const value = e.target.value;
-            if (value === '' || /^\d*\.?\d*$/.test(value)) {
-              const dollarValue = value === '' ? 0 : parseFloat(value) || 0;
-              updateData('bookingsRevenueGoal', Math.round(dollarValue * 100));
-            }
-          }}
-          placeholder="0"
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: '8px',
-            border: '1px solid #d1d5db',
-            fontSize: '16px',
-            backgroundColor: 'white',
-            boxSizing: 'border-box'
-          }}
-        />
-        <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#6b7280', lineHeight: 1.5 }}>
-          Total value of contracts signed this year.
-        </p>
-        <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6b7280', lineHeight: 1.5, fontStyle: 'italic' }}>
-          Example: 10 weddings at $5,000 = $50,000 in bookings.
-        </p>
-      </div>
-
-      <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '24px 0' }} />
-
-      <div>
-        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-          Cash Goal ($)
-        </label>
-        <input
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9.]*"
-          value={data.cashGoal === 0 ? '' : (data.cashGoal / 100).toFixed(2).replace(/\.?0+$/, '')}
-          onChange={(e) => {
-            const value = e.target.value;
-            if (value === '' || /^\d*\.?\d*$/.test(value)) {
-              const dollarValue = value === '' ? 0 : parseFloat(value) || 0;
-              updateData('cashGoal', Math.round(dollarValue * 100));
-            }
-          }}
-          placeholder="0"
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: '8px',
-            border: '1px solid #d1d5db',
-            fontSize: '16px',
-            backgroundColor: 'white',
-            boxSizing: 'border-box'
-          }}
-        />
-        <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#6b7280', lineHeight: 1.5 }}>
-          Total payments expected to be received this year — even if from last year's bookings.
-        </p>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+        gap: isMobile ? 20 : 32,
+        alignItems: 'start'
+      }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+            Bookings Goal ($)
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9.]*"
+            value={data.bookingsRevenueGoal === 0 ? '' : (data.bookingsRevenueGoal / 100).toFixed(2).replace(/\.?0+$/, '')}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                const dollarValue = value === '' ? 0 : parseFloat(value) || 0;
+                updateData('bookingsRevenueGoal', Math.round(dollarValue * 100));
+              }
+            }}
+            placeholder="0"
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: '8px',
+              border: '1px solid #d1d5db',
+              fontSize: '16px',
+              backgroundColor: 'white',
+              boxSizing: 'border-box'
+            }}
+          />
+          <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#6b7280', lineHeight: 1.5 }}>
+            Total value of contracts signed this year.
+          </p>
+          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6b7280', lineHeight: 1.5, fontStyle: 'italic' }}>
+            Example: 10 weddings × $5,000 = $50,000.
+          </p>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+            Cash Goal ($)
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9.]*"
+            value={data.cashGoal === 0 ? '' : (data.cashGoal / 100).toFixed(2).replace(/\.?0+$/, '')}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                const dollarValue = value === '' ? 0 : parseFloat(value) || 0;
+                updateData('cashGoal', Math.round(dollarValue * 100));
+              }
+            }}
+            placeholder="0"
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: '8px',
+              border: '1px solid #d1d5db',
+              fontSize: '16px',
+              backgroundColor: 'white',
+              boxSizing: 'border-box'
+            }}
+          />
+          <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#6b7280', lineHeight: 1.5 }}>
+            Total payments expected this year — even from last year's bookings.
+          </p>
+        </div>
       </div>
     </div>
   );
