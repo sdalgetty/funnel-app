@@ -917,65 +917,46 @@ export default function Insights({ dataManager }: { dataManager: any }) {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1fr',
-              gridTemplateRows: 'auto auto auto',
+              gridTemplateColumns: '1fr 2fr',
+              gridTemplateRows: 'auto auto',
               gap: 16,
               marginBottom: 16,
-              alignItems: 'stretch',
             }}
           >
-            {/* Row 1 */}
-            <div style={{ gridColumn: 1, display: 'flex', minHeight: 0 }}>
-              <InquiriesCard
-                totalInquiries={salesTotals.totalInquiries}
-                confirmedAvailable={salesTotals.totalConfirmedAvailable}
-                formatNumber={formatNumber}
+            {/* Row 1: Inquiries | Sales Metrics */}
+            <InquiriesCard
+              totalInquiries={salesTotals.totalInquiries}
+              confirmedAvailable={salesTotals.totalConfirmedAvailable}
+              formatNumber={formatNumber}
+              isMobile={isMobile}
+            />
+            <SalesMetricsCard
+              closes={salesTotals.totalCloses}
+              bookings={salesTotals.totalBookings}
+              cash={salesTotals.totalCash}
+              formatNumber={formatNumber}
+              toUSD={toUSD}
+              isMobile={isMobile}
+            />
+            {/* Row 2: Call Performance | Conversion Rates + Time cards */}
+            <CallPerformanceCard
+              callsBooked={callTotals.totalCallsBooked}
+              callsCancelled={callTotals.totalCallsCancelled}
+              callsTaken={callTotals.totalCallsTaken}
+              showUpRate={callTotals.showUpRate}
+              formatNumber={formatNumber}
+              isMobile={isMobile}
+            />
+            <div style={{ display: 'grid', gridTemplateRows: 'auto auto', gap: 16 }}>
+              <ConversionRatesCard
+                inquiryToTaken={callTotals.inquiryToTaken}
+                takenToClose={callTotals.takenToClose}
+                inquiryToClose={salesTotals.inquiryToClose}
                 isMobile={isMobile}
               />
-            </div>
-            <div style={{ gridColumn: '2 / 4', display: 'flex', minHeight: 0 }}>
-              <SalesMetricsCard
-                closes={salesTotals.totalCloses}
-                bookings={salesTotals.totalBookings}
-                cash={salesTotals.totalCash}
-                formatNumber={formatNumber}
-                toUSD={toUSD}
-                isMobile={isMobile}
-              />
-            </div>
-            {/* Row 2-3: Call Performance spans 2 rows, right side has Conversion Rates + Time cards */}
-            <div style={{ gridRow: '2 / 4', gridColumn: 1, minHeight: 0 }}>
-              <CallPerformanceCard
-                callsBooked={callTotals.totalCallsBooked}
-                callsCancelled={callTotals.totalCallsCancelled}
-                callsTaken={callTotals.totalCallsTaken}
-                showUpRate={callTotals.showUpRate}
-                formatNumber={formatNumber}
-                isMobile={isMobile}
-              />
-            </div>
-            <div
-              style={{
-                gridRow: '2 / 4',
-                gridColumn: '2 / 4',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 16,
-                minHeight: 0,
-              }}
-            >
-              <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-                <ConversionRatesCard
-                  inquiryToTaken={callTotals.inquiryToTaken}
-                  takenToClose={callTotals.takenToClose}
-                  inquiryToClose={salesTotals.inquiryToClose}
-                  isMobile={isMobile}
-                  fill
-                />
-              </div>
-              <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <Card icon={<Clock size={20} color="#ec4899" />} label="Time from Inquiry to Booking" value={bookingTimeMetrics.avgDaysInquiryToBooking !== null ? `${bookingTimeMetrics.avgDaysInquiryToBooking} days` : 'N/A'} sub="Average days" compact fill />
-                <Card icon={<Calendar size={20} color="#14b8a6" />} label="Time from Booking to Wedding" value={bookingTimeMetrics.avgMonthsBookingToWedding !== null ? `${bookingTimeMetrics.avgMonthsBookingToWedding} months` : 'N/A'} sub="Average months" compact fill />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <Card icon={<Clock size={20} color="#ec4899" />} label="Time from Inquiry to Booking" value={bookingTimeMetrics.avgDaysInquiryToBooking !== null ? `${bookingTimeMetrics.avgDaysInquiryToBooking} days` : 'N/A'} sub="Average days" compact />
+                <Card icon={<Calendar size={20} color="#14b8a6" />} label="Time from Booking to Wedding" value={bookingTimeMetrics.avgMonthsBookingToWedding !== null ? `${bookingTimeMetrics.avgMonthsBookingToWedding} months` : 'N/A'} sub="Average months" compact />
               </div>
             </div>
           </div>
@@ -1302,26 +1283,16 @@ function SalesMetricsCard({
     { label: 'Cash', value: toUSD(cash) },
   ]
   return (
-    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <DollarSign size={20} color="#10b981" />
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Sales Metrics</h3>
       </div>
-      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 16, flexWrap: 'wrap', flex: 1 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 24, flexWrap: 'wrap' }}>
         {items.map(({ label, value }) => (
-          <div
-            key={label}
-            style={{
-              flex: isMobile ? undefined : 1,
-              minWidth: isMobile ? undefined : 0,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 4,
-              padding: isMobile ? 0 : '8px 0',
-            }}
-          >
-            <span style={{ fontSize: 12, color: '#6b7280' }}>{label}</span>
-            <span style={{ fontSize: 20, fontWeight: 700, color: '#1f2937' }}>{value}</span>
+          <div key={label} style={{ flex: isMobile ? undefined : 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{label}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#1f2937' }}>{value}</div>
           </div>
         ))}
       </div>
@@ -1341,7 +1312,7 @@ function InquiriesCard({
   isMobile: boolean
 }) {
   return (
-    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24, height: '100%' }}>
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <Users size={20} color="#3b82f6" />
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Inquiries</h3>
@@ -1382,7 +1353,7 @@ function CallPerformanceCard({
     { label: 'Call Show Up Rate', value: `${showUpRate}%` },
   ]
   return (
-    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 18, height: '100%' }}>
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <Phone size={20} color="#10b981" />
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Call Performance</h3>
@@ -1403,14 +1374,12 @@ function ConversionRatesCard({
   inquiryToTaken,
   takenToClose,
   inquiryToClose,
-  isMobile,
-  fill
+  isMobile
 }: {
   inquiryToTaken: string
   takenToClose: string
   inquiryToClose: string
   isMobile: boolean
-  fill?: boolean
 }) {
   const items = [
     { label: 'Inquiry to Call Taken %', value: `${inquiryToTaken}%` },
@@ -1418,12 +1387,12 @@ function ConversionRatesCard({
     { label: 'Inquiry to Close %', value: `${inquiryToClose}%` },
   ]
   return (
-    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24, ...(fill ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : {}) }}>
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <CheckCircle size={20} color="#ef4444" />
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Conversion Rates</h3>
       </div>
-      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 16, flexWrap: 'wrap', ...(fill ? { flex: 1 } : {}) }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 16, flexWrap: 'wrap' }}>
         {items.map(({ label, value }) => (
           <div
             key={label}
@@ -1656,14 +1625,14 @@ function Cards({ children, columns = 4, desktopColumns, mobileColumns }: { child
   )
 }
 
-function Card({ icon, label, value, sub, compact, fill }: { icon: React.ReactNode; label: string; value: string | number; sub?: React.ReactNode; compact?: boolean; fill?: boolean }) {
+function Card({ icon, label, value, sub, compact }: { icon: React.ReactNode; label: string; value: string | number; sub?: React.ReactNode; compact?: boolean }) {
   return (
-    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: compact ? 16 : 20, ...(fill ? { height: '100%', display: 'flex', flexDirection: 'column' } : {}) }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: compact ? 8 : 8 }}>
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: compact ? 16 : 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         {icon}
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{label}</h3>
       </div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#1f2937', ...(fill ? { flex: 1 } : {}) }}>{value}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#1f2937' }}>{value}</div>
       {sub && <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>{sub}</div>}
     </div>
   )
