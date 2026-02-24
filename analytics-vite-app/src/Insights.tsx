@@ -917,7 +917,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1.5fr 1.25fr 1.25fr',
+              gridTemplateColumns: '1fr 1fr 1fr',
               gridTemplateRows: 'auto auto auto',
               gap: 16,
               marginBottom: 16,
@@ -925,7 +925,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             }}
           >
             {/* Row 1 */}
-            <div style={{ gridColumn: 1 }}>
+            <div style={{ gridColumn: 1, display: 'flex', minHeight: 0 }}>
               <InquiriesCard
                 totalInquiries={salesTotals.totalInquiries}
                 confirmedAvailable={salesTotals.totalConfirmedAvailable}
@@ -933,7 +933,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
                 isMobile={isMobile}
               />
             </div>
-            <div style={{ gridColumn: '2 / 4' }}>
+            <div style={{ gridColumn: '2 / 4', display: 'flex', minHeight: 0 }}>
               <SalesMetricsCard
                 closes={salesTotals.totalCloses}
                 bookings={salesTotals.totalBookings}
@@ -1302,12 +1302,12 @@ function SalesMetricsCard({
     { label: 'Cash', value: toUSD(cash) },
   ]
   return (
-    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24 }}>
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <DollarSign size={20} color="#10b981" />
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Sales Metrics</h3>
       </div>
-      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 16, flexWrap: 'wrap', flex: 1 }}>
         {items.map(({ label, value }) => (
           <div
             key={label}
@@ -1341,19 +1341,19 @@ function InquiriesCard({
   isMobile: boolean
 }) {
   return (
-    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24, height: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <Users size={20} color="#3b82f6" />
-        <span style={{ fontSize: 14, fontWeight: 500, color: '#374151' }}>Inquiries</span>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Inquiries</h3>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div>
           <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>Total Inquiries</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: '#1f2937' }}>{formatNumber(totalInquiries)}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#1f2937' }}>{formatNumber(totalInquiries)}</div>
         </div>
         <div>
           <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>Confirmed Available</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: '#1f2937' }}>{confirmedAvailable > 0 ? formatNumber(confirmedAvailable) : 'N/A'}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#1f2937' }}>{confirmedAvailable > 0 ? formatNumber(confirmedAvailable) : 'N/A'}</div>
         </div>
       </div>
     </div>
@@ -1383,9 +1383,9 @@ function CallPerformanceCard({
   ]
   return (
     <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 18, height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <Phone size={20} color="#10b981" />
-        <span style={{ fontSize: 14, fontWeight: 500, color: '#374151' }}>Call Performance</span>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Call Performance</h3>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {items.map(({ label, value }) => (
@@ -1659,11 +1659,11 @@ function Cards({ children, columns = 4, desktopColumns, mobileColumns }: { child
 function Card({ icon, label, value, sub, compact, fill }: { icon: React.ReactNode; label: string; value: string | number; sub?: React.ReactNode; compact?: boolean; fill?: boolean }) {
   return (
     <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: compact ? 16 : 20, ...(fill ? { height: '100%', display: 'flex', flexDirection: 'column' } : {}) }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: compact ? 6 : 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: compact ? 8 : 8 }}>
         {icon}
-        <span style={{ fontSize: compact ? 12 : 14, fontWeight: 500, color: '#374151' }}>{label}</span>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{label}</h3>
       </div>
-      <div style={{ fontSize: compact ? 20 : 24, fontWeight: 700, color: '#1f2937', ...(fill ? { flex: 1 } : {}) }}>{value}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#1f2937', ...(fill ? { flex: 1 } : {}) }}>{value}</div>
       {sub && <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>{sub}</div>}
     </div>
   )
