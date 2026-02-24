@@ -2217,18 +2217,21 @@ function GoalVisualization({
 
   const cashPercent = cashGoal > 0 ? Math.min(Math.round((ytdData.cashYtd / cashGoal) * 100), 100) : 0;
 
-  const rowGap = 18;
-  const labelValueGap = 8;
-
   const MetricRow = ({ label, value, pacingValue }: { label: string; value?: React.ReactNode; pacingValue?: { delta: number; color: string } }) => (
-    <div style={{ marginBottom: rowGap }}>
-      <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: labelValueGap }}>{label}</div>
+    <div style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 12,
+      padding: '4px 0'
+    }}>
+      <span style={{ fontSize: '13px', color: '#6b7280' }}>{label}</span>
       {pacingValue !== undefined ? (
-        <div style={{ fontSize: '16px', fontWeight: '600', color: pacingValue.color }}>
+        <span style={{ fontSize: '15px', fontWeight: '600', color: pacingValue.color }}>
           {pacingValue.delta >= 0 ? '+' : ''}{pacingValue.delta}%
-        </div>
+        </span>
       ) : (
-        <div style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{value}</div>
+        <span style={{ fontSize: '15px', fontWeight: '600', color: '#1f2937' }}>{value}</span>
       )}
     </div>
   );
@@ -2247,7 +2250,7 @@ function GoalVisualization({
     pacingDelta: number;
   }) => (
     <div>
-      <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937', marginBottom: rowGap }}>{title}</div>
+      <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937', marginBottom: 8 }}>{title}</div>
       <MetricRow label="Goal" value={toUSD(goal)} />
       <MetricRow label="Achieved" value={toUSD(achieved)} />
       <MetricRow label="Remaining" value={toUSD(remaining)} />
@@ -2290,7 +2293,7 @@ function GoalVisualization({
           <PieChart percentage={cashPercent} size={isMobile ? 200 : 180} />
         </div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: isMobile ? 28 : 32, minWidth: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0 }}>
           {cashMetrics && (
             <GoalBlock
               title="Cash Goal"
@@ -2299,6 +2302,9 @@ function GoalVisualization({
               remaining={cashMetrics.remaining}
               pacingDelta={cashMetrics.pacingDelta}
             />
+          )}
+          {cashMetrics && bookingsMetrics && (
+            <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '16px 0' }} />
           )}
           {bookingsMetrics && (
             <GoalBlock
