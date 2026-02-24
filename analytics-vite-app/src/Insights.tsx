@@ -2170,6 +2170,7 @@ function GoalVisualization({
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (percentage / 100) * circumference;
     const displayPercentage = Math.min(percentage, 100);
+    const formattedPercent = (Math.round(displayPercentage * 10) / 10).toFixed(1);
 
     return (
       <div style={{ position: 'relative', width: size, height: size }}>
@@ -2195,7 +2196,7 @@ function GoalVisualization({
           textAlign: 'center'
         }}>
           <div style={{ fontSize: size < 150 ? '26px' : '36px', fontWeight: '700', color: '#1f2937', lineHeight: '1' }}>
-            {displayPercentage}%
+            {formattedPercent}%
           </div>
         </div>
       </div>
@@ -2285,15 +2286,17 @@ function GoalVisualization({
           />
         )}
         {bookingsMetrics && (
-          <MetricCard
-            title="Bookings Goal"
-            metrics={{
-              actual: bookingsMetrics.actual,
-              goal: bookingsMetrics.goal,
-              remaining: bookingsMetrics.remaining,
-              pacingDelta: bookingsMetrics.pacingDelta,
-            }}
-          />
+          <div style={cashMetrics && !isMobile ? { borderLeft: '1px solid #e5e7eb', paddingLeft: 32 } : undefined}>
+            <MetricCard
+              title="Bookings Goal"
+              metrics={{
+                actual: bookingsMetrics.actual,
+                goal: bookingsMetrics.goal,
+                remaining: bookingsMetrics.remaining,
+                pacingDelta: bookingsMetrics.pacingDelta,
+              }}
+            />
+          </div>
         )}
       </div>
     </div>
