@@ -302,7 +302,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
         alignItems: 'start'
       }}>
         <div>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+          <label style={{ display: 'block', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '6px' }}>
             Bookings Goal ($)
           </label>
           <input
@@ -336,7 +336,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
           </p>
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+          <label style={{ display: 'block', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '6px' }}>
             Cash Goal ($)
           </label>
           <input
@@ -690,6 +690,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
               <li>Leads coming from personal referrals and organic sources vs leads coming from colder sources such as Advertising or SEO.</li>
               <li>Clarity and quality of your brand message across social media, website, calls and pricing guides all contribute to your numbers.</li>
               <li>Follow-up and communication quality</li>
+              <li>Pricing alignment to your market</li>
             </ul>
           </div>
         </div>
