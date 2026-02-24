@@ -1862,7 +1862,7 @@ function WelcomeAndTasks({
             </button>
         </div>
 
-        {/* Goal Tracker (full width) + Pace Card (full width, 3 items side-by-side on desktop) */}
+        {/* Bottom Row: Goal Tracker (left) + Pacing (right) */}
         {(() => {
           const hasGoals = calculatorGoals &&
                              bookings &&
@@ -1870,13 +1870,45 @@ function WelcomeAndTasks({
                              currentYear &&
                              ((calculatorGoals.bookingsRevenueGoal > 0) || (calculatorGoals.cashGoal > 0));
 
+          if (isMobile) {
+            return (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 24,
+                gridColumn: '1 / -1',
+                marginTop: 24
+              }}>
+                {hasGoals ? (
+                  <GoalVisualization
+                    bookingsRevenueGoal={calculatorGoals.bookingsRevenueGoal || 0}
+                    cashGoal={calculatorGoals.cashGoal || 0}
+                    bookings={bookings}
+                    payments={payments}
+                    currentYear={currentYear}
+                    isMobile={isMobile}
+                  />
+                ) : (
+                  <GoalEmptyState onSetGoals={() => handleNavigate('view-goals')} isMobile={isMobile} />
+                )}
+                <AnnualizedPace
+                  funnelData={funnelData}
+                  bookings={bookings || []}
+                  serviceTypes={dataManager?.serviceTypes || []}
+                  calculatorGoals={calculatorGoals}
+                  currentYear={currentYear}
+                  isMobile={isMobile}
+                />
+              </div>
+            );
+          }
           return (
             <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: isMobile ? 24 : 36,
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 36,
               gridColumn: '1 / -1',
-              marginTop: isMobile ? 24 : 36
+              marginTop: 36
             }}>
               {hasGoals ? (
                 <GoalVisualization
@@ -2160,9 +2192,19 @@ function GoalVisualization({
     };
   }, [ytdData.cashYtd, ytdData.lockedInCash, cashGoal, yearProgress]);
 
+  const [activeView, setActiveView] = useState<'cash' | 'bookings'>('cash');
+
   const toUSD = (cents: number) => (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
   if (!bookingsMetrics && !cashMetrics) return null;
+
+  const hasBoth = bookingsMetrics && cashMetrics;
+  const effectiveView = !hasBoth
+    ? (bookingsMetrics ? 'bookings' : 'cash')
+    : activeView;
+  const displayMetrics = effectiveView === 'bookings' ? bookingsMetrics : cashMetrics;
+
+  if (!displayMetrics) return null;
 
   const PieChart = ({ percentage, size = 100 }: { percentage: number; size?: number }) => {
     const strokeWidth = 16;
@@ -2203,53 +2245,6 @@ function GoalVisualization({
     );
   };
 
-  const MetricCard = ({
-    title,
-    metrics,
-  }: {
-    title: string;
-    metrics: { actual: number; goal: number; remaining: number; pacingDelta: number };
-  }) => (
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937', marginBottom: '12px' }}>{title}</div>
-      <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px', flexDirection: isMobile ? 'column' : 'row' }}>
-        <div style={{ flexShrink: 0 }}>
-          <PieChart percentage={Math.min(metrics.actual / metrics.goal * 100, 100)} size={isMobile ? 160 : 140} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: isMobile ? '18px' : '20px', fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>
-            {toUSD(metrics.actual)}
-          </div>
-          <div style={{ fontSize: '13px', color: '#6b7280' }}>
-            of {toUSD(metrics.goal)} goal
-          </div>
-        </div>
-      </div>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '12px',
-        paddingTop: '12px',
-        borderTop: '1px solid #e5e7eb'
-      }}>
-        <div>
-          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Remaining</div>
-          <div style={{ fontSize: '14px', fontWeight: '600', color: '#4b5563' }}>{toUSD(metrics.remaining)}</div>
-        </div>
-        <div>
-          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Pacing</div>
-          <div style={{
-            fontSize: '14px',
-            fontWeight: '600',
-            color: metrics.pacingDelta >= 0 ? '#10b981' : '#ef4444'
-          }}>
-            {metrics.pacingDelta >= 0 ? '+' : ''}{metrics.pacingDelta}%
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div style={{
       backgroundColor: 'white',
@@ -2257,47 +2252,93 @@ function GoalVisualization({
       padding: isMobile ? '20px' : '24px',
       border: '1px solid #e5e7eb',
       boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      width: '100%',
-      boxSizing: 'border-box'
+      minWidth: 0
     }}>
       <h3 style={{
         fontSize: isMobile ? '18px' : '20px',
         fontWeight: '600',
-        margin: '0 0 20px 0',
+        margin: '0 0 12px 0',
         color: '#1f2937'
       }}>
         {currentYear} Goal Tracker
       </h3>
 
+      {hasBoth && (
+        <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '8px', backgroundColor: '#f3f4f6', borderRadius: '8px', padding: '4px' }}>
+            <button
+              onClick={() => setActiveView('cash')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: effectiveView === 'cash' ? 'white' : 'transparent',
+                color: effectiveView === 'cash' ? '#1f2937' : '#6b7280',
+                fontWeight: effectiveView === 'cash' ? '600' : '400',
+                fontSize: '14px',
+                cursor: 'pointer',
+                boxShadow: effectiveView === 'cash' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              Cash
+            </button>
+            <button
+              onClick={() => setActiveView('bookings')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: effectiveView === 'bookings' ? 'white' : 'transparent',
+                color: effectiveView === 'bookings' ? '#1f2937' : '#6b7280',
+                fontWeight: effectiveView === 'bookings' ? '600' : '400',
+                fontSize: '14px',
+                cursor: 'pointer',
+                boxShadow: effectiveView === 'bookings' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              Bookings
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '20px', flexDirection: isMobile ? 'column' : 'row' }}>
+        <div style={{ flexShrink: 0 }}>
+          <PieChart percentage={Math.min(displayMetrics.percentOfPlan, 100)} size={isMobile ? 240 : 200} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>
+            {toUSD(displayMetrics.actual)}
+          </div>
+          <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
+            of {toUSD(displayMetrics.goal)} goal
+          </div>
+        </div>
+      </div>
+
       <div style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : (cashMetrics && bookingsMetrics ? '1fr 1fr' : '1fr'),
-        gap: isMobile ? 24 : 32
+        gridTemplateColumns: '1fr 1fr',
+        gap: '12px',
+        paddingTop: '16px',
+        borderTop: '1px solid #e5e7eb'
       }}>
-        {cashMetrics && (
-          <MetricCard
-            title="Cash Goal"
-            metrics={{
-              actual: cashMetrics.actual,
-              goal: cashMetrics.goal,
-              remaining: cashMetrics.remaining,
-              pacingDelta: cashMetrics.pacingDelta,
-            }}
-          />
-        )}
-        {bookingsMetrics && (
-          <div style={cashMetrics && !isMobile ? { borderLeft: '1px solid #e5e7eb', paddingLeft: 32 } : undefined}>
-            <MetricCard
-              title="Bookings Goal"
-              metrics={{
-                actual: bookingsMetrics.actual,
-                goal: bookingsMetrics.goal,
-                remaining: bookingsMetrics.remaining,
-                pacingDelta: bookingsMetrics.pacingDelta,
-              }}
-            />
+        <div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Remaining</div>
+          <div style={{ fontSize: '14px', fontWeight: '600', color: '#4b5563' }}>
+            {toUSD(displayMetrics.remaining)}
           </div>
-        )}
+        </div>
+        <div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Pacing</div>
+          <div style={{
+            fontSize: '14px',
+            fontWeight: '600',
+            color: displayMetrics.pacingDelta >= 0 ? '#10b981' : '#ef4444'
+          }}>
+            {displayMetrics.pacingDelta >= 0 ? '+' : ''}{displayMetrics.pacingDelta}%
+          </div>
+        </div>
       </div>
     </div>
   );
