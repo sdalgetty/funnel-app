@@ -2164,7 +2164,6 @@ function GoalVisualization({
 
   if (!bookingsMetrics && !cashMetrics) return null;
 
-  // Cash circle chart (always for Cash)
   const PieChart = ({ percentage, size = 100 }: { percentage: number; size?: number }) => {
     const strokeWidth = 16;
     const radius = size / 2 - strokeWidth / 2 - 2;
@@ -2175,14 +2174,7 @@ function GoalVisualization({
     return (
       <div style={{ position: 'relative', width: size, height: size }}>
         <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="#e5e7eb"
-            strokeWidth={strokeWidth}
-          />
+          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={strokeWidth} />
           <circle
             cx={size / 2}
             cy={size / 2}
@@ -2202,12 +2194,7 @@ function GoalVisualization({
           transform: 'translate(-50%, -50%)',
           textAlign: 'center'
         }}>
-          <div style={{
-            fontSize: size < 150 ? '26px' : '36px',
-            fontWeight: '700',
-            color: '#1f2937',
-            lineHeight: '1'
-          }}>
+          <div style={{ fontSize: size < 150 ? '26px' : '36px', fontWeight: '700', color: '#1f2937', lineHeight: '1' }}>
             {displayPercentage}%
           </div>
         </div>
@@ -2215,51 +2202,50 @@ function GoalVisualization({
     );
   };
 
-  const cashPercent = cashGoal > 0 ? Math.min(Math.round((ytdData.cashYtd / cashGoal) * 100), 100) : 0;
-
-  const MetricRow = ({ label, value, pacingValue }: { label: string; value?: React.ReactNode; pacingValue?: { delta: number; color: string } }) => (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 12,
-      padding: '4px 0'
-    }}>
-      <span style={{ fontSize: '13px', color: '#6b7280', minWidth: 72 }}>{label}</span>
-      {pacingValue !== undefined ? (
-        <span style={{ fontSize: '15px', fontWeight: '600', color: pacingValue.color }}>
-          {pacingValue.delta >= 0 ? '+' : ''}{pacingValue.delta}%
-        </span>
-      ) : (
-        <span style={{ fontSize: '15px', fontWeight: '600', color: '#1f2937' }}>{value}</span>
-      )}
-    </div>
-  );
-
-  const GoalBlock = ({
+  const MetricCard = ({
     title,
-    goal,
-    achieved,
-    remaining,
-    pacingDelta,
+    metrics,
   }: {
     title: string;
-    goal: number;
-    achieved: number;
-    remaining: number;
-    pacingDelta: number;
+    metrics: { actual: number; goal: number; remaining: number; pacingDelta: number };
   }) => (
-    <div>
-      <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937', marginBottom: 8 }}>{title}</div>
-      <MetricRow label="Goal" value={toUSD(goal)} />
-      <MetricRow label="Achieved" value={toUSD(achieved)} />
-      <MetricRow label="Remaining" value={toUSD(remaining)} />
-      <MetricRow
-        label="Pacing"
-        pacingValue={{
-          delta: pacingDelta,
-          color: pacingDelta >= 0 ? '#10b981' : '#ef4444',
-        }}
-      />
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937', marginBottom: '12px' }}>{title}</div>
+      <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px', flexDirection: isMobile ? 'column' : 'row' }}>
+        <div style={{ flexShrink: 0 }}>
+          <PieChart percentage={Math.min(metrics.actual / metrics.goal * 100, 100)} size={isMobile ? 160 : 140} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: isMobile ? '18px' : '20px', fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>
+            {toUSD(metrics.actual)}
+          </div>
+          <div style={{ fontSize: '13px', color: '#6b7280' }}>
+            of {toUSD(metrics.goal)} goal
+          </div>
+        </div>
+      </div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '12px',
+        paddingTop: '12px',
+        borderTop: '1px solid #e5e7eb'
+      }}>
+        <div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Remaining</div>
+          <div style={{ fontSize: '14px', fontWeight: '600', color: '#4b5563' }}>{toUSD(metrics.remaining)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Pacing</div>
+          <div style={{
+            fontSize: '14px',
+            fontWeight: '600',
+            color: metrics.pacingDelta >= 0 ? '#10b981' : '#ef4444'
+          }}>
+            {metrics.pacingDelta >= 0 ? '+' : ''}{metrics.pacingDelta}%
+          </div>
+        </div>
+      </div>
     </div>
   );
 
@@ -2283,38 +2269,32 @@ function GoalVisualization({
       </h3>
 
       <div style={{
-        display: 'flex',
-        gap: isMobile ? 24 : 40,
-        alignItems: 'flex-start',
-        flexDirection: isMobile ? 'column' : 'row'
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : (cashMetrics && bookingsMetrics ? '1fr 1fr' : '1fr'),
+        gap: isMobile ? 24 : 32
       }}>
-        <div style={{ flexShrink: 0 }}>
-          <PieChart percentage={cashPercent} size={isMobile ? 200 : 180} />
-        </div>
-
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0 }}>
-          {cashMetrics && (
-            <GoalBlock
-              title="Cash Goal"
-              goal={cashMetrics.goal}
-              achieved={cashMetrics.actual}
-              remaining={cashMetrics.remaining}
-              pacingDelta={cashMetrics.pacingDelta}
-            />
-          )}
-          {cashMetrics && bookingsMetrics && (
-            <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '16px 0' }} />
-          )}
-          {bookingsMetrics && (
-            <GoalBlock
-              title="Bookings Goal"
-              goal={bookingsMetrics.goal}
-              achieved={bookingsMetrics.actual}
-              remaining={bookingsMetrics.remaining}
-              pacingDelta={bookingsMetrics.pacingDelta}
-            />
-          )}
-        </div>
+        {cashMetrics && (
+          <MetricCard
+            title="Cash Goal"
+            metrics={{
+              actual: cashMetrics.actual,
+              goal: cashMetrics.goal,
+              remaining: cashMetrics.remaining,
+              pacingDelta: cashMetrics.pacingDelta,
+            }}
+          />
+        )}
+        {bookingsMetrics && (
+          <MetricCard
+            title="Bookings Goal"
+            metrics={{
+              actual: bookingsMetrics.actual,
+              goal: bookingsMetrics.goal,
+              remaining: bookingsMetrics.remaining,
+              pacingDelta: bookingsMetrics.pacingDelta,
+            }}
+          />
+        )}
       </div>
     </div>
   );
