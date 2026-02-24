@@ -917,7 +917,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 2fr',
+              gridTemplateColumns: '1fr 1fr',
               gridTemplateRows: 'auto auto',
               gap: 16,
               marginBottom: 16,
@@ -1283,7 +1283,7 @@ function SalesMetricsCard({
     { label: 'Cash', value: toUSD(cash) },
   ]
   return (
-    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24 }}>
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <DollarSign size={20} color="#10b981" />
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Sales Metrics</h3>
@@ -1324,19 +1324,18 @@ function InquiriesCard({
   isMobile: boolean
 }) {
   return (
-    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24 }}>
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <Users size={20} color="#3b82f6" />
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Inquiries</h3>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div>
-          <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>Total Inquiries</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#1f2937' }}>{formatNumber(totalInquiries)}</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: '#1f2937' }}>{formatNumber(totalInquiries)} Total</div>
         </div>
-        <div>
-          <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>Confirmed Available</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#1f2937' }}>{confirmedAvailable > 0 ? formatNumber(confirmedAvailable) : 'N/A'}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <CheckCircle size={16} color="#10b981" />
+          <span style={{ fontSize: 14, color: '#6b7280' }}>Confirmed Available: {confirmedAvailable > 0 ? formatNumber(confirmedAvailable) : 'N/A'}</span>
         </div>
       </div>
     </div>
