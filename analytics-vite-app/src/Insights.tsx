@@ -1288,9 +1288,21 @@ function SalesMetricsCard({
         <DollarSign size={20} color="#10b981" />
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Sales Metrics</h3>
       </div>
-      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 24, flexWrap: 'wrap' }}>
-        {items.map(({ label, value }) => (
-          <div key={label} style={{ flex: isMobile ? undefined : 1, minWidth: 0 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap' }}>
+        {items.map(({ label, value }, index) => (
+          <div
+            key={label}
+            style={{
+              flex: isMobile ? undefined : 1,
+              minWidth: 0,
+              ...(isMobile
+                ? { paddingTop: index > 0 ? 12 : 0 }
+                : {
+                    paddingLeft: index > 0 ? 24 : 0,
+                    borderLeft: index > 0 ? '1px solid #e5e7eb' : undefined,
+                  }),
+            }}
+          >
             <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{label}</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#1f2937' }}>{value}</div>
           </div>
