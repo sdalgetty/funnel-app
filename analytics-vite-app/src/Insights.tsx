@@ -2054,11 +2054,7 @@ function AnnualizedPace({
         Track your pace for the year based on your activity over the last 3 complete months.
       </p>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr',
-        gap: isMobile ? 12 : 20
-      }}>
+      <Cards columns={2} desktopColumns={2} mobileColumns={1}>
         <Card
           icon={<Users size={20} color="#3b82f6" />}
           label="Inquiries Pace"
@@ -2069,17 +2065,19 @@ function AnnualizedPace({
           label="Calls Pace"
           value={formatNumber(calculations.paceCalls)}
         />
-        <Card
-          icon={<CheckCircle size={20} color="#ef4444" />}
-          label="Bookings Pace"
-          value={formatNumber(calculations.paceBookings)}
-          sub={calculations.isOnTrack ? (
-            <span style={{ color: '#065f46' }}>✓ On track</span>
-          ) : (
-            <span style={{ color: '#991b1b' }}>⚠ Behind goal</span>
-          )}
-        />
-      </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <Card
+            icon={<CheckCircle size={20} color="#ef4444" />}
+            label="Bookings Pace"
+            value={formatNumber(calculations.paceBookings)}
+            sub={calculations.isOnTrack ? (
+              <span style={{ color: '#065f46' }}>✓ On track</span>
+            ) : (
+              <span style={{ color: '#991b1b' }}>⚠ Behind goal</span>
+            )}
+          />
+        </div>
+      </Cards>
     </div>
   );
 }
