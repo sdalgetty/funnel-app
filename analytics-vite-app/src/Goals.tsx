@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Target, TrendingUp, Users, Phone, PlayCircle } from 'lucide-react';
+import { TrendingUp, Users, Phone, DollarSign, Calculator } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { UnifiedDataService } from './services/unifiedDataService';
 import { useIsMobile } from './hooks/useIsMobile';
@@ -23,17 +23,17 @@ interface GoalsProps {
 }
 
 const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
-  const { user, updateProfile, isViewOnly } = useAuth();
+  const { user, effectiveUser, effectiveUserId, updateProfile, isViewOnly } = useAuth();
+  const profileUser = effectiveUser || user;
   const isMobile = useIsMobile();
   
   const currentYear = new Date().getFullYear();
   const [isMarkingWelcomeVideoWatched, setIsMarkingWelcomeVideoWatched] = useState(false);
-  const shouldShowWelcomeVideo = !!user && !user.welcomeVideoWatchedAt;
+  const shouldShowWelcomeVideo = !!profileUser && !profileUser.welcomeVideoWatchedAt;
   const welcomeVideoEmbedUrl = 'https://player.vimeo.com/video/1158563687';
-  const welcomeVideoLinkUrl = 'https://vimeo.com/1158563687?share=copy&fl=sv&fe=ci';
 
   const markWelcomeVideoWatched = async () => {
-    if (!user || isViewOnly) return;
+    if (!profileUser || isViewOnly) return;
     setIsMarkingWelcomeVideoWatched(true);
     try {
       await updateProfile({ welcomeVideoWatchedAt: new Date() });
@@ -134,9 +134,10 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
   // Load goals from database
   useEffect(() => {
     const loadGoals = async () => {
-      if (!user?.id) return;
+      const targetUserId = effectiveUserId || user?.id;
+      if (!targetUserId) return;
       try {
-        const goals = await UnifiedDataService.getCalculatorGoals(user.id);
+        const goals = await UnifiedDataService.getCalculatorGoals(targetUserId);
         if (goals) {
           setData(prev => ({
             ...prev,
@@ -248,9 +249,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
       padding: '20px',
       border: '1px solid #e5e7eb',
       boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-      minWidth: 0,
-      overflow: 'visible',
-      height: '100%'
+      minWidth: 0
     }}>
       <div style={{ 
         display: 'flex', 
@@ -272,17 +271,110 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
     </div>
   );
 
-  // Annual Goals Section Content
-  const annualGoalsContent = (
+  // Annual Revenue Goals card - two-column layout with intro text
+  const annualFinancialGoalsCard = (
+    <div style={{
+      backgroundColor: 'white',
+      borderRadius: '12px',
+      padding: isMobile ? '20px' : '24px',
+      border: '1px solid #e5e7eb',
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+      width: '100%',
+      boxSizing: 'border-box'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <DollarSign size={20} color="#3b82f6" />
+        <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
+          Annual Revenue Goals
+        </h2>
+      </div>
+      <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#374151', lineHeight: 1.5 }}>
+        Set your revenue targets for the year.
+      </p>
+      <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#6b7280', lineHeight: 1.5 }}>
+        Bookings track what you sell. Cash tracks what you collect.
+      </p>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+        gap: isMobile ? 20 : 32,
+        alignItems: 'start'
+      }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '6px' }}>
+            Bookings Goal ($)
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9.]*"
+            value={data.bookingsRevenueGoal === 0 ? '' : (data.bookingsRevenueGoal / 100).toFixed(2).replace(/\.?0+$/, '')}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                const dollarValue = value === '' ? 0 : parseFloat(value) || 0;
+                updateData('bookingsRevenueGoal', Math.round(dollarValue * 100));
+              }
+            }}
+            placeholder="0"
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: '8px',
+              border: '1px solid #d1d5db',
+              fontSize: '16px',
+              backgroundColor: 'white',
+              boxSizing: 'border-box'
+            }}
+          />
+          <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#6b7280', lineHeight: 1.5 }}>
+            Total value of contracts signed this year.
+          </p>
+          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6b7280', lineHeight: 1.5, fontStyle: 'italic' }}>
+            Example: 10 weddings × $5,000 = $50,000.
+          </p>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '6px' }}>
+            Cash Goal ($)
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9.]*"
+            value={data.cashGoal === 0 ? '' : (data.cashGoal / 100).toFixed(2).replace(/\.?0+$/, '')}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                const dollarValue = value === '' ? 0 : parseFloat(value) || 0;
+                updateData('cashGoal', Math.round(dollarValue * 100));
+              }
+            }}
+            placeholder="0"
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: '8px',
+              border: '1px solid #d1d5db',
+              fontSize: '16px',
+              backgroundColor: 'white',
+              boxSizing: 'border-box'
+            }}
+          />
+          <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#6b7280', lineHeight: 1.5 }}>
+            Total payments expected this year — even from last year's bookings.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Sales Calculator Section Content (Bookings #, Inquiry to Call, Call to Booking only - no Bookings $ or Cash)
+  const salesCalculatorContent = (
     <>
       <div style={{ marginBottom: '20px' }}>
-        <label style={{ 
-          display: 'block', 
-          fontSize: '14px', 
-          fontWeight: '500', 
-          color: '#374151', 
-          marginBottom: '6px' 
-        }}>
+        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
           Bookings Number Goal (Number of Weddings)
         </label>
         <input
@@ -293,8 +385,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
           onChange={(e) => {
             const value = e.target.value;
             if (value === '' || /^\d+$/.test(value)) {
-              const numValue = value === '' ? 0 : parseInt(value, 10);
-              updateData('bookingsGoal', numValue);
+              updateData('bookingsGoal', value === '' ? 0 : parseInt(value, 10));
             }
           }}
           style={{
@@ -308,15 +399,8 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
           }}
         />
       </div>
-
       <div style={{ marginBottom: '20px' }}>
-        <label style={{ 
-          display: 'block', 
-          fontSize: '14px', 
-          fontWeight: '500', 
-          color: '#374151', 
-          marginBottom: '6px' 
-        }}>
+        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
           Inquiry to Call Rate (%)
         </label>
         <input
@@ -327,8 +411,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
           onChange={(e) => {
             const value = e.target.value;
             if (value === '' || /^\d+$/.test(value)) {
-              const numValue = value === '' ? 0 : parseInt(value, 10);
-              updateData('inquiryToCall', numValue);
+              updateData('inquiryToCall', value === '' ? 0 : parseInt(value, 10));
             }
           }}
           style={{
@@ -342,15 +425,8 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
           }}
         />
       </div>
-
-      <div style={{ marginBottom: '20px' }}>
-        <label style={{ 
-          display: 'block', 
-          fontSize: '14px', 
-          fontWeight: '500', 
-          color: '#374151', 
-          marginBottom: '6px' 
-        }}>
+      <div>
+        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
           Call to Booking Rate (%)
         </label>
         <input
@@ -361,82 +437,9 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
           onChange={(e) => {
             const value = e.target.value;
             if (value === '' || /^\d+$/.test(value)) {
-              const numValue = value === '' ? 0 : parseInt(value, 10);
-              updateData('callToBooking', numValue);
+              updateData('callToBooking', value === '' ? 0 : parseInt(value, 10));
             }
           }}
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: '8px',
-            border: '1px solid #d1d5db',
-            fontSize: '16px',
-            backgroundColor: 'white',
-            boxSizing: 'border-box'
-          }}
-        />
-      </div>
-
-      <div style={{ marginBottom: '20px' }}>
-        <label style={{ 
-          display: 'block', 
-          fontSize: '14px', 
-          fontWeight: '500', 
-          color: '#374151', 
-          marginBottom: '6px' 
-        }}>
-          Bookings Revenue Goal (Total Booked Revenue $)
-        </label>
-        <input
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9.]*"
-          value={data.bookingsRevenueGoal === 0 ? '' : (data.bookingsRevenueGoal / 100).toFixed(2).replace(/\.?0+$/, '')}
-          onChange={(e) => {
-            const value = e.target.value;
-            if (value === '' || /^\d*\.?\d*$/.test(value)) {
-              const dollarValue = value === '' ? 0 : parseFloat(value) || 0;
-              const centsValue = Math.round(dollarValue * 100);
-              updateData('bookingsRevenueGoal', centsValue);
-            }
-          }}
-          placeholder="0"
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: '8px',
-            border: '1px solid #d1d5db',
-            fontSize: '16px',
-            backgroundColor: 'white',
-            boxSizing: 'border-box'
-          }}
-        />
-      </div>
-
-      <div>
-        <label style={{ 
-          display: 'block', 
-          fontSize: '14px', 
-          fontWeight: '500', 
-          color: '#374151', 
-          marginBottom: '6px' 
-        }}>
-          Cash Goal (Total Cash Projected $)
-        </label>
-        <input
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9.]*"
-          value={data.cashGoal === 0 ? '' : (data.cashGoal / 100).toFixed(2).replace(/\.?0+$/, '')}
-          onChange={(e) => {
-            const value = e.target.value;
-            if (value === '' || /^\d*\.?\d*$/.test(value)) {
-              const dollarValue = value === '' ? 0 : parseFloat(value) || 0;
-              const centsValue = Math.round(dollarValue * 100);
-              updateData('cashGoal', centsValue);
-            }
-          }}
-          placeholder="0"
           style={{
             width: '100%',
             padding: '10px 12px',
@@ -454,6 +457,9 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
   // Required Activity Section Content (Read-only)
   const requiredActivityContent = (
     <>
+      <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#6b7280', lineHeight: 1.5 }}>
+        Based on your revenue and conversion assumptions
+      </p>
       <div style={{ marginBottom: '16px' }}>
         <div style={{
           display: 'flex',
@@ -549,27 +555,9 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
                   Welcome Video
                 </h2>
                 <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
-                  Start here to get the most out of your goals.
+                  Start here to get a quick overview of how to use the app and get up and running!
                 </p>
               </div>
-              <button
-                onClick={() => window.open(welcomeVideoLinkUrl, '_blank')}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 12px',
-                  backgroundColor: '#f9fafb',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  color: '#374151'
-                }}
-              >
-                <PlayCircle size={16} />
-                Open in Vimeo
-              </button>
             </div>
             <div style={{
               position: 'relative',
@@ -616,14 +604,19 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
             </div>
           </div>
         )}
-        {/* Two Column Layout */}
+        {/* Annual Revenue Goals - full width */}
+        <div style={{ width: '100%', marginBottom: isMobile ? 16 : 24 }}>
+          {annualFinancialGoalsCard}
+        </div>
+
+        {/* Sales Calculator + Required Activity - two columns */}
         <div style={{ 
           display: 'grid', 
           gap: isMobile ? '16px' : '24px',
           gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
           maxWidth: '100%'
         }}>
-          {renderSection('Annual Goals', <Target size={20} color="#3b82f6" />, annualGoalsContent)}
+          {renderSection('Sales Activity Calculator', <Calculator size={20} color="#3b82f6" />, salesCalculatorContent)}
           {renderSection('Required Activity', <TrendingUp size={20} color="#10b981" />, requiredActivityContent)}
         </div>
 
@@ -697,6 +690,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
               <li>Leads coming from personal referrals and organic sources vs leads coming from colder sources such as Advertising or SEO.</li>
               <li>Clarity and quality of your brand message across social media, website, calls and pricing guides all contribute to your numbers.</li>
               <li>Follow-up and communication quality</li>
+              <li>Pricing alignment to your market</li>
             </ul>
           </div>
         </div>
