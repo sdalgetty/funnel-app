@@ -1978,13 +1978,43 @@ function AnnualizedPace({
     [serviceTypes]
   );
 
-  // Calculate pace based on last 3 complete months
+  // Calculate pace based on YTD + projected (last 3 months rate × remaining months)
   const calculations = useMemo(() => {
     const y = new Date().getFullYear();
     const m = new Date().getMonth() + 1; // 1-indexed calendar month
     const lastCompleteIdx = m > 1 ? (y * 12 + (m - 1) - 1) : ((y - 1) * 12 + 11);
     const startIdx = lastCompleteIdx - 2;
 
+    // YTD: sum from start of year through last complete month
+    const ytdStartIdx = y * 12;
+
+    const inquiriesYtd = funnelData.reduce((sum, month) => {
+      const idx = month.year * 12 + (month.month - 1);
+      if (idx < ytdStartIdx || idx > lastCompleteIdx) return sum;
+      return sum + (month.inquiries || 0);
+    }, 0);
+
+    const callsYtd = funnelData.reduce((sum, month) => {
+      const idx = month.year * 12 + (month.month - 1);
+      if (idx < ytdStartIdx || idx > lastCompleteIdx) return sum;
+      return sum + (month.callsTaken || 0);
+    }, 0);
+
+    const bookingsYtd = bookings.filter(b => {
+      if (!b?.dateBooked) return false;
+      if (!trackableServiceIds.has(b.serviceTypeId)) return false;
+      const idx = (() => {
+        const parts = b.dateBooked.split('-');
+        if (parts.length < 2) return -1;
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        if (!Number.isFinite(year) || !Number.isFinite(month)) return -1;
+        return year * 12 + (month - 1);
+      })();
+      return idx >= ytdStartIdx && idx <= lastCompleteIdx;
+    }).length;
+
+    // Last 3 months totals (for rate)
     const inquiriesLast3Months = funnelData.reduce((sum, month) => {
       const idx = month.year * 12 + (month.month - 1);
       if (idx < startIdx || idx > lastCompleteIdx) return sum;
@@ -2011,10 +2041,16 @@ function AnnualizedPace({
       return idx >= startIdx && idx <= lastCompleteIdx;
     }).length;
 
-    const paceInq = Math.round((inquiriesLast3Months / 3) * 12);
-    const paceCalls = Math.round((callsLast3Months / 3) * 12);
-    const paceBookings = Math.round((bookingsLast3Months / 3) * 12);
-    
+    // Remaining months in year: Oct(m=10)→3, Dec(m=12)→1, Jan(m=1)→12
+    const remainingMonths = Math.max(0, 13 - m);
+    const monthlyRateInq = inquiriesLast3Months / 3;
+    const monthlyRateCalls = callsLast3Months / 3;
+    const monthlyRateBookings = bookingsLast3Months / 3;
+
+    const paceInq = Math.round(inquiriesYtd + monthlyRateInq * remainingMonths);
+    const paceCalls = Math.round(callsYtd + monthlyRateCalls * remainingMonths);
+    const paceBookings = Math.round(bookingsYtd + monthlyRateBookings * remainingMonths);
+
     // Check if on track for bookings goal
     const isOnTrack = bookingsGoal === 0 || paceBookings >= bookingsGoal;
 
@@ -2051,7 +2087,7 @@ function AnnualizedPace({
         </h3>
       </div>
       <p style={{ margin: '4px 0 16px 0', fontSize: 12, color: '#6b7280', lineHeight: 1.6 }}>
-        Track your pace for the year based on your activity over the last 3 complete months.
+        YTD total plus projected for remaining months based on your rate over the last 3 complete months.
       </p>
 
       <Cards columns={2} desktopColumns={2} mobileColumns={1}>
