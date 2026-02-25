@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { TrendingUp, Users, Phone, DollarSign, Calculator } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
+import { InfoTooltip } from './components/InfoTooltip';
 import { UnifiedDataService } from './services/unifiedDataService';
 import { useIsMobile } from './hooks/useIsMobile';
 import type { Booking, DataManager, FunnelData, Payment } from './types';
@@ -304,6 +305,17 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
         <div>
           <label style={{ display: 'block', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '6px' }}>
             Bookings Goal ($)
+            <InfoTooltip
+              content={
+                <>
+                  Total value of contracts signed this year, regardless of when payments are collected.
+                  <ul style={{ margin: '6px 0 0 0', paddingLeft: 16 }}>
+                    <li>Includes taxes and discounts applied</li>
+                    <li>Excludes tips, fees, and loan repayments</li>
+                  </ul>
+                </>
+              }
+            />
           </label>
           <input
             type="text"
@@ -338,6 +350,16 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
         <div>
           <label style={{ display: 'block', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '6px' }}>
             Cash Goal ($)
+            <InfoTooltip
+              content={
+                <>
+                  Total payments expected to be received this year — including from prior-year bookings.
+                  <ul style={{ margin: '6px 0 0 0', paddingLeft: 16 }}>
+                    <li>Gross revenue before taxes and expenses</li>
+                  </ul>
+                </>
+              }
+            />
           </label>
           <input
             type="text"
