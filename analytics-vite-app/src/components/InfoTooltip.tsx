@@ -1,9 +1,8 @@
 import React, { useState, useRef } from 'react'
-import { Info } from 'lucide-react'
 
 interface InfoTooltipProps {
   content: React.ReactNode
-  /** Optional max width for the tooltip (default 280px) */
+  /** Optional max width for the tooltip (default 560px) */
   maxWidth?: number
 }
 
@@ -11,7 +10,7 @@ interface InfoTooltipProps {
  * Small info icon that shows a tooltip on hover.
  * Use next to labels to provide definitions and clarity.
  */
-export function InfoTooltip({ content, maxWidth = 280 }: InfoTooltipProps) {
+export function InfoTooltip({ content, maxWidth = 560 }: InfoTooltipProps) {
   const [isVisible, setIsVisible] = useState(false)
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -41,11 +40,14 @@ export function InfoTooltip({ content, maxWidth = 280 }: InfoTooltipProps) {
           width: 16,
           height: 16,
           borderRadius: '50%',
-          backgroundColor: '#9ca3af',
-          color: 'white',
+          border: '1.5px solid #1f2937',
+          color: '#1f2937',
+          fontSize: 11,
+          fontWeight: 600,
+          fontFamily: 'system-ui, sans-serif',
         }}
       >
-        <Info size={10} strokeWidth={2.5} />
+        i
       </span>
       {isVisible && (
         <div
