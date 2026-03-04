@@ -2641,7 +2641,7 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
           <div>
             <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Manage Lead Sources</h2>
             <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0', lineHeight: 1.4 }}>
-              Lead sources help you track where your bookings come from. They can also be used to track Advertising ROI.
+              Lead Sources track where your bookings come from and can also be used to measure Advertising ROI.
             </p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -2807,7 +2807,7 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ fontSize: '14px', fontWeight: isAdSource ? 600 : 500 }}>{leadSource.name}</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexShrink: 0 }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', flexShrink: 0 }}>
                           <input
                             type="checkbox"
