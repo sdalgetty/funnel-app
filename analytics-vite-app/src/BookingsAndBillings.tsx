@@ -2896,7 +2896,7 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
                                   display: 'flex',
                                   alignItems: 'center',
                                   gap: '4px',
-                                  minWidth: '72px',
+                                  width: '80px',
                                   justifyContent: 'center'
                                 }}
                               >
@@ -2907,20 +2907,20 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
                           ) : (
                             <button
                               onClick={() => onRemove(leadSource.id)}
-                              style={{
-                                backgroundColor: '#ef4444',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                padding: '4px 12px',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                minWidth: '72px',
-                                justifyContent: 'center'
-                              }}
+                            style={{
+                              backgroundColor: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 12px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              width: '80px',
+                              justifyContent: 'center'
+                            }}
                             >
                               <Trash2 size={12} />
                               Delete

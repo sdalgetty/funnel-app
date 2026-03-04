@@ -168,7 +168,7 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                   <span>Track in Funnel</span>
                   <InfoTooltip content="Include this service type when calculating Bookings (Qty) and funnel conversion metrics." />
                 </div>
-                <div style={{ width: '52px', flexShrink: 0, textAlign: 'left' }}>Edit</div>
+                <div style={{ width: '52px', flexShrink: 0, textAlign: 'left', marginLeft: '24px' }}>Edit</div>
                 <div style={{ width: '88px', flexShrink: 0, textAlign: 'left' }}>Actions</div>
               </div>
             )}
@@ -199,7 +199,7 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                         <span style={{ fontSize: '14px', color: '#6b7280' }}>{st.name} <span style={{ fontStyle: 'italic', fontSize: '12px' }}>(archived)</span></span>
                       </div>
                       <div style={{ flexShrink: 0, width: '140px' }} />
-                      <div style={{ flexShrink: 0, width: '52px' }} />
+                      <div style={{ flexShrink: 0, width: '52px', marginLeft: '24px' }} />
                       <div style={{ flexShrink: 0, width: '88px', display: 'flex', justifyContent: 'flex-start' }}>
                         {onUnarchive && (
                           <button
@@ -295,7 +295,7 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                           </label>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                          <div style={{ width: '52px', flexShrink: 0 }}>
+                          <div style={{ width: '52px', flexShrink: 0, marginLeft: '24px' }}>
                             <button
                               onClick={() => handleEdit(st)}
                               style={{
@@ -331,7 +331,7 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                                   display: 'flex',
                                   alignItems: 'center',
                                   gap: '4px',
-                                  minWidth: '72px',
+                                  width: '80px',
                                   justifyContent: 'center'
                                 }}
                               >
@@ -342,20 +342,20 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                           ) : (
                             <button
                               onClick={() => handleDelete(st.id)}
-                              style={{
-                                backgroundColor: '#ef4444',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                padding: '4px 12px',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                minWidth: '72px',
-                                justifyContent: 'center'
-                              }}
+                            style={{
+                              backgroundColor: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 12px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              width: '80px',
+                              justifyContent: 'center'
+                            }}
                             >
                               <Trash2 size={12} />
                               Delete
