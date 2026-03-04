@@ -6,6 +6,7 @@ import { useAuth } from './contexts/AuthContext';
 import { toUSD, formatDate } from './utils/formatters';
 import CSVImportModal from './components/CSVImportModal';
 import ServiceTypesModal from './components/ServiceTypesModal';
+import { InfoTooltip } from './components/InfoTooltip';
 import type { ImportResult } from './services/honeybookImporter';
 
 // Empty data for new users - they should start fresh
@@ -1245,8 +1246,18 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
       {showLeadSources && (
         <LeadSourcesModal
           leadSources={leadSources}
+          getBookingCountForLeadSource={(id) => bookings.filter(b => b.leadSourceId === id).length}
           onAdd={addLeadSource}
           onRemove={removeLeadSource}
+          onArchive={async (id) => {
+            if (dataManager?.archiveLeadSource) return dataManager.archiveLeadSource(id);
+            if (user?.id) {
+              const ok = await UnifiedDataService.archiveLeadSource(user.id, id);
+              if (ok) window.location.reload();
+              return ok;
+            }
+            return false;
+          }}
           onUnarchive={dataManager?.unarchiveLeadSource}
           onUpdate={updateLeadSource}
           onToggleAdSource={toggleLeadSourceAdSource}
@@ -2559,10 +2570,12 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
 }
 
 // Lead Sources Modal
-function LeadSourcesModal({ leadSources, onAdd, onRemove, onUnarchive, onUpdate, onToggleAdSource, onClose }: {
+function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, onRemove, onArchive, onUnarchive, onUpdate, onToggleAdSource, onClose }: {
   leadSources: LeadSource[];
+  getBookingCountForLeadSource: (id: string) => number;
   onAdd: (name: string) => void;
   onRemove: (id: string) => void;
+  onArchive?: (id: string) => Promise<boolean>;
   onUnarchive?: (id: string) => Promise<boolean>;
   onUpdate: (id: string, newName: string) => void;
   onToggleAdSource: (id: string) => void;
@@ -2624,15 +2637,20 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUnarchive, onUpdate,
         maxHeight: '90vh',
         overflow: 'auto'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Manage Lead Sources</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Manage Lead Sources</h2>
+            <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0', lineHeight: 1.4 }}>
+              Lead sources help you track where your bookings come from. They can also be used to track Advertising ROI.
+            </p>
+          </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
 
         {archivedLeadSources.length > 0 && (
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', cursor: 'pointer', fontSize: '14px', color: '#6b7280' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', marginTop: '16px', cursor: 'pointer', fontSize: '14px', color: '#6b7280' }}>
             <input
               type="checkbox"
               checked={showArchived}
@@ -2640,6 +2658,7 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUnarchive, onUpdate,
               style={{ width: 16, height: 16, accentColor: '#3b82f6' }}
             />
             Show archived lead sources
+            <InfoTooltip content="Archived lead sources remain attached to past sales but are hidden from new sale dropdowns." />
           </label>
         )}
 
@@ -2785,61 +2804,82 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUnarchive, onUpdate,
                     </div>
                   ) : (
                     <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ fontSize: '14px', fontWeight: isAdSource ? 600 : 500 }}>{leadSource.name}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', flexShrink: 0 }}>
                           <input
                             type="checkbox"
                             checked={isAdSource}
                             onChange={() => onToggleAdSource(leadSource.id)}
-                            style={{ cursor: 'pointer' }}
+                            style={{ width: 16, height: 16, accentColor: '#3b82f6', cursor: 'pointer' }}
                           />
-                          <span style={{ 
-                            fontSize: '11px', 
-                            color: isAdSource ? '#3b82f6' : '#6b7280',
-                            fontWeight: '500'
-                          }}>
+                          <span style={{ fontSize: '13px', color: isAdSource ? '#3b82f6' : '#6b7280', fontWeight: '500' }}>
                             Ad Source
                           </span>
+                        </label>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button
+                            onClick={() => handleEdit(leadSource.id, leadSource.name)}
+                            style={{
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 8px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <Edit3 size={12} />
+                            Edit
+                          </button>
+                          {getBookingCountForLeadSource(leadSource.id) > 0 ? (
+                            onArchive && (
+                              <button
+                                onClick={() => onArchive(leadSource.id)}
+                                style={{
+                                  backgroundColor: '#6b7280',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  padding: '4px 8px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                              >
+                                <Trash2 size={12} />
+                                Archive
+                              </button>
+                            )
+                          ) : (
+                            <button
+                              onClick={() => onRemove(leadSource.id)}
+                              style={{
+                                backgroundColor: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Trash2 size={12} />
+                              Delete
+                            </button>
+                          )}
                         </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button
-                          onClick={() => handleEdit(leadSource.id, leadSource.name)}
-                          style={{
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <Edit3 size={12} />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => onRemove(leadSource.id)}
-                          style={{
-                            backgroundColor: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <Trash2 size={12} />
-                          Delete
-                        </button>
                       </div>
                     </>
                   )}
@@ -2847,24 +2887,6 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUnarchive, onUpdate,
               );
               })
             )}
-          </div>
-        </div>
-
-        <div style={{ 
-          backgroundColor: '#f3f4f6', 
-          padding: '12px', 
-          borderRadius: '6px', 
-          marginBottom: '20px',
-          fontSize: '12px',
-          color: '#6b7280',
-          textAlign: 'left'
-        }}>
-          <div style={{ marginBottom: '8px' }}>
-            <strong>Lead Sources:</strong> Lead sources help you track where your bookings come from. They can also be used to track Advertising ROI.
-          </div>
-          <div>
-            <strong>Archive:</strong> Lead sources used by sales cannot be deleted. They can be archived instead.
-            Archived lead sources remain attached to past sales but are hidden from new sale dropdowns.
           </div>
         </div>
 
