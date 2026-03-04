@@ -789,44 +789,44 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
               <tr style={{ backgroundColor: '#f9fafb' }}>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151', minWidth: '120px' }}>Month</th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '90px' }}>
-                  <InfoTooltip variant="inline" content="The total number of new inquiries received during this month.">Inquiries</InfoTooltip>
+                  <InfoTooltip variant="inline" placement="bottom" content="The total number of new inquiries received during this month.">Inquiries</InfoTooltip>
                 </th>
                 {adsTrackingEnabled && (
                   <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '100px' }}>
-                    <InfoTooltip variant="inline" content="The number of inquiries that originated from advertising.">Ad Leads</InfoTooltip>
+                    <InfoTooltip variant="inline" placement="bottom" content="The number of inquiries that originated from advertising.">Ad Leads</InfoTooltip>
                   </th>
                 )}
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>
-                  <InfoTooltip variant="inline" content="The number of inquiries where you confirmed you were available for the requested date.">Confirmed Available</InfoTooltip>
+                  <InfoTooltip variant="inline" placement="bottom" content="The number of inquiries where you confirmed you were available for the requested date.">Confirmed Available</InfoTooltip>
                 </th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>
-                  <InfoTooltip variant="inline" content="The number of sales calls scheduled with potential clients.">Calls Booked</InfoTooltip>
+                  <InfoTooltip variant="inline" placement="bottom" content="The number of sales calls scheduled with potential clients.">Calls Booked</InfoTooltip>
                 </th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>
-                  <InfoTooltip variant="inline" content="Scheduled calls that were cancelled before they occurred.">Calls Cancelled</InfoTooltip>
+                  <InfoTooltip variant="inline" placement="bottom" content="Scheduled calls that were cancelled before they occurred.">Calls Cancelled</InfoTooltip>
                 </th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '95px' }}>
-                  <InfoTooltip variant="inline" content="Scheduled calls where the client did not attend.">No-Shows</InfoTooltip>
+                  <InfoTooltip variant="inline" placement="bottom" content="Scheduled calls where the client did not attend.">No-Shows</InfoTooltip>
                 </th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>
-                  <InfoTooltip variant="inline" content="The number of calls that were successfully completed.">Calls Taken</InfoTooltip>
+                  <InfoTooltip variant="inline" placement="bottom" content="The number of calls that were successfully completed.">Calls Taken</InfoTooltip>
                 </th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '90px' }}>
-                  <InfoTooltip variant="inline" content="The number of signed bookings recorded for service types tracked in your Funnel.">Bookings (Qty)</InfoTooltip>
+                  <InfoTooltip variant="inline" placement="bottom" content="The number of signed bookings recorded for service types tracked in your Funnel.">Bookings (Qty)</InfoTooltip>
                 </th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>
-                  <InfoTooltip variant="inline" content="The total contract value of bookings recorded during this month.">Bookings ($)</InfoTooltip>
+                  <InfoTooltip variant="inline" placement="bottom" content="The total contract value of bookings recorded during this month.">Bookings ($)</InfoTooltip>
                 </th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>
-                  <InfoTooltip variant="inline" content="The total payments received or projected for this month based on signed contracts and payment schedules.">Cash</InfoTooltip>
+                  <InfoTooltip variant="inline" placement="bottom" content="The total payments received or projected for this month based on signed contracts and payment schedules.">Cash</InfoTooltip>
                 </th>
                 {adsTrackingEnabled && (
                   <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>
-                    <InfoTooltip variant="inline" content="The total amount spent on advertising during this month.">Ad Spend</InfoTooltip>
+                    <InfoTooltip variant="inline" placement="bottom" content="The total amount spent on advertising during this month.">Ad Spend</InfoTooltip>
                   </th>
                 )}
                 <th style={{ padding: '12px 6px', textAlign: 'center', fontWeight: '600', color: '#374151', width: '60px' }}>
-                  <InfoTooltip variant="inline" content="Add notes about marketing changes so you can track how they impact your sales funnel over time.">Notes</InfoTooltip>
+                  <InfoTooltip variant="inline" placement="bottom" content="Add notes about marketing changes so you can track how they impact your sales funnel over time.">Notes</InfoTooltip>
                 </th>
                 <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600', color: '#374151', minWidth: '110px' }}>Actions</th>
               </tr>
