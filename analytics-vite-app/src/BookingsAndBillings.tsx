@@ -2702,6 +2702,29 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
             border: '1px solid #e5e7eb',
             borderRadius: '8px',
           }}>
+            {displayLeadSources.length > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '8px 12px',
+                backgroundColor: '#f9fafb',
+                borderBottom: '1px solid #e5e7eb',
+                fontWeight: 600,
+                fontSize: '12px',
+                color: '#374151',
+                position: 'sticky',
+                top: 0,
+                zIndex: 1,
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>Lead Source</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, minWidth: '140px' }}>
+                  <span>Ad Source</span>
+                  <InfoTooltip content="Mark this lead source as advertising so bookings from this source are included in your Advertising metrics and ROI calculations." />
+                </div>
+                <div style={{ width: '88px', flexShrink: 0, textAlign: 'center' }}>Edit</div>
+                <div style={{ width: '88px', flexShrink: 0, textAlign: 'center' }}>Actions</div>
+              </div>
+            )}
             {displayLeadSources.length === 0 ? (
               <div style={{
                 textAlign: 'left',
@@ -2728,23 +2751,29 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
                 }}>
                   {isArchived ? (
                     <>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>{leadSource.name} <span style={{ fontStyle: 'italic', fontSize: '12px' }}>(archived)</span></span>
-                      {onUnarchive && (
-                        <button
-                          onClick={() => onUnarchive(leadSource.id)}
-                          style={{
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '4px 12px',
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Restore
-                        </button>
-                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: '14px', color: '#6b7280' }}>{leadSource.name} <span style={{ fontStyle: 'italic', fontSize: '12px' }}>(archived)</span></span>
+                      </div>
+                      <div style={{ flexShrink: 0, width: '140px' }} />
+                      <div style={{ flexShrink: 0, width: '88px' }} />
+                      <div style={{ flexShrink: 0, width: '88px', display: 'flex', justifyContent: 'center' }}>
+                        {onUnarchive && (
+                          <button
+                            onClick={() => onUnarchive(leadSource.id)}
+                            style={{
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 12px',
+                              fontSize: '12px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Restore
+                          </button>
+                        )}
+                      </div>
                     </>
                   ) : editingId === leadSource.id ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
