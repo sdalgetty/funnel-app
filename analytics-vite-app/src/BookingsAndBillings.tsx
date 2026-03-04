@@ -1,14 +1,11 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Plus, Trash2, CalendarDays, DollarSign, Download, Edit, X, Check, Upload } from "lucide-react";
+import { Plus, Trash2, CalendarDays, DollarSign, Download, Edit, X, Check } from "lucide-react";
 import type { ServiceType, LeadSource, Booking, Payment } from './types';
 import { UnifiedDataService } from './services/unifiedDataService';
 import { useAuth } from './contexts/AuthContext';
 import { toUSD, formatDate } from './utils/formatters';
-import CSVImportModal from './components/CSVImportModal';
 import ServiceTypesModal from './components/ServiceTypesModal';
 import { InfoTooltip } from './components/InfoTooltip';
-import type { ImportResult } from './services/honeybookImporter';
-
 // Empty data for new users - they should start fresh
 const defaultServiceTypes: ServiceType[] = [];
 
@@ -48,7 +45,6 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
   const activeLeadSources = useMemo(() => leadSources.filter(ls => !ls.archived), [leadSources]);
 
   const [showAddBooking, setShowAddBooking] = useState(false);
-  const [showCSVImport, setShowCSVImport] = useState(false);
   
   // Helper to get disabled button styles
   const getDisabledButtonStyle = (baseStyle: any) => {
@@ -244,171 +240,6 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
       } catch (error) {
         console.error('Error creating payment:', error);
       }
-    }
-  };
-
-  // Handle CSV import
-  const handleCSVImport = async (result: ImportResult) => {
-    if (!user?.id) {
-      console.error('User not logged in');
-      return;
-    }
-
-    try {
-      // Import service types and lead sources (only for Booked Client report, not Leads report)
-      // Check if this is a Leads report by checking if there are no bookings
-      const isLeadsReport = result.bookings.length === 0 && result.funnelData.length > 0;
-      
-      if (!isLeadsReport) {
-        // Only import service types and lead sources for Booked Client report
-        for (const serviceType of result.serviceTypes) {
-          if (!serviceTypes.find(st => st.id === serviceType.id)) {
-            if (dataManager) {
-              await dataManager.createServiceType(serviceType.name, serviceType.description);
-            } else {
-              await UnifiedDataService.createServiceType(user.id, serviceType.name, serviceType.description);
-            }
-          }
-        }
-
-        // Import lead sources
-        for (const leadSource of result.leadSources) {
-          if (!leadSources.find(ls => ls.id === leadSource.id)) {
-            if (dataManager) {
-              await dataManager.createLeadSource(leadSource.name, leadSource.description);
-            } else {
-              await UnifiedDataService.createLeadSource(user.id, leadSource.name, leadSource.description);
-            }
-          }
-        }
-      }
-
-      // Import bookings with deduplication
-      // Check existing bookings to prevent duplicates
-      const existingBookings = dataManager?.bookings || (user?.id ? await UnifiedDataService.getBookings(user.id) : []);
-      
-      // Create a set of existing booking keys: projectName + dateBooked
-      const existingBookingKeys = new Set(
-        existingBookings
-          .filter(b => b.projectName && b.dateBooked)
-          .map(b => `${b.projectName.toLowerCase().trim()}-${b.dateBooked}`)
-      );
-      
-      let skippedCount = 0;
-      let importedCount = 0;
-      
-      for (const booking of result.bookings) {
-        // Create deduplication key: projectName + dateBooked
-        const bookingKey = booking.projectName && booking.dateBooked
-          ? `${booking.projectName.toLowerCase().trim()}-${booking.dateBooked}`
-          : null;
-        
-        // Skip if this booking already exists
-        if (bookingKey && existingBookingKeys.has(bookingKey)) {
-          skippedCount++;
-          continue;
-        }
-        
-        // Create the booking
-        if (dataManager) {
-          await dataManager.createBooking(booking);
-        } else {
-          await UnifiedDataService.createBooking(user.id, booking);
-        }
-        importedCount++;
-        
-        // Add to existing set to prevent duplicates within the same import
-        if (bookingKey) {
-          existingBookingKeys.add(bookingKey);
-        }
-      }
-      
-      // Show warning if duplicates were skipped
-      if (skippedCount > 0) {
-        console.warn(`Skipped ${skippedCount} duplicate booking(s) that already exist`);
-      }
-
-      // Import funnel data (merge with existing data to preserve inquiries from Leads report)
-      if (dataManager && dataManager.funnelData) {
-        // Merge with existing funnel data
-        for (const newFunnelData of result.funnelData) {
-          // Find existing funnel data for this year/month
-          const existing = dataManager.funnelData.find(
-            f => f.year === newFunnelData.year && f.month === newFunnelData.month
-          );
-          
-          if (existing) {
-            // Merge: preserve inquiries (from Leads report), update closes/bookings (from Booked Client report)
-            const merged: typeof newFunnelData = {
-              ...existing,
-              closes: newFunnelData.closes > 0 ? newFunnelData.closes : existing.closes,
-              bookings: newFunnelData.bookings > 0 ? newFunnelData.bookings : existing.bookings,
-              // Only update inquiries if the new data has inquiries (from Leads report)
-              inquiries: newFunnelData.inquiries > 0 ? newFunnelData.inquiries : existing.inquiries,
-            };
-            await dataManager.saveFunnelData(merged);
-          } else {
-            // No existing data, save as-is
-            await dataManager.saveFunnelData(newFunnelData);
-          }
-        }
-      } else if (user?.id) {
-        // Load existing funnel data to merge
-        const existingFunnelData = await UnifiedDataService.getAllFunnelData(user.id);
-        
-        for (const newFunnelData of result.funnelData) {
-          // Find existing funnel data for this year/month
-          const existing = existingFunnelData.find(
-            f => f.year === newFunnelData.year && f.month === newFunnelData.month
-          );
-          
-          if (existing) {
-            // Merge: preserve inquiries (from Leads report), update closes/bookings (from Booked Client report)
-            const merged: typeof newFunnelData = {
-              ...existing,
-              closes: newFunnelData.closes > 0 ? newFunnelData.closes : existing.closes,
-              bookings: newFunnelData.bookings > 0 ? newFunnelData.bookings : existing.bookings,
-              // Only update inquiries if the new data has inquiries (from Leads report)
-              inquiries: newFunnelData.inquiries > 0 ? newFunnelData.inquiries : existing.inquiries,
-            };
-            await UnifiedDataService.saveFunnelData(user.id, merged);
-          } else {
-            // No existing data, save as-is
-            await UnifiedDataService.saveFunnelData(user.id, newFunnelData);
-          }
-        }
-      }
-
-      // Reload data if using data manager
-      if (dataManager && dataManager.loadAllData) {
-        await dataManager.loadAllData();
-      }
-
-      console.log('CSV import completed successfully');
-      
-      // Show success message with deduplication info
-      const importedItems = [];
-      if (result.bookings.length > 0) {
-        // Special case: all data was duplicates
-        if (importedCount === 0 && skippedCount > 0) {
-          importedItems.push('No duplicate data imported. All uploaded data already exists');
-        } else if (importedCount > 0 && skippedCount > 0) {
-          // Some new data, some duplicates
-          importedItems.push(`Successfully imported ${importedCount} new booking(s), ${skippedCount} duplicate(s) skipped`);
-        } else if (importedCount > 0) {
-          // All new data, no duplicates
-          importedItems.push(`${importedCount} booking(s) imported`);
-        }
-      }
-      if (result.funnelData.length > 0) importedItems.push(`${result.funnelData.length} months of funnel data`);
-      if (importedItems.length > 0) {
-        alert(`Successfully imported ${importedItems.join(' and ')}!`);
-      }
-    } catch (error) {
-      console.error('Error importing CSV data:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to import data. Please try again.';
-      alert(`Import error: ${errorMessage}`);
-      throw error;
     }
   };
 
@@ -824,42 +655,6 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
           <Plus size={16} />
           Add New Booking
         </button>
-        {user?.crm === 'honeybook' && (
-          <button
-            onClick={() => !isViewOnly && setShowCSVImport(true)}
-            disabled={isViewOnly}
-            style={getDisabledButtonStyle({
-              backgroundColor: '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '12px 18px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)',
-              transition: 'all 0.2s'
-            })}
-          onMouseEnter={(e) => {
-            if (!isViewOnly) {
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 4px 6px rgba(16, 185, 129, 0.4)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isViewOnly) {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
-            }
-            }}
-          >
-            <Upload size={16} />
-            Import from CSV
-          </button>
-        )}
         <button
           onClick={() => !isViewOnly && setShowServiceTypes(true)}
           disabled={isViewOnly}
@@ -1203,19 +998,6 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
           onClose={() => setShowAddBooking(false)}
           dataManager={dataManager}
           isViewOnly={isViewOnly}
-        />
-      )}
-
-      {/* CSV Import Modal */}
-      {showCSVImport && user && (
-        <CSVImportModal
-          isOpen={showCSVImport}
-          onClose={() => setShowCSVImport(false)}
-          onImport={handleCSVImport}
-          existingServiceTypes={serviceTypes}
-          existingLeadSources={leadSources}
-          userId={user.id}
-          pageType="sales"
         />
       )}
 
@@ -2358,7 +2140,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                       style={{ width: 16, height: 16, accentColor: '#3b82f6' }}
                     />
                     Track in Funnel
-                    <InfoTooltip content="Include this service type when calculating Bookings (Qty) and funnel conversion metrics." />
+                    <InfoTooltip content={<>Include this service type when calculating Bookings (Qty) and funnel conversion metrics.<br /><br />Example: You may track weddings in the funnel but exclude high-volume services like portraits or mini sessions.</>} />
                   </label>
                 </div>
               ) : (
@@ -3106,7 +2888,7 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
                               color: 'white',
                               border: 'none',
                               borderRadius: '6px',
-                              padding: '6px 12px',
+                              padding: '4px 12px',
                               fontSize: '12px',
                               cursor: 'pointer',
                               display: 'flex',

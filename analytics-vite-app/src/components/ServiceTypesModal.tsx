@@ -166,7 +166,7 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                 <div style={{ flex: 1, minWidth: 0 }}>Service Type</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, width: '140px', justifyContent: 'flex-start' }}>
                   <span>Track in Funnel</span>
-                  <InfoTooltip content="Include this service type when calculating Bookings (Qty) and funnel conversion metrics." />
+                  <InfoTooltip content={<>Include this service type when calculating Bookings (Qty) and funnel conversion metrics.<br /><br />Example: You may track weddings in the funnel but exclude high-volume services like portraits or mini sessions.</>} />
                 </div>
                 <div style={{ width: '64px', flexShrink: 0, textAlign: 'left', marginLeft: '24px' }}>Edit</div>
                 <div style={{ width: '88px', flexShrink: 0, textAlign: 'left' }}>Actions</div>
@@ -303,7 +303,7 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '6px',
-                                padding: '6px 12px',
+                                padding: '4px 12px',
                                 fontSize: '12px',
                                 cursor: 'pointer',
                                 display: 'flex',
