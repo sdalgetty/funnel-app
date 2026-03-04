@@ -641,7 +641,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     return { avgDaysInquiryToBooking, avgMonthsBookingToWedding }
   }, [bookings, salesFunnelRange, trackableServiceIds])
 
-  // LEAD SOURCES
+  // LEAD SOURCES - only include bookings with service types that track in funnel
   const leadSourcesRange = useMemo(() => buildTimeRange(operationalTimeRange), [buildTimeRange, operationalTimeRange])
   const leadSourceBookings = useMemo(
     () => bookings.filter(b => trackableServiceIds.has(b.serviceTypeId) && isDateInRange(b.dateBooked, leadSourcesRange)),
@@ -672,7 +672,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     return { items, totalCount, totalRevenue, byCountDesc, byRevenueDesc, byAvgRevenueDesc }
   }, [leadSourceBookings, leadSources])
 
-  // SERVICE TYPES METRICS
+  // SERVICE TYPES METRICS - include all bookings in range (regardless of Track in Funnel)
   const serviceTypesRange = useMemo(() => buildTimeRange(operationalTimeRange), [buildTimeRange, operationalTimeRange])
   const serviceTypeBookings = useMemo(
     () => bookings.filter(b => isDateInRange(b.dateBooked, serviceTypesRange)),
@@ -1053,7 +1053,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       {/* LEAD SOURCE METRICS */}
       <Section
         title="Lead Source Metrics"
-        titleTooltip="Shows how bookings perform across your lead sources, including total contract value, average booking value, and booking volume."
+        titleTooltip="Shows how bookings tracked in your funnel perform across your lead sources, including total contract value, average booking value, and booking volume."
       >
         {/* Pie Chart Visualizations */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: isMobile ? 12 : 16, marginBottom: isMobile ? 12 : 16 }}>

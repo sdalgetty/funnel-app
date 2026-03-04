@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { X, Check, Edit3, Trash2 } from 'lucide-react';
+import { X, Check, Edit, Trash2 } from 'lucide-react';
 import type { ServiceType } from '../types';
+import { InfoTooltip } from './InfoTooltip';
 
 interface ServiceTypesModalProps {
   serviceTypes: ServiceType[];
+  getBookingCountForServiceType: (id: string) => number;
   onAdd: (name: string) => void;
   onRemove: (id: string) => void;
+  onArchive?: (id: string) => Promise<boolean>;
   onUnarchive?: (id: string) => Promise<boolean>;
   onUpdate: (id: string, newName: string) => void;
   onToggleFunnelTracking: (id: string) => void;
@@ -14,8 +17,10 @@ interface ServiceTypesModalProps {
 
 const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
   serviceTypes,
+  getBookingCountForServiceType,
   onAdd,
   onRemove,
+  onArchive,
   onUnarchive,
   onUpdate,
   onToggleFunnelTracking,
@@ -81,15 +86,20 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
         maxHeight: '90vh',
         overflow: 'auto'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Manage Service Types</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Manage Service Types</h2>
+            <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0', lineHeight: 1.4 }}>
+              Service Types categorize the work you book (e.g., Wedding, Engagement, Family). They help you filter sales and group performance metrics in Insights.
+            </p>
+          </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
 
         {archivedServiceTypes.length > 0 && (
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', cursor: 'pointer', fontSize: '14px', color: '#6b7280' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', marginTop: '16px', cursor: 'pointer', fontSize: '14px', color: '#6b7280' }}>
             <input
               type="checkbox"
               checked={showArchived}
@@ -97,6 +107,7 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
               style={{ width: 16, height: 16, accentColor: '#3b82f6' }}
             />
             Show archived service types
+            <InfoTooltip content="Archived service types remain attached to past sales but are hidden from new sale dropdowns." />
           </label>
         )}
 
@@ -138,6 +149,29 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
             border: '1px solid #e5e7eb',
             borderRadius: '8px',
           }}>
+            {displayServiceTypes.length > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '8px 12px',
+                backgroundColor: '#f9fafb',
+                borderBottom: '1px solid #e5e7eb',
+                fontWeight: 600,
+                fontSize: '12px',
+                color: '#374151',
+                position: 'sticky',
+                top: 0,
+                zIndex: 1,
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>Service Type</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, width: '140px', justifyContent: 'flex-start' }}>
+                  <span>Track in Funnel</span>
+                  <InfoTooltip content={<>Include this service type when calculating Bookings (Qty) and funnel conversion metrics.<br /><br />Example: You may track weddings in the funnel but exclude high-volume services like portraits or mini sessions.</>} />
+                </div>
+                <div style={{ width: '64px', flexShrink: 0, textAlign: 'left', marginLeft: '24px' }}>Edit</div>
+                <div style={{ width: '88px', flexShrink: 0, textAlign: 'left' }}>Actions</div>
+              </div>
+            )}
             {displayServiceTypes.length === 0 ? (
               <div style={{
                 textAlign: 'left',
@@ -161,23 +195,29 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                 }}>
                   {st.archived ? (
                     <>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>{st.name} <span style={{ fontStyle: 'italic', fontSize: '12px' }}>(archived)</span></span>
-                      {onUnarchive && (
-                        <button
-                          onClick={() => onUnarchive(st.id)}
-                          style={{
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '4px 12px',
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Restore
-                        </button>
-                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: '14px', color: '#6b7280' }}>{st.name} <span style={{ fontStyle: 'italic', fontSize: '12px' }}>(archived)</span></span>
+                      </div>
+                      <div style={{ flexShrink: 0, width: '140px' }} />
+                      <div style={{ flexShrink: 0, width: '52px', marginLeft: '24px' }} />
+                      <div style={{ flexShrink: 0, width: '88px', display: 'flex', justifyContent: 'flex-start' }}>
+                        {onUnarchive && (
+                          <button
+                            onClick={() => onUnarchive(st.id)}
+                            style={{
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 12px',
+                              fontSize: '12px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Restore
+                          </button>
+                        )}
+                      </div>
                     </>
                   ) : editingId === st.id ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
@@ -237,85 +277,98 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                     </div>
                   ) : (
                     <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ fontSize: '14px', fontWeight: st.tracksInFunnel ? 600 : 500 }}>{st.name}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <input
-                            type="checkbox"
-                            checked={st.tracksInFunnel}
-                            onChange={() => onToggleFunnelTracking(st.id)}
-                            style={{ cursor: 'pointer' }}
-                          />
-                          <span style={{
-                            fontSize: '11px',
-                            color: st.tracksInFunnel ? '#10b981' : '#6b7280',
-                            fontWeight: '500'
-                          }}>
-                            Track in Funnel
-                          </span>
-                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button
-                          onClick={() => handleEdit(st)}
-                          style={{
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <Edit3 size={12} />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(st.id)}
-                          style={{
-                            backgroundColor: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <Trash2 size={12} />
-                          Delete
-                        </button>
+                      <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                        <div style={{ width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={st.tracksInFunnel}
+                              onChange={() => onToggleFunnelTracking(st.id)}
+                              style={{ width: 16, height: 16, accentColor: '#3b82f6', cursor: 'pointer' }}
+                            />
+                            <span style={{ fontSize: '13px', color: st.tracksInFunnel ? '#3b82f6' : '#6b7280', fontWeight: '500' }}>
+                              Track in Funnel
+                            </span>
+                          </label>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                          <div style={{ width: '64px', flexShrink: 0, marginLeft: '24px' }}>
+                            <button
+                              onClick={() => handleEdit(st)}
+                              style={{
+                                backgroundColor: '#3b82f6',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '4px 12px',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Edit size={12} />
+                              Edit
+                            </button>
+                          </div>
+                          <div style={{ width: '88px', flexShrink: 0, display: 'flex', justifyContent: 'flex-start' }}>
+                          {getBookingCountForServiceType(st.id) > 0 ? (
+                            onArchive && (
+                              <button
+                                onClick={() => onArchive(st.id)}
+                                style={{
+                                  backgroundColor: '#6b7280',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  padding: '4px 12px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  width: '80px',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                <Trash2 size={12} />
+                                Archive
+                              </button>
+                            )
+                          ) : (
+                            <button
+                              onClick={() => handleDelete(st.id)}
+                            style={{
+                              backgroundColor: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 12px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              width: '80px',
+                              justifyContent: 'center'
+                            }}
+                            >
+                              <Trash2 size={12} />
+                              Delete
+                            </button>
+                          )}
+                          </div>
+                        </div>
                       </div>
                     </>
                   )}
                 </div>
               ))
             )}
-          </div>
-        </div>
-
-        <div style={{
-          backgroundColor: '#f3f4f6',
-          padding: '12px',
-          borderRadius: '6px',
-          marginBottom: '20px',
-          fontSize: '12px',
-          color: '#6b7280',
-          textAlign: 'left'
-        }}>
-          <div style={{ marginBottom: '8px' }}>
-            <strong>Track in Funnel:</strong> Service Types marked as "Track in Funnel" will be included in your Funnel calculation for Bookings (Qty).
-          </div>
-          <div>
-            <strong>Archive:</strong> Service types used by sales cannot be deleted. They can be archived instead.
-            Archived types remain attached to past sales but are hidden from new sale dropdowns.
           </div>
         </div>
 

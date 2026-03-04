@@ -80,12 +80,13 @@ export class MockDataService {
     return [...mockLeadSources];
   }
 
-  static async createLeadSource(userId: string, name: string): Promise<LeadSource | null> {
-    console.log('Mock create lead source:', name);
+  static async createLeadSource(userId: string, name: string, isAdSource: boolean = false): Promise<LeadSource | null> {
+    console.log('Mock create lead source:', name, 'isAdSource:', isAdSource);
     const newLeadSource: LeadSource = {
       id: `mock_${Date.now()}`,
       name,
-      isCustom: true
+      isCustom: true,
+      isAdSource
     };
     return newLeadSource;
   }

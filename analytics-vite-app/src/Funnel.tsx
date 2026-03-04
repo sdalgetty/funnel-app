@@ -1,12 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit, Lock, Crown, StickyNote, Calendar, Upload } from "lucide-react";
+import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit, Lock, Crown, StickyNote, Calendar } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 // Calculator moved to its own top-level page
 import { UnifiedDataService } from "./services/unifiedDataService";
 import type { FunnelData, FunnelEvent, Booking, Payment } from "./types";
 import { logger } from "./utils/logger";
-import CSVImportModal from "./components/CSVImportModal";
-import { importBookingsFromCSV, type ImportResult } from "./services/honeybookImporter";
 import { InfoTooltip } from "./components/InfoTooltip";
 import AdsSetupModal from "./components/AdsSetupModal";
 
@@ -264,8 +262,6 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
   const [notesMonth, setNotesMonth] = useState<FunnelData | null>(null);
   const [notesDraft, setNotesDraft] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
-  const [showCSVImport, setShowCSVImport] = useState(false);
-
   // Funnel data is provided via props from dataManager, so we don't need to reload it
   // The dataManager handles all data loading centrally
 
@@ -668,41 +664,6 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
           <h1 style={{ fontSize: '28px', fontWeight: '700', margin: 0, color: '#1f2937' }}>
             Sales Funnel
           </h1>
-          {user && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {(funnelUser?.crm === 'honeybook' || funnelUser?.crm === 'dubsado') && !isViewOnly && (
-                <button
-                  onClick={() => setShowCSVImport(true)}
-                  style={{
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '8px 16px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow = '0 4px 6px rgba(16, 185, 129, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
-                  }}
-                >
-                  <Upload size={16} />
-                  Import Leads Report
-                </button>
-              )}
-            </div>
-          )}
         </div>
         <p style={{ color: '#6b7280', margin: 0, fontSize: '16px' }}>
           Tracks how inquiries progress from lead to booking for services managed in this pipeline.
@@ -1938,88 +1899,6 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
         );
       })()}
 
-      {/* CSV Import Modal for Leads Report (Funnel page) */}
-      {showCSVImport && user && (
-        <CSVImportModal
-          isOpen={showCSVImport}
-          onClose={() => setShowCSVImport(false)}
-          onImport={async (result: ImportResult) => {
-            if (!user?.id) return;
-
-            try {
-              // Leads Report: Do NOT import service types or lead sources
-              // These should be managed manually by the user since they can be very custom/nuanced
-              // We only import funnel data (inquiries and closes count)
-
-              if (result.funnelEvents.length > 0 && effectiveUserId) {
-                await UnifiedDataService.createFunnelEvents(effectiveUserId, result.funnelEvents);
-              }
-
-              // Import funnel data (merge with existing data)
-              if (dataManager && dataManager.funnelData) {
-                for (const newFunnelData of result.funnelData) {
-                  const existing = dataManager.funnelData.find(
-                    f => f.year === newFunnelData.year && f.month === newFunnelData.month
-                  );
-                  
-                  if (existing) {
-                    // Merge: preserve existing inquiries/closes/bookings, add new inquiries
-                    const merged: typeof newFunnelData = {
-                      ...existing,
-                      inquiries: newFunnelData.inquiries > 0 ? newFunnelData.inquiries : existing.inquiries,
-                      closes: newFunnelData.closes > 0 ? newFunnelData.closes : existing.closes,
-                      bookings: newFunnelData.bookings > 0 ? newFunnelData.bookings : existing.bookings,
-                    };
-                    await dataManager.saveFunnelData(merged);
-                  } else {
-                    await dataManager.saveFunnelData(newFunnelData);
-                  }
-                }
-              } else if (user?.id) {
-                if (!effectiveUserId) return;
-                const existingFunnelData = await UnifiedDataService.getAllFunnelData(effectiveUserId);
-                for (const newFunnelData of result.funnelData) {
-                  const existing = existingFunnelData.find(
-                    f => f.year === newFunnelData.year && f.month === newFunnelData.month
-                  );
-                  
-                  if (existing) {
-                    const merged: typeof newFunnelData = {
-                      ...existing,
-                      inquiries: newFunnelData.inquiries > 0 ? newFunnelData.inquiries : existing.inquiries,
-                      closes: newFunnelData.closes > 0 ? newFunnelData.closes : existing.closes,
-                      bookings: newFunnelData.bookings > 0 ? newFunnelData.bookings : existing.bookings,
-                    };
-                    await UnifiedDataService.saveFunnelData(effectiveUserId, merged);
-                  } else {
-                    await UnifiedDataService.saveFunnelData(effectiveUserId, newFunnelData);
-                  }
-                }
-              }
-
-              // Reload data if using data manager
-              if (dataManager && dataManager.loadAllData) {
-                await dataManager.loadAllData();
-              }
-
-              setShowCSVImport(false);
-              // Show success message
-              alert(`Successfully imported ${result.funnelData.length} months of funnel data!`);
-              window.location.reload(); // Refresh to show updated data
-            } catch (error) {
-              console.error('Error importing CSV data:', error);
-              const errorMessage = error instanceof Error ? error.message : 'Failed to import data. Please try again.';
-              alert(`Import error: ${errorMessage}`);
-              throw error; // Re-throw so the modal can handle it
-            }
-          }}
-          existingServiceTypes={serviceTypes}
-          existingLeadSources={leadSources}
-          userId={effectiveUserId || user.id}
-          pageType="funnel"
-          crmType={funnelUser?.crm === 'dubsado' ? 'dubsado' : 'honeybook'}
-        />
-      )}
     </div>
   );
 }

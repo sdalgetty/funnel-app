@@ -1,13 +1,11 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Plus, Trash2, CalendarDays, DollarSign, Download, Edit, X, Edit3, Check, Upload } from "lucide-react";
+import { Plus, Trash2, CalendarDays, DollarSign, Download, Edit, X, Check } from "lucide-react";
 import type { ServiceType, LeadSource, Booking, Payment } from './types';
 import { UnifiedDataService } from './services/unifiedDataService';
 import { useAuth } from './contexts/AuthContext';
 import { toUSD, formatDate } from './utils/formatters';
-import CSVImportModal from './components/CSVImportModal';
 import ServiceTypesModal from './components/ServiceTypesModal';
-import type { ImportResult } from './services/honeybookImporter';
-
+import { InfoTooltip } from './components/InfoTooltip';
 // Empty data for new users - they should start fresh
 const defaultServiceTypes: ServiceType[] = [];
 
@@ -47,7 +45,6 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
   const activeLeadSources = useMemo(() => leadSources.filter(ls => !ls.archived), [leadSources]);
 
   const [showAddBooking, setShowAddBooking] = useState(false);
-  const [showCSVImport, setShowCSVImport] = useState(false);
   
   // Helper to get disabled button styles
   const getDisabledButtonStyle = (baseStyle: any) => {
@@ -243,171 +240,6 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
       } catch (error) {
         console.error('Error creating payment:', error);
       }
-    }
-  };
-
-  // Handle CSV import
-  const handleCSVImport = async (result: ImportResult) => {
-    if (!user?.id) {
-      console.error('User not logged in');
-      return;
-    }
-
-    try {
-      // Import service types and lead sources (only for Booked Client report, not Leads report)
-      // Check if this is a Leads report by checking if there are no bookings
-      const isLeadsReport = result.bookings.length === 0 && result.funnelData.length > 0;
-      
-      if (!isLeadsReport) {
-        // Only import service types and lead sources for Booked Client report
-        for (const serviceType of result.serviceTypes) {
-          if (!serviceTypes.find(st => st.id === serviceType.id)) {
-            if (dataManager) {
-              await dataManager.createServiceType(serviceType.name, serviceType.description);
-            } else {
-              await UnifiedDataService.createServiceType(user.id, serviceType.name, serviceType.description);
-            }
-          }
-        }
-
-        // Import lead sources
-        for (const leadSource of result.leadSources) {
-          if (!leadSources.find(ls => ls.id === leadSource.id)) {
-            if (dataManager) {
-              await dataManager.createLeadSource(leadSource.name, leadSource.description);
-            } else {
-              await UnifiedDataService.createLeadSource(user.id, leadSource.name, leadSource.description);
-            }
-          }
-        }
-      }
-
-      // Import bookings with deduplication
-      // Check existing bookings to prevent duplicates
-      const existingBookings = dataManager?.bookings || (user?.id ? await UnifiedDataService.getBookings(user.id) : []);
-      
-      // Create a set of existing booking keys: projectName + dateBooked
-      const existingBookingKeys = new Set(
-        existingBookings
-          .filter(b => b.projectName && b.dateBooked)
-          .map(b => `${b.projectName.toLowerCase().trim()}-${b.dateBooked}`)
-      );
-      
-      let skippedCount = 0;
-      let importedCount = 0;
-      
-      for (const booking of result.bookings) {
-        // Create deduplication key: projectName + dateBooked
-        const bookingKey = booking.projectName && booking.dateBooked
-          ? `${booking.projectName.toLowerCase().trim()}-${booking.dateBooked}`
-          : null;
-        
-        // Skip if this booking already exists
-        if (bookingKey && existingBookingKeys.has(bookingKey)) {
-          skippedCount++;
-          continue;
-        }
-        
-        // Create the booking
-        if (dataManager) {
-          await dataManager.createBooking(booking);
-        } else {
-          await UnifiedDataService.createBooking(user.id, booking);
-        }
-        importedCount++;
-        
-        // Add to existing set to prevent duplicates within the same import
-        if (bookingKey) {
-          existingBookingKeys.add(bookingKey);
-        }
-      }
-      
-      // Show warning if duplicates were skipped
-      if (skippedCount > 0) {
-        console.warn(`Skipped ${skippedCount} duplicate booking(s) that already exist`);
-      }
-
-      // Import funnel data (merge with existing data to preserve inquiries from Leads report)
-      if (dataManager && dataManager.funnelData) {
-        // Merge with existing funnel data
-        for (const newFunnelData of result.funnelData) {
-          // Find existing funnel data for this year/month
-          const existing = dataManager.funnelData.find(
-            f => f.year === newFunnelData.year && f.month === newFunnelData.month
-          );
-          
-          if (existing) {
-            // Merge: preserve inquiries (from Leads report), update closes/bookings (from Booked Client report)
-            const merged: typeof newFunnelData = {
-              ...existing,
-              closes: newFunnelData.closes > 0 ? newFunnelData.closes : existing.closes,
-              bookings: newFunnelData.bookings > 0 ? newFunnelData.bookings : existing.bookings,
-              // Only update inquiries if the new data has inquiries (from Leads report)
-              inquiries: newFunnelData.inquiries > 0 ? newFunnelData.inquiries : existing.inquiries,
-            };
-            await dataManager.saveFunnelData(merged);
-          } else {
-            // No existing data, save as-is
-            await dataManager.saveFunnelData(newFunnelData);
-          }
-        }
-      } else if (user?.id) {
-        // Load existing funnel data to merge
-        const existingFunnelData = await UnifiedDataService.getAllFunnelData(user.id);
-        
-        for (const newFunnelData of result.funnelData) {
-          // Find existing funnel data for this year/month
-          const existing = existingFunnelData.find(
-            f => f.year === newFunnelData.year && f.month === newFunnelData.month
-          );
-          
-          if (existing) {
-            // Merge: preserve inquiries (from Leads report), update closes/bookings (from Booked Client report)
-            const merged: typeof newFunnelData = {
-              ...existing,
-              closes: newFunnelData.closes > 0 ? newFunnelData.closes : existing.closes,
-              bookings: newFunnelData.bookings > 0 ? newFunnelData.bookings : existing.bookings,
-              // Only update inquiries if the new data has inquiries (from Leads report)
-              inquiries: newFunnelData.inquiries > 0 ? newFunnelData.inquiries : existing.inquiries,
-            };
-            await UnifiedDataService.saveFunnelData(user.id, merged);
-          } else {
-            // No existing data, save as-is
-            await UnifiedDataService.saveFunnelData(user.id, newFunnelData);
-          }
-        }
-      }
-
-      // Reload data if using data manager
-      if (dataManager && dataManager.loadAllData) {
-        await dataManager.loadAllData();
-      }
-
-      console.log('CSV import completed successfully');
-      
-      // Show success message with deduplication info
-      const importedItems = [];
-      if (result.bookings.length > 0) {
-        // Special case: all data was duplicates
-        if (importedCount === 0 && skippedCount > 0) {
-          importedItems.push('No duplicate data imported. All uploaded data already exists');
-        } else if (importedCount > 0 && skippedCount > 0) {
-          // Some new data, some duplicates
-          importedItems.push(`Successfully imported ${importedCount} new booking(s), ${skippedCount} duplicate(s) skipped`);
-        } else if (importedCount > 0) {
-          // All new data, no duplicates
-          importedItems.push(`${importedCount} booking(s) imported`);
-        }
-      }
-      if (result.funnelData.length > 0) importedItems.push(`${result.funnelData.length} months of funnel data`);
-      if (importedItems.length > 0) {
-        alert(`Successfully imported ${importedItems.join(' and ')}!`);
-      }
-    } catch (error) {
-      console.error('Error importing CSV data:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to import data. Please try again.';
-      alert(`Import error: ${errorMessage}`);
-      throw error;
     }
   };
 
@@ -823,42 +655,6 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
           <Plus size={16} />
           Add New Booking
         </button>
-        {user?.crm === 'honeybook' && (
-          <button
-            onClick={() => !isViewOnly && setShowCSVImport(true)}
-            disabled={isViewOnly}
-            style={getDisabledButtonStyle({
-              backgroundColor: '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '12px 18px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)',
-              transition: 'all 0.2s'
-            })}
-          onMouseEnter={(e) => {
-            if (!isViewOnly) {
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 4px 6px rgba(16, 185, 129, 0.4)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isViewOnly) {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
-            }
-            }}
-          >
-            <Upload size={16} />
-            Import from CSV
-          </button>
-        )}
         <button
           onClick={() => !isViewOnly && setShowServiceTypes(true)}
           disabled={isViewOnly}
@@ -1169,7 +965,7 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
                 <option value="dateInquired">Date Inquired</option>
                 <option value="dateBooked">Date Booked</option>
                 <option value="projectDate">Project Date</option>
-                <option value="bookedRevenue">Revenue</option>
+                <option value="bookedRevenue">Booked Revenue</option>
                 <option value="createdAt">Date Added</option>
               </select>
               <button
@@ -1197,22 +993,11 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
           serviceTypes={activeServiceTypes}
           leadSources={activeLeadSources}
           onAdd={addBooking}
+          onAddServiceType={dataManager?.createServiceType}
+          onAddLeadSource={dataManager?.createLeadSource}
           onClose={() => setShowAddBooking(false)}
           dataManager={dataManager}
           isViewOnly={isViewOnly}
-        />
-      )}
-
-      {/* CSV Import Modal */}
-      {showCSVImport && user && (
-        <CSVImportModal
-          isOpen={showCSVImport}
-          onClose={() => setShowCSVImport(false)}
-          onImport={handleCSVImport}
-          existingServiceTypes={serviceTypes}
-          existingLeadSources={leadSources}
-          userId={user.id}
-          pageType="sales"
         />
       )}
 
@@ -1232,8 +1017,18 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
       {showServiceTypes && (
         <ServiceTypesModal
           serviceTypes={serviceTypes}
+          getBookingCountForServiceType={(id) => bookings.filter(b => b.serviceTypeId === id).length}
           onAdd={addServiceType}
           onRemove={removeServiceType}
+          onArchive={async (id) => {
+            if (dataManager?.archiveServiceType) return dataManager.archiveServiceType(id);
+            if (user?.id) {
+              const ok = await UnifiedDataService.archiveServiceType(user.id, id);
+              if (ok) window.location.reload();
+              return ok;
+            }
+            return false;
+          }}
           onUnarchive={dataManager?.unarchiveServiceType}
           onUpdate={updateServiceType}
           onToggleFunnelTracking={toggleFunnelTracking}
@@ -1245,8 +1040,18 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
       {showLeadSources && (
         <LeadSourcesModal
           leadSources={leadSources}
+          getBookingCountForLeadSource={(id) => bookings.filter(b => b.leadSourceId === id).length}
           onAdd={addLeadSource}
           onRemove={removeLeadSource}
+          onArchive={async (id) => {
+            if (dataManager?.archiveLeadSource) return dataManager.archiveLeadSource(id);
+            if (user?.id) {
+              const ok = await UnifiedDataService.archiveLeadSource(user.id, id);
+              if (ok) window.location.reload();
+              return ok;
+            }
+            return false;
+          }}
           onUnarchive={dataManager?.unarchiveLeadSource}
           onUpdate={updateLeadSource}
           onToggleAdSource={toggleLeadSourceAdSource}
@@ -1278,13 +1083,27 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
               zIndex: 10
             }}>
               <tr>
-                <Th width="20%">Project Name</Th>
-                <Th width="12%">Service Type</Th>
-                <Th width="12%">Lead Source</Th>
-                <Th width="10%">Date Inquired</Th>
-                <Th width="10%">Date Booked</Th>
-                <Th width="10%">Project Date</Th>
-                <Th align="right" width="12%">Revenue</Th>
+                <Th width="20%">
+                  <InfoTooltip variant="inline" content="The client or project name for this booking.">Project Name</InfoTooltip>
+                </Th>
+                <Th width="12%">
+                  <InfoTooltip variant="inline" content="Used to categorize your work (e.g., Wedding, Engagement, Family). Service Types allow you to filter Sales and analyze performance in Insights.">Service Type</InfoTooltip>
+                </Th>
+                <Th width="12%">
+                  <InfoTooltip variant="inline" content="Tracks where the booking came from. Lead Sources power your Funnel metrics and can also be used to track Advertising ROI.">Lead Source</InfoTooltip>
+                </Th>
+                <Th width="10%">
+                  <InfoTooltip variant="inline" content="The date the client first contacted you. Used to track inquiry trends and conversion rates in your Funnel.">Date Inquired</InfoTooltip>
+                </Th>
+                <Th width="10%">
+                  <InfoTooltip variant="inline" content="The date the client officially booked with you. This helps track how long it takes to convert inquiries into bookings.">Date Booked</InfoTooltip>
+                </Th>
+                <Th width="10%">
+                  <InfoTooltip variant="inline" content="The date the work will take place (e.g., wedding date or session date). Used for planning and forecasting.">Project Date</InfoTooltip>
+                </Th>
+                <Th align="right" width="12%">
+                  <InfoTooltip variant="inline" content="The total value of this booking. Payments determine when the cash will be received.">Booked Revenue</InfoTooltip>
+                </Th>
                 <Th width="14%">Actions</Th>
               </tr>
             </thead>
@@ -1502,21 +1321,20 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
                       overflow: 'hidden'
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                      <div style={{ flex: 1 }}>
-                        <h4 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0', color: '#1f2937' }}>
-                          {booking.projectName}
-                        </h4>
-                        <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981', marginBottom: '12px' }}>
-                          {toUSD(booking.bookedRevenue)}
-                        </div>
+                    <div style={{ marginBottom: '12px' }}>
+                      <h4 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0', color: '#1f2937' }}>
+                        {booking.projectName}
+                      </h4>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>Booked Revenue:<InfoTooltip content="The total value of this booking. Payments determine when the cash will be received." /></span>
+                        <span style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>{toUSD(booking.bookedRevenue)}</span>
                       </div>
                     </div>
                     
                     <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Service Type:</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>Service Type:<InfoTooltip content="Used to categorize your work (e.g., Wedding, Engagement, Family). Service Types allow you to filter Sales and analyze performance in Insights." /></span>
                           <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
                             {serviceType?.name || (
                               <span style={{ color: '#ef4444', fontStyle: 'italic', fontSize: '12px' }}>
@@ -1525,8 +1343,8 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
                             )}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Lead Source:</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>Lead Source:<InfoTooltip content="Tracks where the booking came from. Lead Sources power your Funnel metrics and can also be used to track Advertising ROI." /></span>
                           <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
                             {leadSource?.name || (
                               <span style={{ color: '#ef4444', fontStyle: 'italic', fontSize: '12px' }}>
@@ -1535,20 +1353,20 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
                             )}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Date Inquired:</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>Date Inquired:<InfoTooltip content="The date the client first contacted you. Used to track inquiry trends and conversion rates in your Funnel." /></span>
                           <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
                             {formatBookingDate(booking.dateInquired)}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Date Booked:</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>Date Booked:<InfoTooltip content="The date the client officially booked with you. This helps track how long it takes to convert inquiries into bookings." /></span>
                           <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
                             {formatBookingDate(booking.dateBooked)}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Project Date:</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>Project Date:<InfoTooltip content="The date the work will take place (e.g., wedding date or session date). Used for planning and forecasting." /></span>
                           <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
                             {formatBookingDate(booking.projectDate)}
                           </span>
@@ -2057,10 +1875,12 @@ function Td({ children, align = 'left' }: { children: React.ReactNode; align?: '
 }
 
 // Add Booking Modal - Completely Clean (v3)
-function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManager, isViewOnly = false }: {
+function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, onAddLeadSource, onClose, dataManager, isViewOnly = false }: {
   serviceTypes: ServiceType[];
   leadSources: LeadSource[];
   onAdd: (booking: Omit<Booking, 'id' | 'createdAt'>) => Promise<Booking | null> | void;
+  onAddServiceType?: (name: string, tracksInFunnel?: boolean) => Promise<ServiceType | null>;
+  onAddLeadSource?: (name: string, isAdSource?: boolean) => Promise<LeadSource | null>;
   onClose: () => void;
   dataManager?: any;
   isViewOnly?: boolean;
@@ -2075,6 +1895,12 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
     bookedRevenue: '',
   });
   const [scheduledPayments, setScheduledPayments] = useState<Array<Omit<Payment, 'id'> & { amountInput?: string }>>([]);
+  const [addingServiceType, setAddingServiceType] = useState(false);
+  const [newServiceTypeName, setNewServiceTypeName] = useState('');
+  const [newServiceTypeTracksInFunnel, setNewServiceTypeTracksInFunnel] = useState(false);
+  const [addingLeadSource, setAddingLeadSource] = useState(false);
+  const [newLeadSourceName, setNewLeadSourceName] = useState('');
+  const [newLeadSourceIsAdSource, setNewLeadSourceIsAdSource] = useState(false);
 
   // Add new payment schedule
   const handleAddPayment = () => {
@@ -2125,15 +1951,8 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.projectName || !formData.serviceTypeId || !formData.leadSourceId || !formData.bookedRevenue) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    // Check if the selected service type tracks in funnel
-    const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceTypeId);
-    if (selectedServiceType?.tracksInFunnel && !formData.dateBooked) {
-      alert('Date Booked is required for service types that are tracked in the Funnel. Please enter a booking date or uncheck "Track in Funnel" for this service type.');
+    if (!formData.projectName || !formData.serviceTypeId || !formData.leadSourceId || !formData.dateBooked || !formData.bookedRevenue) {
+      alert('Please fill in all required fields (Project Name, Service Type, Lead Source, Date Booked, Booked Revenue)');
       return;
     }
 
@@ -2203,9 +2022,9 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            <div>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '20px' }}>
+            <div style={{ minWidth: 0 }}>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Project Name *
               </label>
@@ -2226,57 +2045,290 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
               />
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+            <div style={{ minWidth: 0 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Service Type *
+                <InfoTooltip content="Used to categorize your work (e.g., Wedding, Engagement, Family). Service Types allow you to filter Sales and analyze performance in Insights." />
               </label>
-              <select
-                value={formData.serviceTypeId}
-                onChange={(e) => setFormData({ ...formData, serviceTypeId: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                  height: '40px'
-                }}
-              >
-                <option value="">Select service type</option>
-                {serviceTypes.map(st => (
-                  <option key={st.id} value={st.id}>{st.name}</option>
-                ))}
-              </select>
+              {addingServiceType ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0, flexWrap: 'wrap' }}>
+                    <input
+                      type="text"
+                      value={newServiceTypeName}
+                      onChange={(e) => setNewServiceTypeName(e.target.value)}
+                      placeholder="New service type name"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newServiceTypeName.trim() && onAddServiceType) {
+                            onAddServiceType(newServiceTypeName.trim(), newServiceTypeTracksInFunnel).then((st) => {
+                              if (st) {
+                                setFormData({ ...formData, serviceTypeId: st.id });
+                                setAddingServiceType(false);
+                                setNewServiceTypeName('');
+                                setNewServiceTypeTracksInFunnel(false);
+                              }
+                            });
+                          }
+                        } else if (e.key === 'Escape') {
+                          setAddingServiceType(false);
+                          setNewServiceTypeName('');
+                          setNewServiceTypeTracksInFunnel(false);
+                        }
+                      }}
+                      style={{
+                        flex: '1 1 120px',
+                        minWidth: 0,
+                        padding: '10px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box',
+                        height: '40px'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (newServiceTypeName.trim() && onAddServiceType) {
+                          const st = await onAddServiceType(newServiceTypeName.trim(), newServiceTypeTracksInFunnel);
+                          if (st) {
+                            setFormData({ ...formData, serviceTypeId: st.id });
+                            setAddingServiceType(false);
+                            setNewServiceTypeName('');
+                            setNewServiceTypeTracksInFunnel(false);
+                          }
+                        }
+                      }}
+                      style={{
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        flexShrink: 0
+                      }}
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAddingServiceType(false); setNewServiceTypeName(''); setNewServiceTypeTracksInFunnel(false); }}
+                    style={{
+                      backgroundColor: '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '8px 12px',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      flexShrink: 0
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+                    <input
+                      type="checkbox"
+                      checked={newServiceTypeTracksInFunnel}
+                      onChange={(e) => setNewServiceTypeTracksInFunnel(e.target.checked)}
+                      style={{ width: 16, height: 16, accentColor: '#3b82f6' }}
+                    />
+                    Track in Funnel
+                    <InfoTooltip content={<>Include this service type when calculating Bookings (Qty) and funnel conversion metrics.<br /><br />Example: You may track weddings in the funnel but exclude high-volume services like portraits or mini sessions.</>} />
+                  </label>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <select
+                    value={formData.serviceTypeId}
+                    onChange={(e) => setFormData({ ...formData, serviceTypeId: e.target.value })}
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                      height: '40px'
+                    }}
+                  >
+                    <option value="">Select service type</option>
+                    {serviceTypes.map(st => (
+                      <option key={st.id} value={st.id}>{st.name}</option>
+                    ))}
+                  </select>
+                  {onAddServiceType && !isViewOnly && (
+                    <button
+                      type="button"
+                      onClick={() => setAddingServiceType(true)}
+                      style={{
+                        backgroundColor: '#f3f4f6',
+                        color: '#374151',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      New Service Type
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             
-            <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+            <div style={{ minWidth: 0 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Lead Source *
+                <InfoTooltip content="Tracks where the booking came from. Lead Sources power your Funnel metrics and can also be used to track Advertising ROI." />
               </label>
-              <select
-                value={formData.leadSourceId}
-                onChange={(e) => setFormData({ ...formData, leadSourceId: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                  height: '40px'
-                }}
-              >
-                <option value="">Select lead source</option>
-                {leadSources.map(ls => (
-                  <option key={ls.id} value={ls.id}>{ls.name}</option>
-                ))}
-              </select>
+              {addingLeadSource ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0, flexWrap: 'wrap' }}>
+                    <input
+                      type="text"
+                      value={newLeadSourceName}
+                      onChange={(e) => setNewLeadSourceName(e.target.value)}
+                      placeholder="New lead source name"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newLeadSourceName.trim() && onAddLeadSource) {
+                            onAddLeadSource(newLeadSourceName.trim(), newLeadSourceIsAdSource).then((ls) => {
+                              if (ls) {
+                                setFormData({ ...formData, leadSourceId: ls.id });
+                                setAddingLeadSource(false);
+                                setNewLeadSourceName('');
+                                setNewLeadSourceIsAdSource(false);
+                              }
+                            });
+                          }
+                        } else if (e.key === 'Escape') {
+                          setAddingLeadSource(false);
+                          setNewLeadSourceName('');
+                          setNewLeadSourceIsAdSource(false);
+                        }
+                      }}
+                      style={{
+                        flex: '1 1 120px',
+                        minWidth: 0,
+                        padding: '10px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box',
+                        height: '40px'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (newLeadSourceName.trim() && onAddLeadSource) {
+                          const ls = await onAddLeadSource(newLeadSourceName.trim(), newLeadSourceIsAdSource);
+                          if (ls) {
+                            setFormData({ ...formData, leadSourceId: ls.id });
+                            setAddingLeadSource(false);
+                            setNewLeadSourceName('');
+                            setNewLeadSourceIsAdSource(false);
+                          }
+                        }
+                      }}
+                    style={{
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '8px 12px',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      flexShrink: 0
+                    }}
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAddingLeadSource(false); setNewLeadSourceName(''); setNewLeadSourceIsAdSource(false); }}
+                    style={{
+                      backgroundColor: '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '8px 12px',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      flexShrink: 0
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+                    <input
+                      type="checkbox"
+                      checked={newLeadSourceIsAdSource}
+                      onChange={(e) => setNewLeadSourceIsAdSource(e.target.checked)}
+                      style={{ width: 16, height: 16, accentColor: '#3b82f6' }}
+                    />
+                    Ad Source
+                    <InfoTooltip content="Mark this lead source as advertising so bookings from this source are included in your Advertising metrics and ROI calculations." />
+                  </label>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <select
+                    value={formData.leadSourceId}
+                    onChange={(e) => setFormData({ ...formData, leadSourceId: e.target.value })}
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                      height: '40px'
+                    }}
+                  >
+                    <option value="">Select lead source</option>
+                    {leadSources.map(ls => (
+                      <option key={ls.id} value={ls.id}>{ls.name}</option>
+                    ))}
+                  </select>
+                  {onAddLeadSource && !isViewOnly && (
+                    <button
+                      type="button"
+                      onClick={() => setAddingLeadSource(true)}
+                      style={{
+                        backgroundColor: '#f3f4f6',
+                        color: '#374151',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      New Lead Source
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+            <div style={{ minWidth: 0 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Date Inquired
+                <InfoTooltip content="The date the client first contacted you. Used to track inquiry trends and conversion rates in your Funnel." />
               </label>
               <input
                 type="date"
@@ -2294,24 +2346,11 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
               />
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
-                Date Booked{(() => {
-                  const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceTypeId);
-                  return selectedServiceType?.tracksInFunnel ? ' *' : '';
-                })()}
+            <div style={{ minWidth: 0 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+                Date Booked *
+                <InfoTooltip content="The date the client officially booked with you. This helps track how long it takes to convert inquiries into bookings." />
               </label>
-              {(() => {
-                const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceTypeId);
-                if (selectedServiceType?.tracksInFunnel) {
-                  return (
-                    <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '0', marginBottom: '4px' }}>
-                      Required when service type tracks in Funnel
-                    </p>
-                  );
-                }
-                return null;
-              })()}
               <input
                 type="date"
                 value={formData.dateBooked}
@@ -2328,9 +2367,10 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
               />
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+            <div style={{ minWidth: 0 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Project Date
+                <InfoTooltip content="The date the work will take place (e.g., wedding date or session date). Used for planning and forecasting." />
               </label>
               <input
                 type="date"
@@ -2352,8 +2392,9 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
           
 
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
               Booked Revenue *
+              <InfoTooltip content="The total value of this booking. Payments below determine when the cash will be received." />
             </label>
             <input
               type="text"
@@ -2383,7 +2424,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
           <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', margin: 0 }}>
-                Payment Schedule (For Cash Tracking)
+                Payment Schedule (For Cash Forecasting)
               </label>
               <button
                 type="button"
@@ -2406,7 +2447,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
               </button>
             </div>
             <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px', marginTop: 0 }}>
-              Add expected payments for forecasting future cash. Dates are Month/Year only.
+              Add expected payments to forecast when Cash will be received. Payment dates are entered as Month and Year only.
             </p>
 
             {scheduledPayments.map((payment, index) => {
@@ -2559,10 +2600,12 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
 }
 
 // Lead Sources Modal
-function LeadSourcesModal({ leadSources, onAdd, onRemove, onUnarchive, onUpdate, onToggleAdSource, onClose }: {
+function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, onRemove, onArchive, onUnarchive, onUpdate, onToggleAdSource, onClose }: {
   leadSources: LeadSource[];
+  getBookingCountForLeadSource: (id: string) => number;
   onAdd: (name: string) => void;
   onRemove: (id: string) => void;
+  onArchive?: (id: string) => Promise<boolean>;
   onUnarchive?: (id: string) => Promise<boolean>;
   onUpdate: (id: string, newName: string) => void;
   onToggleAdSource: (id: string) => void;
@@ -2624,15 +2667,20 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUnarchive, onUpdate,
         maxHeight: '90vh',
         overflow: 'auto'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Manage Lead Sources</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Manage Lead Sources</h2>
+            <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0', lineHeight: 1.4 }}>
+              Lead Sources track where your bookings come from and can also be used to measure Advertising ROI.
+            </p>
+          </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
 
         {archivedLeadSources.length > 0 && (
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', cursor: 'pointer', fontSize: '14px', color: '#6b7280' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', marginTop: '16px', cursor: 'pointer', fontSize: '14px', color: '#6b7280' }}>
             <input
               type="checkbox"
               checked={showArchived}
@@ -2640,6 +2688,7 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUnarchive, onUpdate,
               style={{ width: 16, height: 16, accentColor: '#3b82f6' }}
             />
             Show archived lead sources
+            <InfoTooltip content="Archived lead sources remain attached to past sales but are hidden from new sale dropdowns." />
           </label>
         )}
 
@@ -2683,6 +2732,29 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUnarchive, onUpdate,
             border: '1px solid #e5e7eb',
             borderRadius: '8px',
           }}>
+            {displayLeadSources.length > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '8px 12px',
+                backgroundColor: '#f9fafb',
+                borderBottom: '1px solid #e5e7eb',
+                fontWeight: 600,
+                fontSize: '12px',
+                color: '#374151',
+                position: 'sticky',
+                top: 0,
+                zIndex: 1,
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>Lead Source</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, width: '140px', justifyContent: 'flex-start' }}>
+                  <span>Ad Source</span>
+                  <InfoTooltip content="Mark this lead source as advertising so bookings from this source are included in your Advertising metrics and ROI calculations." />
+                </div>
+                <div style={{ width: '64px', flexShrink: 0, textAlign: 'left' }}>Edit</div>
+                <div style={{ width: '88px', flexShrink: 0, textAlign: 'left' }}>Actions</div>
+              </div>
+            )}
             {displayLeadSources.length === 0 ? (
               <div style={{
                 textAlign: 'left',
@@ -2709,23 +2781,29 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUnarchive, onUpdate,
                 }}>
                   {isArchived ? (
                     <>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>{leadSource.name} <span style={{ fontStyle: 'italic', fontSize: '12px' }}>(archived)</span></span>
-                      {onUnarchive && (
-                        <button
-                          onClick={() => onUnarchive(leadSource.id)}
-                          style={{
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '4px 12px',
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Restore
-                        </button>
-                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: '14px', color: '#6b7280' }}>{leadSource.name} <span style={{ fontStyle: 'italic', fontSize: '12px' }}>(archived)</span></span>
+                      </div>
+                      <div style={{ flexShrink: 0, width: '140px' }} />
+                      <div style={{ flexShrink: 0, width: '52px' }} />
+                      <div style={{ flexShrink: 0, width: '88px', display: 'flex', justifyContent: 'flex-start' }}>
+                        {onUnarchive && (
+                          <button
+                            onClick={() => onUnarchive(leadSource.id)}
+                            style={{
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 12px',
+                              fontSize: '12px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Restore
+                          </button>
+                        )}
+                      </div>
                     </>
                   ) : editingId === leadSource.id ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
@@ -2785,61 +2863,90 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUnarchive, onUpdate,
                     </div>
                   ) : (
                     <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ fontSize: '14px', fontWeight: isAdSource ? 600 : 500 }}>{leadSource.name}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <input
-                            type="checkbox"
-                            checked={isAdSource}
-                            onChange={() => onToggleAdSource(leadSource.id)}
-                            style={{ cursor: 'pointer' }}
-                          />
-                          <span style={{ 
-                            fontSize: '11px', 
-                            color: isAdSource ? '#3b82f6' : '#6b7280',
-                            fontWeight: '500'
-                          }}>
-                            Ad Source
-                          </span>
-                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button
-                          onClick={() => handleEdit(leadSource.id, leadSource.name)}
-                          style={{
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <Edit3 size={12} />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => onRemove(leadSource.id)}
-                          style={{
-                            backgroundColor: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <Trash2 size={12} />
-                          Delete
-                        </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                        <div style={{ width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={isAdSource}
+                              onChange={() => onToggleAdSource(leadSource.id)}
+                              style={{ width: 16, height: 16, accentColor: '#3b82f6', cursor: 'pointer' }}
+                            />
+                            <span style={{ fontSize: '13px', color: isAdSource ? '#3b82f6' : '#6b7280', fontWeight: '500' }}>
+                              Ad Source
+                            </span>
+                          </label>
+                        </div>
+                        <div style={{ width: '64px', flexShrink: 0 }}>
+                          <button
+                            onClick={() => handleEdit(leadSource.id, leadSource.name)}
+                            style={{
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '4px 12px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <Edit size={12} />
+                            Edit
+                          </button>
+                        </div>
+                        <div style={{ width: '88px', flexShrink: 0, display: 'flex', justifyContent: 'flex-start' }}>
+                          {getBookingCountForLeadSource(leadSource.id) > 0 ? (
+                            onArchive && (
+                              <button
+                                onClick={() => onArchive(leadSource.id)}
+                                style={{
+                                  backgroundColor: '#6b7280',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  padding: '4px 12px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  width: '80px',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                <Trash2 size={12} />
+                                Archive
+                              </button>
+                            )
+                          ) : (
+                            <button
+                              onClick={() => onRemove(leadSource.id)}
+                            style={{
+                              backgroundColor: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 12px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              width: '80px',
+                              justifyContent: 'center'
+                            }}
+                            >
+                              <Trash2 size={12} />
+                              Delete
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </>
                   )}
@@ -2847,24 +2954,6 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUnarchive, onUpdate,
               );
               })
             )}
-          </div>
-        </div>
-
-        <div style={{ 
-          backgroundColor: '#f3f4f6', 
-          padding: '12px', 
-          borderRadius: '6px', 
-          marginBottom: '20px',
-          fontSize: '12px',
-          color: '#6b7280',
-          textAlign: 'left'
-        }}>
-          <div style={{ marginBottom: '8px' }}>
-            <strong>Lead Sources:</strong> Lead sources help you track where your bookings come from. They can also be used to track Advertising ROI.
-          </div>
-          <div>
-            <strong>Archive:</strong> Lead sources used by sales cannot be deleted. They can be archived instead.
-            Archived lead sources remain attached to past sales but are hidden from new sale dropdowns.
           </div>
         </div>
 
@@ -3436,7 +3525,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
           <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', margin: 0 }}>
-                Payment Schedule (For Cash Tracking)
+                Payment Schedule (For Cash Forecasting)
               </label>
               <button
                 type="button"
@@ -3459,7 +3548,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
               </button>
             </div>
             <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px', marginTop: 0 }}>
-              Add expected payments for forecasting future cash. Dates are Month/Year only.
+              Add expected payments to forecast when Cash will be received. Payment dates are entered as Month and Year only.
             </p>
 
             {scheduledPayments.map((payment, index) => {
