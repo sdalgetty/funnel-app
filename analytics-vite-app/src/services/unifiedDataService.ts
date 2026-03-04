@@ -695,11 +695,12 @@ export class UnifiedDataService {
     }
   }
 
-  static async createLeadSource(userId: string, name: string, isViewOnly: boolean = false): Promise<LeadSource | null> {
+  static async createLeadSource(userId: string, name: string, isAdSourceOrLegacy: boolean | string = false, isViewOnly: boolean = false): Promise<LeadSource | null> {
+    const isAdSource = typeof isAdSourceOrLegacy === 'boolean' ? isAdSourceOrLegacy : false;
     this.checkWritePermission(isViewOnly);
     
     if (!this.isSupabaseConfigured()) {
-      return MockDataService.createLeadSource(userId, name);
+      return MockDataService.createLeadSource(userId, name, isAdSource);
     }
 
     try {
@@ -707,7 +708,8 @@ export class UnifiedDataService {
         .from('lead_sources')
         .insert({
           user_id: userId,
-          name: name
+          name: name,
+          is_ad_source: isAdSource
         })
         .select()
         .single();

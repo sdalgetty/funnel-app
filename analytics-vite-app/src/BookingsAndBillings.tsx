@@ -2084,8 +2084,8 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
   serviceTypes: ServiceType[];
   leadSources: LeadSource[];
   onAdd: (booking: Omit<Booking, 'id' | 'createdAt'>) => Promise<Booking | null> | void;
-  onAddServiceType?: (name: string) => Promise<ServiceType | null>;
-  onAddLeadSource?: (name: string) => Promise<LeadSource | null>;
+  onAddServiceType?: (name: string, tracksInFunnel?: boolean) => Promise<ServiceType | null>;
+  onAddLeadSource?: (name: string, isAdSource?: boolean) => Promise<LeadSource | null>;
   onClose: () => void;
   dataManager?: any;
   isViewOnly?: boolean;
@@ -2102,8 +2102,10 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
   const [scheduledPayments, setScheduledPayments] = useState<Array<Omit<Payment, 'id'> & { amountInput?: string }>>([]);
   const [addingServiceType, setAddingServiceType] = useState(false);
   const [newServiceTypeName, setNewServiceTypeName] = useState('');
+  const [newServiceTypeTracksInFunnel, setNewServiceTypeTracksInFunnel] = useState(false);
   const [addingLeadSource, setAddingLeadSource] = useState(false);
   const [newLeadSourceName, setNewLeadSourceName] = useState('');
+  const [newLeadSourceIsAdSource, setNewLeadSourceIsAdSource] = useState(false);
 
   // Add new payment schedule
   const handleAddPayment = () => {
@@ -2254,67 +2256,71 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                 <InfoTooltip content="Used to categorize your work (e.g., Wedding, Engagement, Family). Service Types allow you to filter Sales and analyze performance in Insights." />
               </label>
               {addingServiceType ? (
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    value={newServiceTypeName}
-                    onChange={(e) => setNewServiceTypeName(e.target.value)}
-                    placeholder="New service type name"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (newServiceTypeName.trim() && onAddServiceType) {
-                          onAddServiceType(newServiceTypeName.trim()).then((st) => {
-                            if (st) {
-                              setFormData({ ...formData, serviceTypeId: st.id });
-                              setAddingServiceType(false);
-                              setNewServiceTypeName('');
-                            }
-                          });
-                        }
-                      } else if (e.key === 'Escape') {
-                        setAddingServiceType(false);
-                        setNewServiceTypeName('');
-                      }
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box',
-                      height: '40px'
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (newServiceTypeName.trim() && onAddServiceType) {
-                        const st = await onAddServiceType(newServiceTypeName.trim());
-                        if (st) {
-                          setFormData({ ...formData, serviceTypeId: st.id });
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      value={newServiceTypeName}
+                      onChange={(e) => setNewServiceTypeName(e.target.value)}
+                      placeholder="New service type name"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newServiceTypeName.trim() && onAddServiceType) {
+                            onAddServiceType(newServiceTypeName.trim(), newServiceTypeTracksInFunnel).then((st) => {
+                              if (st) {
+                                setFormData({ ...formData, serviceTypeId: st.id });
+                                setAddingServiceType(false);
+                                setNewServiceTypeName('');
+                                setNewServiceTypeTracksInFunnel(false);
+                              }
+                            });
+                          }
+                        } else if (e.key === 'Escape') {
                           setAddingServiceType(false);
                           setNewServiceTypeName('');
+                          setNewServiceTypeTracksInFunnel(false);
                         }
-                      }
-                    }}
-                    style={{
-                      backgroundColor: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '8px 12px',
-                      fontSize: '14px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Add
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setAddingServiceType(false); setNewServiceTypeName(''); }}
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '10px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box',
+                        height: '40px'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (newServiceTypeName.trim() && onAddServiceType) {
+                          const st = await onAddServiceType(newServiceTypeName.trim(), newServiceTypeTracksInFunnel);
+                          if (st) {
+                            setFormData({ ...formData, serviceTypeId: st.id });
+                            setAddingServiceType(false);
+                            setNewServiceTypeName('');
+                            setNewServiceTypeTracksInFunnel(false);
+                          }
+                        }
+                      }}
+                      style={{
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAddingServiceType(false); setNewServiceTypeName(''); setNewServiceTypeTracksInFunnel(false); }}
                     style={{
                       backgroundColor: '#6b7280',
                       color: 'white',
@@ -2327,6 +2333,17 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                   >
                     Cancel
                   </button>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+                    <input
+                      type="checkbox"
+                      checked={newServiceTypeTracksInFunnel}
+                      onChange={(e) => setNewServiceTypeTracksInFunnel(e.target.checked)}
+                      style={{ width: 16, height: 16, accentColor: '#3b82f6' }}
+                    />
+                    Track in Funnel
+                    <InfoTooltip content="Include this service type when calculating Bookings (Qty) and funnel conversion metrics." />
+                  </label>
                 </div>
               ) : (
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -2376,52 +2393,56 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                 <InfoTooltip content="Tracks where the booking came from. Lead Sources power your Funnel metrics and can also be used to track Advertising ROI." />
               </label>
               {addingLeadSource ? (
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    value={newLeadSourceName}
-                    onChange={(e) => setNewLeadSourceName(e.target.value)}
-                    placeholder="New lead source name"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (newLeadSourceName.trim() && onAddLeadSource) {
-                          onAddLeadSource(newLeadSourceName.trim()).then((ls) => {
-                            if (ls) {
-                              setFormData({ ...formData, leadSourceId: ls.id });
-                              setAddingLeadSource(false);
-                              setNewLeadSourceName('');
-                            }
-                          });
-                        }
-                      } else if (e.key === 'Escape') {
-                        setAddingLeadSource(false);
-                        setNewLeadSourceName('');
-                      }
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box',
-                      height: '40px'
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (newLeadSourceName.trim() && onAddLeadSource) {
-                        const ls = await onAddLeadSource(newLeadSourceName.trim());
-                        if (ls) {
-                          setFormData({ ...formData, leadSourceId: ls.id });
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      value={newLeadSourceName}
+                      onChange={(e) => setNewLeadSourceName(e.target.value)}
+                      placeholder="New lead source name"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newLeadSourceName.trim() && onAddLeadSource) {
+                            onAddLeadSource(newLeadSourceName.trim(), newLeadSourceIsAdSource).then((ls) => {
+                              if (ls) {
+                                setFormData({ ...formData, leadSourceId: ls.id });
+                                setAddingLeadSource(false);
+                                setNewLeadSourceName('');
+                                setNewLeadSourceIsAdSource(false);
+                              }
+                            });
+                          }
+                        } else if (e.key === 'Escape') {
                           setAddingLeadSource(false);
                           setNewLeadSourceName('');
+                          setNewLeadSourceIsAdSource(false);
                         }
-                      }
-                    }}
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '10px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box',
+                        height: '40px'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (newLeadSourceName.trim() && onAddLeadSource) {
+                          const ls = await onAddLeadSource(newLeadSourceName.trim(), newLeadSourceIsAdSource);
+                          if (ls) {
+                            setFormData({ ...formData, leadSourceId: ls.id });
+                            setAddingLeadSource(false);
+                            setNewLeadSourceName('');
+                            setNewLeadSourceIsAdSource(false);
+                          }
+                        }
+                      }}
                     style={{
                       backgroundColor: '#10b981',
                       color: 'white',
@@ -2436,7 +2457,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setAddingLeadSource(false); setNewLeadSourceName(''); }}
+                    onClick={() => { setAddingLeadSource(false); setNewLeadSourceName(''); setNewLeadSourceIsAdSource(false); }}
                     style={{
                       backgroundColor: '#6b7280',
                       color: 'white',
@@ -2449,6 +2470,17 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                   >
                     Cancel
                   </button>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+                    <input
+                      type="checkbox"
+                      checked={newLeadSourceIsAdSource}
+                      onChange={(e) => setNewLeadSourceIsAdSource(e.target.checked)}
+                      style={{ width: 16, height: 16, accentColor: '#3b82f6' }}
+                    />
+                    Ad Source
+                    <InfoTooltip content="Mark this lead source as advertising so bookings from this source are included in your Advertising metrics and ROI calculations." />
+                  </label>
                 </div>
               ) : (
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>

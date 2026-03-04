@@ -115,12 +115,13 @@ export function useDataManager(): DataManager {
   }, [effectiveUserId, user?.id, isViewOnly]);
 
   // Service type operations
-  const createServiceType = useCallback(async (name: string) => {
+  const createServiceType = useCallback(async (name: string, tracksInFunnelOrDescription?: boolean | string) => {
+    const tracksInFunnel = typeof tracksInFunnelOrDescription === 'boolean' ? tracksInFunnelOrDescription : false;
     const userId = effectiveUserId || user?.id;
     if (!userId) return null;
     
     try {
-      const serviceType = await UnifiedDataService.createServiceType(userId, name, isViewOnly);
+      const serviceType = await UnifiedDataService.createServiceType(userId, name, tracksInFunnel, isViewOnly);
       if (serviceType) {
         setServiceTypes(prev => [...prev, serviceType]);
       }
@@ -220,12 +221,13 @@ export function useDataManager(): DataManager {
   }, [effectiveUserId, user?.id, isViewOnly]);
 
   // Lead source operations
-  const createLeadSource = useCallback(async (name: string) => {
+  const createLeadSource = useCallback(async (name: string, isAdSourceOrDescription?: boolean | string) => {
+    const isAdSource = typeof isAdSourceOrDescription === 'boolean' ? isAdSourceOrDescription : false;
     const userId = effectiveUserId || user?.id;
     if (!userId) return null;
     
     try {
-      const leadSource = await UnifiedDataService.createLeadSource(userId, name, isViewOnly);
+      const leadSource = await UnifiedDataService.createLeadSource(userId, name, isAdSource, isViewOnly);
       if (leadSource) {
         setLeadSources(prev => [...prev, leadSource]);
       }
