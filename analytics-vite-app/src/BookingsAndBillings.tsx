@@ -46,19 +46,6 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
   const activeServiceTypes = useMemo(() => serviceTypes.filter(st => !st.archived), [serviceTypes]);
   const activeLeadSources = useMemo(() => leadSources.filter(ls => !ls.archived), [leadSources]);
 
-  // For Edit modal: include current booking's lead source/service type even if archived
-  const serviceTypesForEdit = useMemo(() => {
-    if (!editingBooking) return activeServiceTypes;
-    const current = serviceTypes.find(st => st.id === editingBooking.serviceTypeId);
-    if (current?.archived) return [current, ...activeServiceTypes.filter(s => s.id !== current.id)];
-    return activeServiceTypes;
-  }, [activeServiceTypes, serviceTypes, editingBooking?.serviceTypeId]);
-  const leadSourcesForEdit = useMemo(() => {
-    if (!editingBooking) return activeLeadSources;
-    const current = leadSources.find(ls => ls.id === editingBooking.leadSourceId);
-    if (current?.archived) return [current, ...activeLeadSources.filter(l => l.id !== current.id)];
-    return activeLeadSources;
-  }, [activeLeadSources, leadSources, editingBooking?.leadSourceId]);
   const [showAddBooking, setShowAddBooking] = useState(false);
   const [showCSVImport, setShowCSVImport] = useState(false);
   
@@ -92,6 +79,21 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+
+  // For Edit modal: include current booking's lead source/service type even if archived
+  const serviceTypesForEdit = useMemo(() => {
+    if (!editingBooking) return activeServiceTypes;
+    const current = serviceTypes.find(st => st.id === editingBooking.serviceTypeId);
+    if (current?.archived) return [current, ...activeServiceTypes.filter(s => s.id !== current.id)];
+    return activeServiceTypes;
+  }, [activeServiceTypes, serviceTypes, editingBooking?.serviceTypeId]);
+  const leadSourcesForEdit = useMemo(() => {
+    if (!editingBooking) return activeLeadSources;
+    const current = leadSources.find(ls => ls.id === editingBooking.leadSourceId);
+    if (current?.archived) return [current, ...activeLeadSources.filter(l => l.id !== current.id)];
+    return activeLeadSources;
+  }, [activeLeadSources, leadSources, editingBooking?.leadSourceId]);
+
   const [showServiceTypeDropdown, setShowServiceTypeDropdown] = useState(false);
   const [deleteServiceTypeConfirmation, setDeleteServiceTypeConfirmation] = useState<{ id: string; name: string; bookingCount: number } | null>(null);
   const [deleteLeadSourceConfirmation, setDeleteLeadSourceConfirmation] = useState<{ id: string; name: string; bookingCount: number } | null>(null);
