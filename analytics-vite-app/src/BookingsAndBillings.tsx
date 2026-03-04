@@ -1198,6 +1198,8 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
           serviceTypes={activeServiceTypes}
           leadSources={activeLeadSources}
           onAdd={addBooking}
+          onAddServiceType={dataManager?.createServiceType}
+          onAddLeadSource={dataManager?.createLeadSource}
           onClose={() => setShowAddBooking(false)}
           dataManager={dataManager}
           isViewOnly={isViewOnly}
@@ -2078,10 +2080,12 @@ function Td({ children, align = 'left' }: { children: React.ReactNode; align?: '
 }
 
 // Add Booking Modal - Completely Clean (v3)
-function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManager, isViewOnly = false }: {
+function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, onAddLeadSource, onClose, dataManager, isViewOnly = false }: {
   serviceTypes: ServiceType[];
   leadSources: LeadSource[];
   onAdd: (booking: Omit<Booking, 'id' | 'createdAt'>) => Promise<Booking | null> | void;
+  onAddServiceType?: (name: string) => Promise<ServiceType | null>;
+  onAddLeadSource?: (name: string) => Promise<LeadSource | null>;
   onClose: () => void;
   dataManager?: any;
   isViewOnly?: boolean;
@@ -2096,6 +2100,10 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
     bookedRevenue: '',
   });
   const [scheduledPayments, setScheduledPayments] = useState<Array<Omit<Payment, 'id'> & { amountInput?: string }>>([]);
+  const [addingServiceType, setAddingServiceType] = useState(false);
+  const [newServiceTypeName, setNewServiceTypeName] = useState('');
+  const [addingLeadSource, setAddingLeadSource] = useState(false);
+  const [newLeadSourceName, setNewLeadSourceName] = useState('');
 
   // Add new payment schedule
   const handleAddPayment = () => {
@@ -2146,15 +2154,8 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.projectName || !formData.serviceTypeId || !formData.leadSourceId || !formData.bookedRevenue) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    // Check if the selected service type tracks in funnel
-    const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceTypeId);
-    if (selectedServiceType?.tracksInFunnel && !formData.dateBooked) {
-      alert('Date Booked is required for service types that are tracked in the Funnel. Please enter a booking date or uncheck "Track in Funnel" for this service type.');
+    if (!formData.projectName || !formData.serviceTypeId || !formData.leadSourceId || !formData.dateBooked || !formData.bookedRevenue) {
+      alert('Please fill in all required fields (Project Name, Service Type, Lead Source, Date Booked, Booked Revenue)');
       return;
     }
 
@@ -2248,56 +2249,253 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Service Type *
+                <InfoTooltip content="Used to categorize your work (e.g., Wedding, Engagement, Family). Service Types allow you to filter Sales and analyze performance in Insights." />
               </label>
-              <select
-                value={formData.serviceTypeId}
-                onChange={(e) => setFormData({ ...formData, serviceTypeId: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                  height: '40px'
-                }}
-              >
-                <option value="">Select service type</option>
-                {serviceTypes.map(st => (
-                  <option key={st.id} value={st.id}>{st.name}</option>
-                ))}
-              </select>
+              {addingServiceType ? (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    value={newServiceTypeName}
+                    onChange={(e) => setNewServiceTypeName(e.target.value)}
+                    placeholder="New service type name"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newServiceTypeName.trim() && onAddServiceType) {
+                          onAddServiceType(newServiceTypeName.trim()).then((st) => {
+                            if (st) {
+                              setFormData({ ...formData, serviceTypeId: st.id });
+                              setAddingServiceType(false);
+                              setNewServiceTypeName('');
+                            }
+                          });
+                        }
+                      } else if (e.key === 'Escape') {
+                        setAddingServiceType(false);
+                        setNewServiceTypeName('');
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                      height: '40px'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (newServiceTypeName.trim() && onAddServiceType) {
+                        const st = await onAddServiceType(newServiceTypeName.trim());
+                        if (st) {
+                          setFormData({ ...formData, serviceTypeId: st.id });
+                          setAddingServiceType(false);
+                          setNewServiceTypeName('');
+                        }
+                      }
+                    }}
+                    style={{
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '8px 12px',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAddingServiceType(false); setNewServiceTypeName(''); }}
+                    style={{
+                      backgroundColor: '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '8px 12px',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <select
+                    value={formData.serviceTypeId}
+                    onChange={(e) => setFormData({ ...formData, serviceTypeId: e.target.value })}
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                      height: '40px'
+                    }}
+                  >
+                    <option value="">Select service type</option>
+                    {serviceTypes.map(st => (
+                      <option key={st.id} value={st.id}>{st.name}</option>
+                    ))}
+                  </select>
+                  {onAddServiceType && !isViewOnly && (
+                    <button
+                      type="button"
+                      onClick={() => setAddingServiceType(true)}
+                      style={{
+                        backgroundColor: '#f3f4f6',
+                        color: '#374151',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      + Add new
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Lead Source *
+                <InfoTooltip content="Tracks where the booking came from. Lead Sources power your Funnel metrics and can also be used to track Advertising ROI." />
               </label>
-              <select
-                value={formData.leadSourceId}
-                onChange={(e) => setFormData({ ...formData, leadSourceId: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                  height: '40px'
-                }}
-              >
-                <option value="">Select lead source</option>
-                {leadSources.map(ls => (
-                  <option key={ls.id} value={ls.id}>{ls.name}</option>
-                ))}
-              </select>
+              {addingLeadSource ? (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    value={newLeadSourceName}
+                    onChange={(e) => setNewLeadSourceName(e.target.value)}
+                    placeholder="New lead source name"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newLeadSourceName.trim() && onAddLeadSource) {
+                          onAddLeadSource(newLeadSourceName.trim()).then((ls) => {
+                            if (ls) {
+                              setFormData({ ...formData, leadSourceId: ls.id });
+                              setAddingLeadSource(false);
+                              setNewLeadSourceName('');
+                            }
+                          });
+                        }
+                      } else if (e.key === 'Escape') {
+                        setAddingLeadSource(false);
+                        setNewLeadSourceName('');
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                      height: '40px'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (newLeadSourceName.trim() && onAddLeadSource) {
+                        const ls = await onAddLeadSource(newLeadSourceName.trim());
+                        if (ls) {
+                          setFormData({ ...formData, leadSourceId: ls.id });
+                          setAddingLeadSource(false);
+                          setNewLeadSourceName('');
+                        }
+                      }
+                    }}
+                    style={{
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '8px 12px',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAddingLeadSource(false); setNewLeadSourceName(''); }}
+                    style={{
+                      backgroundColor: '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '8px 12px',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <select
+                    value={formData.leadSourceId}
+                    onChange={(e) => setFormData({ ...formData, leadSourceId: e.target.value })}
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                      height: '40px'
+                    }}
+                  >
+                    <option value="">Select lead source</option>
+                    {leadSources.map(ls => (
+                      <option key={ls.id} value={ls.id}>{ls.name}</option>
+                    ))}
+                  </select>
+                  {onAddLeadSource && !isViewOnly && (
+                    <button
+                      type="button"
+                      onClick={() => setAddingLeadSource(true)}
+                      style={{
+                        backgroundColor: '#f3f4f6',
+                        color: '#374151',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      + Add new
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Date Inquired
+                <InfoTooltip content="The date the client first contacted you. Used to track inquiry trends and conversion rates in your Funnel." />
               </label>
               <input
                 type="date"
@@ -2316,23 +2514,10 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
-                Date Booked{(() => {
-                  const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceTypeId);
-                  return selectedServiceType?.tracksInFunnel ? ' *' : '';
-                })()}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+                Date Booked *
+                <InfoTooltip content="The date the client officially booked with you. This helps track how long it takes to convert inquiries into bookings." />
               </label>
-              {(() => {
-                const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceTypeId);
-                if (selectedServiceType?.tracksInFunnel) {
-                  return (
-                    <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '0', marginBottom: '4px' }}>
-                      Required when service type tracks in Funnel
-                    </p>
-                  );
-                }
-                return null;
-              })()}
               <input
                 type="date"
                 value={formData.dateBooked}
@@ -2350,8 +2535,9 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Project Date
+                <InfoTooltip content="The date the work will take place (e.g., wedding date or session date). Used for planning and forecasting." />
               </label>
               <input
                 type="date"
@@ -2373,8 +2559,9 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
           
 
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
               Booked Revenue *
+              <InfoTooltip content="The total value of the booking." />
             </label>
             <input
               type="text"
@@ -2427,7 +2614,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
               </button>
             </div>
             <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px', marginTop: 0 }}>
-              Add expected payments for forecasting future cash. Dates are Month/Year only.
+              Add expected payments to forecast when Cash will be received. Payment dates are entered as Month and Year only.
             </p>
 
             {scheduledPayments.map((payment, index) => {
@@ -3528,7 +3715,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
               </button>
             </div>
             <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px', marginTop: 0 }}>
-              Add expected payments for forecasting future cash. Dates are Month/Year only.
+              Add expected payments to forecast when Cash will be received. Payment dates are entered as Month and Year only.
             </p>
 
             {scheduledPayments.map((payment, index) => {
