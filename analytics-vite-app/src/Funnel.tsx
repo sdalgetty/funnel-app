@@ -8,6 +8,7 @@ import { logger } from "./utils/logger";
 import CSVImportModal from "./components/CSVImportModal";
 import { importBookingsFromCSV, type ImportResult } from "./services/honeybookImporter";
 import { InfoTooltip } from "./components/InfoTooltip";
+import AdsSetupModal from "./components/AdsSetupModal";
 
 interface FunnelProps {
   funnelData: FunnelData[];
@@ -125,6 +126,8 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
   const [editingMonth, setEditingMonth] = useState<FunnelData | null>(null);
   const originalEditingMonthRef = useRef<FunnelData | null>(null);
   const [adsTrackingEnabled, setAdsTrackingEnabled] = useState<boolean>(funnelUser?.adsTrackingEnabled || false);
+  const [isAdsSetupModalOpen, setIsAdsSetupModalOpen] = useState(false);
+  const [adsSetupModalMode, setAdsSetupModalMode] = useState<'setup' | 'edit'>('setup');
   
   // Mobile detection
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -142,19 +145,67 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
     }
   }, [funnelUser?.adsTrackingEnabled]);
 
+  const advertisingLeadSourceCount = leadSources.filter(ls => ls.isAdSource).length;
+  // Only require setup wizard when no lead sources are connected to Ads. If they have ad sources, enable immediately.
+  const adsSetupRequired = advertisingLeadSourceCount === 0;
+
   // Handle toggle change
   const handleAdsTrackingToggle = async (enabled: boolean) => {
-    if (funnelUser) {
+    if (!funnelUser) return;
+    if (enabled && !adsTrackingEnabled) {
+      // Switching from OFF to ON
+      if (adsSetupRequired) {
+        setAdsSetupModalMode('setup');
+        setIsAdsSetupModalOpen(true);
+        return;
+      }
+      // Setup not required: enable immediately
       try {
-        await updateProfile({ adsTrackingEnabled: enabled });
-        // Only update local state if update succeeds
-        setAdsTrackingEnabled(enabled);
+        await updateProfile({ adsTrackingEnabled: true });
+        setAdsTrackingEnabled(true);
       } catch (error) {
         logger.error('Failed to update ads tracking setting:', error);
-        // Don't revert - keep current state since update failed
-        // The error will be logged and user can try again
+      }
+      return;
+    }
+    if (!enabled) {
+      // Switching from ON to OFF: hide UI but don't delete stored data
+      try {
+        await updateProfile({ adsTrackingEnabled: false });
+        setAdsTrackingEnabled(false);
+      } catch (error) {
+        logger.error('Failed to update ads tracking setting:', error);
       }
     }
+  };
+
+  const handleAdsSetupCancel = () => {
+    setIsAdsSetupModalOpen(false);
+    // Toggle stays OFF - no change needed
+  };
+
+  const handleAdsSetupComplete = async () => {
+    try {
+      await updateProfile({ adsTrackingEnabled: true, adsSetupCompleted: true });
+      setAdsTrackingEnabled(true);
+      setIsAdsSetupModalOpen(false);
+    } catch (error) {
+      logger.error('Failed to enable ads tracking:', error);
+    }
+  };
+
+  const handleAdsSetupEditComplete = async () => {
+    try {
+      await updateProfile({ adsSetupCompleted: true });
+      setIsAdsSetupModalOpen(false);
+    } catch (error) {
+      logger.error('Failed to update ads setup:', error);
+    }
+  };
+
+  const handleEditAdsSetup = () => {
+    setAdsSetupModalMode('edit');
+    setIsAdsSetupModalOpen(true);
   };
 
   // Handle navigation action to open edit modal for specific month
@@ -707,40 +758,59 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
               ))}
             </select>
             {!isViewOnly && (
-              <label style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                cursor: 'pointer',
-                gap: '8px',
-                fontSize: '14px',
-                color: '#374151',
-                whiteSpace: 'nowrap'
-              }}>
-                <span style={{ userSelect: 'none' }}>Track Advertising Data</span>
-                <div style={{
-                  position: 'relative',
-                  width: '44px',
-                  height: '24px',
-                  borderRadius: '12px',
-                  backgroundColor: adsTrackingEnabled ? '#3b82f6' : '#d1d5db',
-                  transition: 'background-color 0.2s',
-                  cursor: 'pointer'
-                }}
-                onClick={() => handleAdsTrackingToggle(!adsTrackingEnabled)}
-                >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <label style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  cursor: 'pointer',
+                  gap: '8px',
+                  fontSize: '14px',
+                  color: '#374151',
+                  whiteSpace: 'nowrap'
+                }}>
+                  <span style={{ userSelect: 'none' }}>Track Advertising Data</span>
                   <div style={{
-                    position: 'absolute',
-                    top: '2px',
-                    left: adsTrackingEnabled ? '22px' : '2px',
-                    width: '20px',
-                    height: '20px',
-                    borderRadius: '50%',
-                    backgroundColor: 'white',
-                    transition: 'left 0.2s',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                  }} />
-                </div>
-              </label>
+                    position: 'relative',
+                    width: '44px',
+                    height: '24px',
+                    borderRadius: '12px',
+                    backgroundColor: adsTrackingEnabled ? '#3b82f6' : '#d1d5db',
+                    transition: 'background-color 0.2s',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => handleAdsTrackingToggle(!adsTrackingEnabled)}
+                  >
+                    <div style={{
+                      position: 'absolute',
+                      top: '2px',
+                      left: adsTrackingEnabled ? '22px' : '2px',
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      backgroundColor: 'white',
+                      transition: 'left 0.2s',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }} />
+                  </div>
+                </label>
+                {adsTrackingEnabled && (
+                  <button
+                    type="button"
+                    onClick={handleEditAdsSetup}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      fontSize: '13px',
+                      color: '#3b82f6',
+                      cursor: 'pointer',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    Edit Ads Setup
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -1110,6 +1180,22 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
           </div>
         )}
       </div>
+
+      {/* Ads Setup Modal - when user toggles Advertising ON */}
+      {isAdsSetupModalOpen && dataManager && (
+        <AdsSetupModal
+          leadSources={leadSources}
+          onCreateLeadSource={async (name) => {
+            const created = await dataManager.createLeadSource(name);
+            return created ?? null;
+          }}
+          onSetLeadSourceAdSource={(id, isAdSource) =>
+            dataManager.setLeadSourceAdSource ? dataManager.setLeadSourceAdSource(id, isAdSource) : Promise.resolve(false)
+          }
+          onEnableTracking={adsSetupModalMode === 'setup' ? handleAdsSetupComplete : handleAdsSetupEditComplete}
+          onCancel={handleAdsSetupCancel}
+        />
+      )}
 
       {/* Notes Modal */}
       {isNotesModalOpen && notesMonth && (

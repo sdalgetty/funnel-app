@@ -702,6 +702,31 @@ export class UnifiedDataService {
     }
   }
 
+  static async setLeadSourceAdSource(userId: string, id: string, isAdSource: boolean, isViewOnly: boolean = false): Promise<boolean> {
+    this.checkWritePermission(isViewOnly);
+
+    if (!this.isSupabaseConfigured()) {
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('lead_sources')
+        .update({ is_ad_source: isAdSource })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) {
+        logger.error('Error setting ad source flag:', error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      logger.error('Error setting ad source flag:', error);
+      return false;
+    }
+  }
+
   static async toggleLeadSourceAdSource(userId: string, id: string, isViewOnly: boolean = false): Promise<boolean> {
     this.checkWritePermission(isViewOnly);
     

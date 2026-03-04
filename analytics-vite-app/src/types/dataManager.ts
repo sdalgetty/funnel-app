@@ -50,8 +50,9 @@ export interface DataManager {
   toggleServiceTypeFunnelTracking: (id: string) => Promise<boolean>;
 
   // Lead source operations
-  createLeadSource: (name: string, description?: string) => Promise<boolean>;
+  createLeadSource: (name: string, description?: string) => Promise<LeadSource | null>;
   updateLeadSource: (id: string, name: string, description?: string) => Promise<boolean>;
+  setLeadSourceAdSource?: (id: string, isAdSource: boolean) => Promise<boolean>;
   deleteLeadSource: (id: string) => Promise<boolean>;
 
   // Ad campaign operations
