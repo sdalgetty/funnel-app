@@ -923,7 +923,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
                   <>
                     Time from Inquiry to Booking
                     <InfoTooltip
-                      content="The average time between inquiry and signed booking, based on bookings tracked in your Funnel. Services not tracked through the Funnel are not included."
+                      content="The average time between an inquiry and a signed booking, based on bookings tracked in your Funnel."
                     />
                   </>
                 }
@@ -938,7 +938,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
                   <>
                     Time from Booking to Event Date
                     <InfoTooltip
-                      content="The average time between signed booking and the event date, based on bookings tracked in your Funnel. Services not tracked through the Funnel are not included."
+                      content="The average time between a signed booking and the event date, based on bookings tracked in your Funnel."
                     />
                   </>
                 }
@@ -1013,7 +1013,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
                       <>
                         Time from Inquiry to Booking
                         <InfoTooltip
-                          content="The average time between inquiry and signed booking, based on bookings tracked in your Funnel. Services not tracked through the Funnel are not included."
+                          content="The average time between an inquiry and a signed booking, based on bookings tracked in your Funnel."
                         />
                       </>
                     }
@@ -1031,7 +1031,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
                       <>
                         Time from Booking to Event Date
                         <InfoTooltip
-                          content="The average time between signed booking and the event date, based on bookings tracked in your Funnel. Services not tracked through the Funnel are not included."
+                          content="The average time between a signed booking and the event date, based on bookings tracked in your Funnel."
                         />
                       </>
                     }
@@ -1425,7 +1425,7 @@ function SalesMetricsCard({
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937', display: 'flex', alignItems: 'center' }}>
           Sales Performance
           <InfoTooltip
-            content="Summarizes your sales results for the selected time period, including booking quantity, total contract value, and all payments received."
+            content="Summarizes your sales results for the selected time period, including booking quantity, total contract value, and payments received."
           />
         </h3>
       </div>
@@ -1471,13 +1471,7 @@ function InquiriesCard({
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937', display: 'flex', alignItems: 'center' }}>
           Inquiries
           <InfoTooltip
-            content={
-              <>
-                Shows the total number of new inquiries during the selected time period, along with how many were for dates you were available.
-                <br /><br />
-                All data is pulled directly from your Funnel.
-              </>
-            }
+            content="Shows the total number of new inquiries during the selected time period, along with how many were for dates you were available."
           />
         </h3>
       </div>
@@ -1814,9 +1808,9 @@ function Cards({ children, columns = 4, desktopColumns, mobileColumns }: { child
 function Card({ icon, label, value, sub, compact, style: styleProp, valueFontSize }: { icon: React.ReactNode; label: React.ReactNode; value: string | number; sub?: React.ReactNode; compact?: boolean; style?: React.CSSProperties; valueFontSize?: number }) {
   return (
     <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: compact ? 16 : 20, ...styleProp }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
         {icon}
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937', display: 'flex', alignItems: 'center' }}>{label}</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937', display: 'flex', alignItems: 'flex-start' }}>{label}</h3>
       </div>
       <div style={{ fontSize: valueFontSize ?? 20, fontWeight: 700, color: '#1f2937' }}>{value}</div>
       {sub && <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>{sub}</div>}
@@ -2215,20 +2209,21 @@ function AnnualizedPace({
       width: '100%',
       boxSizing: 'border-box'
     }}>
-      <div style={{ marginBottom: '8px' }}>
+      <div style={{ marginBottom: '16px' }}>
         <h3 style={{ 
           fontSize: isMobile ? '16px' : '18px', 
           fontWeight: '600', 
           margin: 0, 
-          color: '#1f2937' 
+          color: '#1f2937',
+          display: 'flex',
+          alignItems: 'center'
         }}>
           Sales Activity Pace for {yearLabel}
+          <InfoTooltip
+            content="This section estimates your full-year pace for Inquiries, Calls, and Bookings (Qty). It combines your year-to-date results with the past 3 months of activity to project where you're trending."
+          />
         </h3>
       </div>
-      <p style={{ margin: '4px 0 16px 0', fontSize: 12, color: '#6b7280', lineHeight: 1.6 }}>
-        This section estimates your full-year pace for Inquiries, Calls, and Bookings (Qty).
-        It combines your year-to-date results with the past 3 months of activity to project where you're trending.
-      </p>
 
       <Cards columns={2} desktopColumns={2} mobileColumns={1}>
         <Card
@@ -2386,7 +2381,7 @@ function GoalVisualization({
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (percentage / 100) * circumference;
     const displayPercentage = Math.min(percentage, 100);
-    const formattedPercent = (Math.round(displayPercentage * 10) / 10).toFixed(1);
+    const formattedPercent = Math.round(displayPercentage).toString();
 
     return (
       <div style={{ position: 'relative', width: size, height: size }}>
@@ -2438,13 +2433,7 @@ function GoalVisualization({
       }}>
         {currentYear} Goal Tracker
         <InfoTooltip
-          content={
-            <>
-              This section tracks your progress toward your annual Bookings ($) and Cash goals.
-              <br /><br />
-              It shows what you've achieved so far, what remains, and whether you're on track for the year.
-            </>
-          }
+          content="Tracks your progress toward your annual Bookings ($) and Cash goals, showing what you've achieved so far, what remains, and whether you're on track for the year."
         />
       </h3>
 
@@ -2548,13 +2537,7 @@ function GoalEmptyState({ onSetGoals, isMobile }: { onSetGoals: () => void; isMo
       }}>
         Goal Tracker
         <InfoTooltip
-          content={
-            <>
-              This section tracks your progress toward your annual Bookings ($) and Cash goals.
-              <br /><br />
-              It shows what you've achieved so far, what remains, and whether you're on track for the year.
-            </>
-          }
+          content="Tracks your progress toward your annual Bookings ($) and Cash goals, showing what you've achieved so far, what remains, and whether you're on track for the year."
         />
       </h3>
       <p style={{ margin: '0 0 20px 0', fontSize: isMobile ? '14px' : '16px', color: '#6b7280' }}>
