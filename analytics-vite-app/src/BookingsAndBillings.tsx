@@ -41,6 +41,24 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
   const serviceTypes = dataManager?.serviceTypes || defaultServiceTypes;
   const leadSources = dataManager?.leadSources || defaultLeadSources;
   const loading = dataManager?.loading || false;
+
+  // Active (non-archived) for Add/Edit dropdowns - archived stay in filters for historical reporting
+  const activeServiceTypes = useMemo(() => serviceTypes.filter(st => !st.archived), [serviceTypes]);
+  const activeLeadSources = useMemo(() => leadSources.filter(ls => !ls.archived), [leadSources]);
+
+  // For Edit modal: include current booking's lead source/service type even if archived
+  const serviceTypesForEdit = useMemo(() => {
+    if (!editingBooking) return activeServiceTypes;
+    const current = serviceTypes.find(st => st.id === editingBooking.serviceTypeId);
+    if (current?.archived) return [current, ...activeServiceTypes.filter(s => s.id !== current.id)];
+    return activeServiceTypes;
+  }, [activeServiceTypes, serviceTypes, editingBooking?.serviceTypeId]);
+  const leadSourcesForEdit = useMemo(() => {
+    if (!editingBooking) return activeLeadSources;
+    const current = leadSources.find(ls => ls.id === editingBooking.leadSourceId);
+    if (current?.archived) return [current, ...activeLeadSources.filter(l => l.id !== current.id)];
+    return activeLeadSources;
+  }, [activeLeadSources, leadSources, editingBooking?.leadSourceId]);
   const [showAddBooking, setShowAddBooking] = useState(false);
   const [showCSVImport, setShowCSVImport] = useState(false);
   
@@ -428,30 +446,34 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
     });
   };
 
+  const confirmArchiveServiceType = async () => {
+    if (!deleteServiceTypeConfirmation) return;
+    const { id } = deleteServiceTypeConfirmation;
+    let success = false;
+    if (dataManager?.archiveServiceType) {
+      success = await dataManager.archiveServiceType(id);
+    } else if (user?.id) {
+      success = await UnifiedDataService.archiveServiceType(user.id, id);
+      if (success) window.location.reload();
+    }
+    if (success) setDeleteServiceTypeConfirmation(null);
+  };
+
   const confirmDeleteServiceType = async () => {
     if (!deleteServiceTypeConfirmation) return;
-    
-    const { id, bookingCount } = deleteServiceTypeConfirmation;
-    
+    const { id } = deleteServiceTypeConfirmation;
+    let success = false;
     if (dataManager) {
-      await dataManager.deleteServiceType(id);
+      success = await dataManager.deleteServiceType(id);
     } else if (user?.id) {
       try {
-        console.log('Deleting service type:', id);
-        const success = await UnifiedDataService.deleteServiceType(user.id, id);
-        
-        if (success) {
-          console.log('Service type deleted successfully');
-          // Note: This won't update the UI without data manager
-        } else {
-          console.error('Failed to delete service type');
-        }
+        success = await UnifiedDataService.deleteServiceType(user.id, id);
+        if (success) window.location.reload();
       } catch (error) {
         console.error('Error deleting service type:', error);
       }
     }
-    
-    setDeleteServiceTypeConfirmation(null);
+    if (success) setDeleteServiceTypeConfirmation(null);
   };
 
   // Update service type
@@ -522,30 +544,34 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
     });
   };
 
+  const confirmArchiveLeadSource = async () => {
+    if (!deleteLeadSourceConfirmation) return;
+    const { id } = deleteLeadSourceConfirmation;
+    let success = false;
+    if (dataManager?.archiveLeadSource) {
+      success = await dataManager.archiveLeadSource(id);
+    } else if (user?.id) {
+      success = await UnifiedDataService.archiveLeadSource(user.id, id);
+      if (success) window.location.reload();
+    }
+    if (success) setDeleteLeadSourceConfirmation(null);
+  };
+
   const confirmDeleteLeadSource = async () => {
     if (!deleteLeadSourceConfirmation) return;
-    
-    const { id, bookingCount } = deleteLeadSourceConfirmation;
-    
+    const { id } = deleteLeadSourceConfirmation;
+    let success = false;
     if (dataManager) {
-      await dataManager.deleteLeadSource(id);
+      success = await dataManager.deleteLeadSource(id);
     } else if (user?.id) {
       try {
-        console.log('Deleting lead source:', id);
-        const success = await UnifiedDataService.deleteLeadSource(user.id, id);
-        
-        if (success) {
-          console.log('Lead source deleted successfully');
-          // Note: This won't update the UI without data manager
-        } else {
-          console.error('Failed to delete lead source');
-        }
+        success = await UnifiedDataService.deleteLeadSource(user.id, id);
+        if (success) window.location.reload();
       } catch (error) {
         console.error('Error deleting lead source:', error);
       }
     }
-    
-    setDeleteLeadSourceConfirmation(null);
+    if (success) setDeleteLeadSourceConfirmation(null);
   };
 
   // Update lead source
@@ -1166,8 +1192,8 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
       {/* Add Booking Modal */}
       {showAddBooking && (
         <AddBookingModal
-          serviceTypes={serviceTypes}
-          leadSources={leadSources}
+          serviceTypes={activeServiceTypes}
+          leadSources={activeLeadSources}
           onAdd={addBooking}
           onClose={() => setShowAddBooking(false)}
           dataManager={dataManager}
@@ -1192,8 +1218,8 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
       {editingBooking && (
         <EditBookingModal
           booking={editingBooking}
-          serviceTypes={serviceTypes}
-          leadSources={leadSources}
+          serviceTypes={serviceTypesForEdit}
+          leadSources={leadSourcesForEdit}
           onUpdate={updateBooking}
           onClose={() => setEditingBooking(null)}
           dataManager={dataManager}
@@ -1206,6 +1232,7 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
           serviceTypes={serviceTypes}
           onAdd={addServiceType}
           onRemove={removeServiceType}
+          onUnarchive={dataManager?.unarchiveServiceType}
           onUpdate={updateServiceType}
           onToggleFunnelTracking={toggleFunnelTracking}
           onClose={() => setShowServiceTypes(false)}
@@ -1218,6 +1245,7 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
           leadSources={leadSources}
           onAdd={addLeadSource}
           onRemove={removeLeadSource}
+          onUnarchive={dataManager?.unarchiveLeadSource}
           onUpdate={updateLeadSource}
           onToggleAdSource={toggleLeadSourceAdSource}
           onClose={() => setShowLeadSources(false)}
@@ -1629,7 +1657,7 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
         </section>
       )}
 
-      {/* Delete Service Type Confirmation Modal */}
+      {/* Delete / Archive Service Type Confirmation Modal */}
       {deleteServiceTypeConfirmation && (
         <div style={{
           position: 'fixed',
@@ -1651,74 +1679,129 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
             width: '90%',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                backgroundColor: '#fee2e2',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Trash2 size={24} color="#dc2626" />
-              </div>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937', textAlign: 'left' }}>
-                Delete Service Type
-              </h3>
-            </div>
-            
-            <p style={{ color: '#374151', margin: '0 0 8px 0', fontSize: '14px', textAlign: 'left', lineHeight: '1.5' }}>
-              Are you sure you want to delete <strong>{deleteServiceTypeConfirmation.name}</strong>?
-            </p>
-            
             {deleteServiceTypeConfirmation.bookingCount > 0 ? (
-              <p style={{ color: '#dc2626', margin: '0 0 20px 0', fontSize: '13px', textAlign: 'left', lineHeight: '1.5', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '6px' }}>
-                <strong>Warning:</strong> This service type is used by {deleteServiceTypeConfirmation.bookingCount} booking(s). Deleting it will remove the service type association from those bookings. This action cannot be undone.
-              </p>
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: '#fee2e2',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Trash2 size={24} color="#dc2626" />
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937', textAlign: 'left' }}>
+                    Cannot delete Service Type
+                  </h3>
+                </div>
+                <p style={{ color: '#374151', margin: '0 0 12px 0', fontSize: '14px', textAlign: 'left', lineHeight: '1.5' }}>
+                  This Service Type is used by {deleteServiceTypeConfirmation.bookingCount} existing sales record{deleteServiceTypeConfirmation.bookingCount !== 1 ? 's' : ''}.
+                </p>
+                <p style={{ color: '#6b7280', margin: '0 0 20px 0', fontSize: '14px', textAlign: 'left', lineHeight: '1.5' }}>
+                  Deleting it would affect your historical reporting.
+                </p>
+                <p style={{ color: '#374151', margin: '0 0 20px 0', fontSize: '14px', textAlign: 'left', lineHeight: '1.5' }}>
+                  Instead, you can archive this Service Type. Archived Service Types remain attached to past sales but cannot be used for new sales.
+                </p>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => setDeleteServiceTypeConfirmation(null)}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#f3f4f6',
+                      color: '#374151',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmArchiveServiceType}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Archive Service Type
+                  </button>
+                </div>
+              </>
             ) : (
-              <p style={{ color: '#dc2626', margin: '0 0 20px 0', fontSize: '13px', textAlign: 'left', lineHeight: '1.5', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '6px' }}>
-                <strong>Warning:</strong> This action cannot be undone.
-              </p>
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: '#fee2e2',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Trash2 size={24} color="#dc2626" />
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937', textAlign: 'left' }}>
+                    Delete Service Type
+                  </h3>
+                </div>
+                <p style={{ color: '#374151', margin: '0 0 8px 0', fontSize: '14px', textAlign: 'left', lineHeight: '1.5' }}>
+                  Are you sure you want to delete <strong>{deleteServiceTypeConfirmation.name}</strong>?
+                </p>
+                <p style={{ color: '#dc2626', margin: '0 0 20px 0', fontSize: '13px', textAlign: 'left', lineHeight: '1.5', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '6px' }}>
+                  <strong>Warning:</strong> This action cannot be undone.
+                </p>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => setDeleteServiceTypeConfirmation(null)}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#f3f4f6',
+                      color: '#374151',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteServiceType}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#dc2626',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Delete Service Type
+                  </button>
+                </div>
+              </>
             )}
-
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setDeleteServiceTypeConfirmation(null)}
-                style={{
-                  padding: '10px 16px',
-                  backgroundColor: '#f3f4f6',
-                  color: '#374151',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeleteServiceType}
-                style={{
-                  padding: '10px 16px',
-                  backgroundColor: '#dc2626',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Delete Service Type
-              </button>
-            </div>
           </div>
         </div>
       )}
 
-      {/* Delete Lead Source Confirmation Modal */}
+      {/* Delete / Archive Lead Source Confirmation Modal */}
       {deleteLeadSourceConfirmation && (
         <div style={{
           position: 'fixed',
@@ -1740,69 +1823,124 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
             width: '90%',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                backgroundColor: '#fee2e2',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Trash2 size={24} color="#dc2626" />
-              </div>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937', textAlign: 'left' }}>
-                Delete Lead Source
-              </h3>
-            </div>
-            
-            <p style={{ color: '#374151', margin: '0 0 8px 0', fontSize: '14px', textAlign: 'left', lineHeight: '1.5' }}>
-              Are you sure you want to delete <strong>{deleteLeadSourceConfirmation.name}</strong>?
-            </p>
-            
             {deleteLeadSourceConfirmation.bookingCount > 0 ? (
-              <p style={{ color: '#dc2626', margin: '0 0 20px 0', fontSize: '13px', textAlign: 'left', lineHeight: '1.5', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '6px' }}>
-                <strong>Warning:</strong> This lead source is used by {deleteLeadSourceConfirmation.bookingCount} booking(s). Deleting it will remove the lead source association from those bookings. This action cannot be undone.
-              </p>
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: '#fee2e2',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Trash2 size={24} color="#dc2626" />
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937', textAlign: 'left' }}>
+                    Cannot delete Lead Source
+                  </h3>
+                </div>
+                <p style={{ color: '#374151', margin: '0 0 12px 0', fontSize: '14px', textAlign: 'left', lineHeight: '1.5' }}>
+                  This Lead Source is used by {deleteLeadSourceConfirmation.bookingCount} existing sales record{deleteLeadSourceConfirmation.bookingCount !== 1 ? 's' : ''}.
+                </p>
+                <p style={{ color: '#6b7280', margin: '0 0 20px 0', fontSize: '14px', textAlign: 'left', lineHeight: '1.5' }}>
+                  Deleting it would affect your historical reporting.
+                </p>
+                <p style={{ color: '#374151', margin: '0 0 20px 0', fontSize: '14px', textAlign: 'left', lineHeight: '1.5' }}>
+                  Instead, you can archive this Lead Source. Archived Lead Sources remain attached to past sales but cannot be used for new sales.
+                </p>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => setDeleteLeadSourceConfirmation(null)}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#f3f4f6',
+                      color: '#374151',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmArchiveLeadSource}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Archive Lead Source
+                  </button>
+                </div>
+              </>
             ) : (
-              <p style={{ color: '#dc2626', margin: '0 0 20px 0', fontSize: '13px', textAlign: 'left', lineHeight: '1.5', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '6px' }}>
-                <strong>Warning:</strong> This action cannot be undone.
-              </p>
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: '#fee2e2',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Trash2 size={24} color="#dc2626" />
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937', textAlign: 'left' }}>
+                    Delete Lead Source
+                  </h3>
+                </div>
+                <p style={{ color: '#374151', margin: '0 0 8px 0', fontSize: '14px', textAlign: 'left', lineHeight: '1.5' }}>
+                  Are you sure you want to delete <strong>{deleteLeadSourceConfirmation.name}</strong>?
+                </p>
+                <p style={{ color: '#dc2626', margin: '0 0 20px 0', fontSize: '13px', textAlign: 'left', lineHeight: '1.5', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '6px' }}>
+                  <strong>Warning:</strong> This action cannot be undone.
+                </p>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => setDeleteLeadSourceConfirmation(null)}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#f3f4f6',
+                      color: '#374151',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteLeadSource}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#dc2626',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Delete Lead Source
+                  </button>
+                </div>
+              </>
             )}
-
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setDeleteLeadSourceConfirmation(null)}
-                style={{
-                  padding: '10px 16px',
-                  backgroundColor: '#f3f4f6',
-                  color: '#374151',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeleteLeadSource}
-                style={{
-                  padding: '10px 16px',
-                  backgroundColor: '#dc2626',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Delete Lead Source
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -2419,10 +2557,11 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onClose, dataManage
 }
 
 // Lead Sources Modal
-function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onToggleAdSource, onClose }: {
+function LeadSourcesModal({ leadSources, onAdd, onRemove, onUnarchive, onUpdate, onToggleAdSource, onClose }: {
   leadSources: LeadSource[];
   onAdd: (name: string) => void;
   onRemove: (id: string) => void;
+  onUnarchive?: (id: string) => Promise<boolean>;
   onUpdate: (id: string, newName: string) => void;
   onToggleAdSource: (id: string) => void;
   onClose: () => void;
@@ -2430,6 +2569,11 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onToggleAdSo
   const [newLeadSource, setNewLeadSource] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
+
+  const activeLeadSources = leadSources.filter(ls => !ls.archived);
+  const archivedLeadSources = leadSources.filter(ls => ls.archived);
+  const displayLeadSources = showArchived ? leadSources : activeLeadSources;
 
   const handleAdd = async () => {
     if (newLeadSource.trim()) {
@@ -2485,6 +2629,18 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onToggleAdSo
           </button>
         </div>
 
+        {archivedLeadSources.length > 0 && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', cursor: 'pointer', fontSize: '14px', color: '#6b7280' }}>
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: '#3b82f6' }}
+            />
+            Show archived lead sources
+          </label>
+        )}
+
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
             <input
@@ -2519,8 +2675,13 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onToggleAdSo
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {leadSources.length === 0 ? (
+          <div style={{
+            maxHeight: '280px',
+            overflowY: 'auto',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+          }}>
+            {displayLeadSources.length === 0 ? (
               <div style={{
                 textAlign: 'left',
                 padding: '24px',
@@ -2528,22 +2689,43 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onToggleAdSo
                 fontSize: '14px',
                 backgroundColor: '#f9fafb',
                 borderRadius: '6px',
-                border: '1px solid #e5e7eb'
               }}>
-                No lead sources created yet. Add your first lead source above to get started.
+                {showArchived ? 'No archived lead sources.' : 'No lead sources created yet. Add your first lead source above to get started.'}
               </div>
             ) : (
-              leadSources.map((leadSource) => (
+              displayLeadSources.map((leadSource) => {
+                const isAdSource = leadSource.isAdSource || false;
+                const isArchived = leadSource.archived || false;
+                return (
                 <div key={leadSource.id} style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  padding: '12px',
-                  backgroundColor: '#f9fafb',
-                  borderRadius: '6px',
-                  border: '1px solid #e5e7eb'
+                  padding: '8px 12px',
+                  borderBottom: '1px solid #f3f4f6',
+                  backgroundColor: isArchived ? '#f9fafb' : (isAdSource ? '#eff6ff' : '#f9fafb'),
                 }}>
-                  {editingId === leadSource.id ? (
+                  {isArchived ? (
+                    <>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>{leadSource.name} <span style={{ fontStyle: 'italic', fontSize: '12px' }}>(archived)</span></span>
+                      {onUnarchive && (
+                        <button
+                          onClick={() => onUnarchive(leadSource.id)}
+                          style={{
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '4px 12px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Restore
+                        </button>
+                      )}
+                    </>
+                  ) : editingId === leadSource.id ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
                       <input
                         type="text"
@@ -2602,17 +2784,17 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onToggleAdSo
                   ) : (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                        <span style={{ fontSize: '14px' }}>{leadSource.name}</span>
+                        <span style={{ fontSize: '14px', fontWeight: isAdSource ? 600 : 500 }}>{leadSource.name}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <input
                             type="checkbox"
-                            checked={leadSource.isAdSource || false}
+                            checked={isAdSource}
                             onChange={() => onToggleAdSource(leadSource.id)}
                             style={{ cursor: 'pointer' }}
                           />
                           <span style={{ 
                             fontSize: '11px', 
-                            color: leadSource.isAdSource ? '#3b82f6' : '#6b7280',
+                            color: isAdSource ? '#3b82f6' : '#6b7280',
                             fontWeight: '500'
                           }}>
                             Ad Source
@@ -2660,7 +2842,8 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onToggleAdSo
                     </>
                   )}
                 </div>
-              ))
+              );
+              })
             )}
           </div>
         </div>
@@ -2674,8 +2857,12 @@ function LeadSourcesModal({ leadSources, onAdd, onRemove, onUpdate, onToggleAdSo
           color: '#6b7280',
           textAlign: 'left'
         }}>
-          <div>
+          <div style={{ marginBottom: '8px' }}>
             <strong>Lead Sources:</strong> Lead sources help you track where your bookings come from. They can also be used to track Advertising ROI.
+          </div>
+          <div>
+            <strong>Archive:</strong> Lead sources used by sales cannot be deleted. They can be archived instead.
+            Archived lead sources remain attached to past sales but are hidden from new sale dropdowns.
           </div>
         </div>
 

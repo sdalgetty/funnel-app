@@ -99,6 +99,7 @@ export interface ServiceType {
   description?: string;
   isCustom: boolean;
   tracksInFunnel: boolean;
+  archived?: boolean; // If true, hidden from active lists and new sale dropdowns but remains in filters
 }
 
 export interface LeadSource {
@@ -107,6 +108,7 @@ export interface LeadSource {
   description?: string;
   isCustom: boolean;
   isAdSource?: boolean; // If true, bookings from this source are included in advertising ROI calculations
+  archived?: boolean; // If true, hidden from active lists and new sale dropdowns but remains in filters
 }
 
 export interface Booking {

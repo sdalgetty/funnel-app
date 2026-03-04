@@ -179,14 +179,42 @@ export function useDataManager(): DataManager {
       const success = await UnifiedDataService.deleteServiceType(userId, id, isViewOnly);
       if (success) {
         setServiceTypes(prev => prev.filter(st => st.id !== id));
-        // Also remove from bookings that use this service type
-        setBookings(prev => prev.map(booking => 
-          booking.serviceTypeId === id ? { ...booking, serviceTypeId: '' } : booking
-        ));
       }
       return success;
     } catch (err) {
       logger.error('Error deleting service type:', err);
+      return false;
+    }
+  }, [effectiveUserId, user?.id, isViewOnly]);
+
+  const archiveServiceType = useCallback(async (id: string) => {
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
+    
+    try {
+      const success = await UnifiedDataService.archiveServiceType(userId, id, isViewOnly);
+      if (success) {
+        setServiceTypes(prev => prev.map(st => st.id === id ? { ...st, archived: true } : st));
+      }
+      return success;
+    } catch (err) {
+      logger.error('Error archiving service type:', err);
+      return false;
+    }
+  }, [effectiveUserId, user?.id, isViewOnly]);
+
+  const unarchiveServiceType = useCallback(async (id: string) => {
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
+    
+    try {
+      const success = await UnifiedDataService.unarchiveServiceType(userId, id, isViewOnly);
+      if (success) {
+        setServiceTypes(prev => prev.map(st => st.id === id ? { ...st, archived: false } : st));
+      }
+      return success;
+    } catch (err) {
+      logger.error('Error unarchiving service type:', err);
       return false;
     }
   }, [effectiveUserId, user?.id, isViewOnly]);
@@ -268,14 +296,42 @@ export function useDataManager(): DataManager {
       const success = await UnifiedDataService.deleteLeadSource(userId, id, isViewOnly);
       if (success) {
         setLeadSources(prev => prev.filter(ls => ls.id !== id));
-        // Also remove from bookings that use this lead source
-        setBookings(prev => prev.map(booking => 
-          booking.leadSourceId === id ? { ...booking, leadSourceId: '' } : booking
-        ));
       }
       return success;
     } catch (err) {
       logger.error('Error deleting lead source:', err);
+      return false;
+    }
+  }, [effectiveUserId, user?.id, isViewOnly]);
+
+  const archiveLeadSource = useCallback(async (id: string) => {
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
+    
+    try {
+      const success = await UnifiedDataService.archiveLeadSource(userId, id, isViewOnly);
+      if (success) {
+        setLeadSources(prev => prev.map(ls => ls.id === id ? { ...ls, archived: true } : ls));
+      }
+      return success;
+    } catch (err) {
+      logger.error('Error archiving lead source:', err);
+      return false;
+    }
+  }, [effectiveUserId, user?.id, isViewOnly]);
+
+  const unarchiveLeadSource = useCallback(async (id: string) => {
+    const userId = effectiveUserId || user?.id;
+    if (!userId) return false;
+    
+    try {
+      const success = await UnifiedDataService.unarchiveLeadSource(userId, id, isViewOnly);
+      if (success) {
+        setLeadSources(prev => prev.map(ls => ls.id === id ? { ...ls, archived: false } : ls));
+      }
+      return success;
+    } catch (err) {
+      logger.error('Error unarchiving lead source:', err);
       return false;
     }
   }, [effectiveUserId, user?.id, isViewOnly]);
@@ -534,6 +590,8 @@ export function useDataManager(): DataManager {
     updateServiceType,
     toggleServiceTypeFunnelTracking,
     deleteServiceType,
+    archiveServiceType,
+    unarchiveServiceType,
     
     // Lead source operations
     createLeadSource,
@@ -541,6 +599,8 @@ export function useDataManager(): DataManager {
     toggleLeadSourceAdSource,
     setLeadSourceAdSource,
     deleteLeadSource,
+    archiveLeadSource,
+    unarchiveLeadSource,
     
     // Booking operations
     createBooking,
