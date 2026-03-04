@@ -1233,8 +1233,18 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
       {showServiceTypes && (
         <ServiceTypesModal
           serviceTypes={serviceTypes}
+          getBookingCountForServiceType={(id) => bookings.filter(b => b.serviceTypeId === id).length}
           onAdd={addServiceType}
           onRemove={removeServiceType}
+          onArchive={async (id) => {
+            if (dataManager?.archiveServiceType) return dataManager.archiveServiceType(id);
+            if (user?.id) {
+              const ok = await UnifiedDataService.archiveServiceType(user.id, id);
+              if (ok) window.location.reload();
+              return ok;
+            }
+            return false;
+          }}
           onUnarchive={dataManager?.unarchiveServiceType}
           onUpdate={updateServiceType}
           onToggleFunnelTracking={toggleFunnelTracking}
@@ -2717,12 +2727,12 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
                 zIndex: 1,
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>Lead Source</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, minWidth: '140px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, width: '140px', justifyContent: 'flex-start' }}>
                   <span>Ad Source</span>
                   <InfoTooltip content="Mark this lead source as advertising so bookings from this source are included in your Advertising metrics and ROI calculations." />
                 </div>
-                <div style={{ width: '88px', flexShrink: 0, textAlign: 'center' }}>Edit</div>
-                <div style={{ width: '88px', flexShrink: 0, textAlign: 'center' }}>Actions</div>
+                <div style={{ width: '52px', flexShrink: 0, textAlign: 'left' }}>Edit</div>
+                <div style={{ width: '88px', flexShrink: 0, textAlign: 'left' }}>Actions</div>
               </div>
             )}
             {displayLeadSources.length === 0 ? (
@@ -2755,8 +2765,8 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
                         <span style={{ fontSize: '14px', color: '#6b7280' }}>{leadSource.name} <span style={{ fontStyle: 'italic', fontSize: '12px' }}>(archived)</span></span>
                       </div>
                       <div style={{ flexShrink: 0, width: '140px' }} />
-                      <div style={{ flexShrink: 0, width: '88px' }} />
-                      <div style={{ flexShrink: 0, width: '88px', display: 'flex', justifyContent: 'center' }}>
+                      <div style={{ flexShrink: 0, width: '52px' }} />
+                      <div style={{ flexShrink: 0, width: '88px', display: 'flex', justifyContent: 'flex-start' }}>
                         {onUnarchive && (
                           <button
                             onClick={() => onUnarchive(leadSource.id)}
@@ -2836,19 +2846,21 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ fontSize: '14px', fontWeight: isAdSource ? 600 : 500 }}>{leadSource.name}</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexShrink: 0 }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', flexShrink: 0 }}>
-                          <input
-                            type="checkbox"
-                            checked={isAdSource}
-                            onChange={() => onToggleAdSource(leadSource.id)}
-                            style={{ width: 16, height: 16, accentColor: '#3b82f6', cursor: 'pointer' }}
-                          />
-                          <span style={{ fontSize: '13px', color: isAdSource ? '#3b82f6' : '#6b7280', fontWeight: '500' }}>
-                            Ad Source
-                          </span>
-                        </label>
-                        <div style={{ display: 'flex', gap: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                        <div style={{ width: '140px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={isAdSource}
+                              onChange={() => onToggleAdSource(leadSource.id)}
+                              style={{ width: 16, height: 16, accentColor: '#3b82f6', cursor: 'pointer' }}
+                            />
+                            <span style={{ fontSize: '13px', color: isAdSource ? '#3b82f6' : '#6b7280', fontWeight: '500' }}>
+                              Ad Source
+                            </span>
+                          </label>
+                        </div>
+                        <div style={{ width: '52px', flexShrink: 0 }}>
                           <button
                             onClick={() => handleEdit(leadSource.id, leadSource.name)}
                             style={{
@@ -2867,6 +2879,8 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
                             <Edit3 size={12} />
                             Edit
                           </button>
+                        </div>
+                        <div style={{ width: '88px', flexShrink: 0, display: 'flex', justifyContent: 'flex-start' }}>
                           {getBookingCountForLeadSource(leadSource.id) > 0 ? (
                             onArchive && (
                               <button
@@ -2876,12 +2890,14 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
                                   color: 'white',
                                   border: 'none',
                                   borderRadius: '4px',
-                                  padding: '4px 8px',
+                                  padding: '4px 12px',
                                   fontSize: '12px',
                                   cursor: 'pointer',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '4px'
+                                  gap: '4px',
+                                  minWidth: '72px',
+                                  justifyContent: 'center'
                                 }}
                               >
                                 <Trash2 size={12} />
@@ -2896,12 +2912,14 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '4px',
-                                padding: '4px 8px',
+                                padding: '4px 12px',
                                 fontSize: '12px',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '4px'
+                                gap: '4px',
+                                minWidth: '72px',
+                                justifyContent: 'center'
                               }}
                             >
                               <Trash2 size={12} />

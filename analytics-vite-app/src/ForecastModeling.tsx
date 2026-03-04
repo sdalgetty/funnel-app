@@ -1438,8 +1438,18 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
       {showServiceTypesModal && (
         <ServiceTypesModal
           serviceTypes={serviceTypes}
+          getBookingCountForServiceType={(id) => bookings.filter(b => b.serviceTypeId === id).length}
           onAdd={addUserServiceType}
           onRemove={removeUserServiceType}
+          onArchive={async (id) => {
+            if (dataManager?.archiveServiceType) return dataManager.archiveServiceType(id);
+            if (user?.id) {
+              const ok = await UnifiedDataService.archiveServiceType(user.id, id);
+              if (ok) window.location.reload();
+              return ok;
+            }
+            return false;
+          }}
           onUnarchive={dataManager?.unarchiveServiceType}
           onUpdate={updateUserServiceType}
           onToggleFunnelTracking={toggleUserServiceTypeTracking}
