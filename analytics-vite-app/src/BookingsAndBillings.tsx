@@ -1170,7 +1170,7 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
                 <option value="dateInquired">Date Inquired</option>
                 <option value="dateBooked">Date Booked</option>
                 <option value="projectDate">Project Date</option>
-                <option value="bookedRevenue">Revenue</option>
+                <option value="bookedRevenue">Booked Revenue</option>
                 <option value="createdAt">Date Added</option>
               </select>
               <button
@@ -1301,13 +1301,27 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
               zIndex: 10
             }}>
               <tr>
-                <Th width="20%">Project Name</Th>
-                <Th width="12%">Service Type</Th>
-                <Th width="12%">Lead Source</Th>
-                <Th width="10%">Date Inquired</Th>
-                <Th width="10%">Date Booked</Th>
-                <Th width="10%">Project Date</Th>
-                <Th align="right" width="12%">Revenue</Th>
+                <Th width="20%">
+                  <InfoTooltip variant="inline" content="The client or project name for this booking.">Project Name</InfoTooltip>
+                </Th>
+                <Th width="12%">
+                  <InfoTooltip variant="inline" content="Used to categorize your work (e.g., Wedding, Engagement, Family). Service Types allow you to filter Sales and analyze performance in Insights.">Service Type</InfoTooltip>
+                </Th>
+                <Th width="12%">
+                  <InfoTooltip variant="inline" content="Tracks where the booking came from. Lead Sources power your Funnel metrics and can also be used to track Advertising ROI.">Lead Source</InfoTooltip>
+                </Th>
+                <Th width="10%">
+                  <InfoTooltip variant="inline" content="The date the client first contacted you. Used to track inquiry trends and conversion rates in your Funnel.">Date Inquired</InfoTooltip>
+                </Th>
+                <Th width="10%">
+                  <InfoTooltip variant="inline" content="The date the client officially booked with you. This helps track how long it takes to convert inquiries into bookings.">Date Booked</InfoTooltip>
+                </Th>
+                <Th width="10%">
+                  <InfoTooltip variant="inline" content="The date the work will take place (e.g., wedding date or session date). Used for planning and forecasting.">Project Date</InfoTooltip>
+                </Th>
+                <Th align="right" width="12%">
+                  <InfoTooltip variant="inline" content="The total value of this booking. Payments determine when the cash will be received.">Booked Revenue</InfoTooltip>
+                </Th>
                 <Th width="14%">Actions</Th>
               </tr>
             </thead>
@@ -1525,21 +1539,20 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
                       overflow: 'hidden'
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                      <div style={{ flex: 1 }}>
-                        <h4 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0', color: '#1f2937' }}>
-                          {booking.projectName}
-                        </h4>
-                        <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981', marginBottom: '12px' }}>
-                          {toUSD(booking.bookedRevenue)}
-                        </div>
+                    <div style={{ marginBottom: '12px' }}>
+                      <h4 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0', color: '#1f2937' }}>
+                        {booking.projectName}
+                      </h4>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>Booked Revenue:<InfoTooltip content="The total value of this booking. Payments determine when the cash will be received." /></span>
+                        <span style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>{toUSD(booking.bookedRevenue)}</span>
                       </div>
                     </div>
                     
                     <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Service Type:</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>Service Type:<InfoTooltip content="Used to categorize your work (e.g., Wedding, Engagement, Family). Service Types allow you to filter Sales and analyze performance in Insights." /></span>
                           <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
                             {serviceType?.name || (
                               <span style={{ color: '#ef4444', fontStyle: 'italic', fontSize: '12px' }}>
@@ -1548,8 +1561,8 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
                             )}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Lead Source:</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>Lead Source:<InfoTooltip content="Tracks where the booking came from. Lead Sources power your Funnel metrics and can also be used to track Advertising ROI." /></span>
                           <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
                             {leadSource?.name || (
                               <span style={{ color: '#ef4444', fontStyle: 'italic', fontSize: '12px' }}>
@@ -1558,20 +1571,20 @@ export default function BookingsAndBillingsPOC({ dataManager, navigationAction, 
                             )}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Date Inquired:</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>Date Inquired:<InfoTooltip content="The date the client first contacted you. Used to track inquiry trends and conversion rates in your Funnel." /></span>
                           <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
                             {formatBookingDate(booking.dateInquired)}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Date Booked:</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>Date Booked:<InfoTooltip content="The date the client officially booked with you. This helps track how long it takes to convert inquiries into bookings." /></span>
                           <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
                             {formatBookingDate(booking.dateBooked)}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '14px', color: '#6b7280' }}>Project Date:</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>Project Date:<InfoTooltip content="The date the work will take place (e.g., wedding date or session date). Used for planning and forecasting." /></span>
                           <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
                             {formatBookingDate(booking.projectDate)}
                           </span>
