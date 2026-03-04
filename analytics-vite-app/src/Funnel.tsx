@@ -7,6 +7,7 @@ import type { FunnelData, FunnelEvent, Booking, Payment } from "./types";
 import { logger } from "./utils/logger";
 import CSVImportModal from "./components/CSVImportModal";
 import { importBookingsFromCSV, type ImportResult } from "./services/honeybookImporter";
+import { InfoTooltip } from "./components/InfoTooltip";
 
 interface FunnelProps {
   funnelData: FunnelData[];
@@ -653,7 +654,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
           )}
         </div>
         <p style={{ color: '#6b7280', margin: 0, fontSize: '16px' }}>
-          Track and analyze your sales funnel performance
+          Tracks how inquiries progress from lead to booking for services managed in this pipeline.
         </p>
       </div>
 
@@ -787,22 +788,46 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
             <thead>
               <tr style={{ backgroundColor: '#f9fafb' }}>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151', minWidth: '120px' }}>Month</th>
-                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '90px' }}>Inquiries</th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '90px' }}>
+                  <InfoTooltip variant="inline" content="The total number of new inquiries received during this month.">Inquiries</InfoTooltip>
+                </th>
                 {adsTrackingEnabled && (
-                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '100px' }}>Ad Leads</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '100px' }}>
+                    <InfoTooltip variant="inline" content="The number of inquiries that originated from advertising.">Ad Leads</InfoTooltip>
+                  </th>
                 )}
-                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Confirmed Available</th>
-                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>Calls Booked</th>
-                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>Calls Cancelled</th>
-                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '95px' }}>No-Shows</th>
-                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>Calls Taken</th>
-                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '90px' }}>Bookings (Qty)</th>
-                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Bookings ($)</th>
-                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Cash</th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>
+                  <InfoTooltip variant="inline" content="The number of inquiries where you confirmed you were available for the requested date.">Confirmed Available</InfoTooltip>
+                </th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>
+                  <InfoTooltip variant="inline" content="The number of sales calls scheduled with potential clients.">Calls Booked</InfoTooltip>
+                </th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>
+                  <InfoTooltip variant="inline" content="Scheduled calls that were cancelled before they occurred.">Calls Cancelled</InfoTooltip>
+                </th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '95px' }}>
+                  <InfoTooltip variant="inline" content="Scheduled calls where the client did not attend.">No-Shows</InfoTooltip>
+                </th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>
+                  <InfoTooltip variant="inline" content="The number of calls that were successfully completed.">Calls Taken</InfoTooltip>
+                </th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '90px' }}>
+                  <InfoTooltip variant="inline" content="The number of signed bookings recorded for service types tracked in your Funnel.">Bookings (Qty)</InfoTooltip>
+                </th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>
+                  <InfoTooltip variant="inline" content="The total contract value of bookings recorded during this month.">Bookings ($)</InfoTooltip>
+                </th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>
+                  <InfoTooltip variant="inline" content="The total payments received or projected for this month based on signed contracts and payment schedules.">Cash</InfoTooltip>
+                </th>
                 {adsTrackingEnabled && (
-                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Ad Spend</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>
+                    <InfoTooltip variant="inline" content="The total amount spent on advertising during this month.">Ad Spend</InfoTooltip>
+                  </th>
                 )}
-                <th style={{ padding: '12px 6px', textAlign: 'center', fontWeight: '600', color: '#374151', width: '60px' }}>Notes</th>
+                <th style={{ padding: '12px 6px', textAlign: 'center', fontWeight: '600', color: '#374151', width: '60px' }}>
+                  <InfoTooltip variant="inline" content="Add notes about marketing changes so you can track how they impact your sales funnel over time.">Notes</InfoTooltip>
+                </th>
                 <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600', color: '#374151', minWidth: '110px' }}>Actions</th>
               </tr>
             </thead>
@@ -1001,54 +1026,54 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Inquiries</span>
+                      <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center' }}>Inquiries<InfoTooltip content="The total number of new inquiries received during this month." /></span>
                       <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.inquiries)}</span>
                     </div>
                     {adsTrackingEnabled && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '14px', color: '#6b7280' }}>Ad Leads</span>
+                        <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center' }}>Ad Leads<InfoTooltip content="The number of inquiries that originated from advertising." /></span>
                         <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.adsLead || 0)}</span>
                       </div>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Confirmed Available</span>
+                      <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center' }}>Confirmed Available<InfoTooltip content="The number of inquiries where you confirmed you were available for the requested date." /></span>
                       <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.confirmedAvailable ?? 0)}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Calls Booked</span>
+                      <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center' }}>Calls Booked<InfoTooltip content="The number of sales calls scheduled with potential clients." /></span>
                       <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.callsBooked)}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Calls Cancelled</span>
+                      <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center' }}>Calls Cancelled<InfoTooltip content="Scheduled calls that were cancelled before they occurred." /></span>
                       <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.callsCancelled ?? 0)}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>No-Shows</span>
+                      <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center' }}>No-Shows<InfoTooltip content="Scheduled calls where the client did not attend." /></span>
                       <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(Math.max(0, month.callsNoShows ?? (month.callsBooked - (month.callsCancelled ?? 0) - month.callsTaken)))}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Calls Taken</span>
+                      <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center' }}>Calls Taken<InfoTooltip content="The number of calls that were successfully completed." /></span>
                       <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.callsTaken)}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Bookings (Qty)</span>
+                      <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center' }}>Bookings (Qty)<InfoTooltip content="The number of signed bookings recorded for service types tracked in your Funnel." /></span>
                       <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.closes)}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Bookings ($)</span>
+                      <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center' }}>Bookings ($)<InfoTooltip content="The total contract value of bookings recorded during this month." /></span>
                       <span style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
                         {toUSD(month.bookings)}
                       </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Cash</span>
+                      <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center' }}>Cash<InfoTooltip content="The total payments received or projected for this month based on signed contracts and payment schedules." /></span>
                       <span style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
                         {toUSD(month.cash)}
                       </span>
                     </div>
                     {adsTrackingEnabled && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '14px', color: '#6b7280' }}>Ad Spend</span>
+                        <span style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center' }}>Ad Spend<InfoTooltip content="The total amount spent on advertising during this month." /></span>
                         <span style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
                           {toUSD(month.adsSpend || 0)}
                         </span>
