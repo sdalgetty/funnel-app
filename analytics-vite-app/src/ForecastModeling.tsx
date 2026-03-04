@@ -1440,6 +1440,7 @@ const ForecastModeling: React.FC<ForecastModelingProps> = ({
           serviceTypes={serviceTypes}
           onAdd={addUserServiceType}
           onRemove={removeUserServiceType}
+          onUnarchive={dataManager?.unarchiveServiceType}
           onUpdate={updateUserServiceType}
           onToggleFunnelTracking={toggleUserServiceTypeTracking}
           onClose={() => setShowServiceTypesModal(false)}

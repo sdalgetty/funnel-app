@@ -450,7 +450,8 @@ export class UnifiedDataService {
         id: item.id,
         name: item.name,
         isCustom: true, // All database items are considered custom
-        tracksInFunnel: item.tracks_in_funnel ?? false // Read from database, default to false if null
+        tracksInFunnel: item.tracks_in_funnel ?? false, // Read from database, default to false if null
+        archived: item.archived ?? false
       })) || [];
     } catch (error) {
       logger.error('Error fetching service types:', error);
@@ -500,7 +501,8 @@ export class UnifiedDataService {
         id: data.id,
         name: data.name,
         isCustom: true,
-        tracksInFunnel: data.tracks_in_funnel ?? false
+        tracksInFunnel: data.tracks_in_funnel ?? false,
+        archived: data.archived ?? false
       };
     } catch (error) {
       logger.error('Error creating service type:', error);
@@ -609,6 +611,56 @@ export class UnifiedDataService {
     }
   }
 
+  static async archiveServiceType(userId: string, id: string, isViewOnly: boolean = false): Promise<boolean> {
+    this.checkWritePermission(isViewOnly);
+    
+    if (!this.isSupabaseConfigured()) {
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('service_types')
+        .update({ archived: true })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) {
+        logger.error('Error archiving service type:', error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      logger.error('Error archiving service type:', error);
+      return false;
+    }
+  }
+
+  static async unarchiveServiceType(userId: string, id: string, isViewOnly: boolean = false): Promise<boolean> {
+    this.checkWritePermission(isViewOnly);
+    
+    if (!this.isSupabaseConfigured()) {
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('service_types')
+        .update({ archived: false })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) {
+        logger.error('Error unarchiving service type:', error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      logger.error('Error unarchiving service type:', error);
+      return false;
+    }
+  }
+
   // ============================================================================
   // LEAD SOURCES
   // ============================================================================
@@ -634,7 +686,8 @@ export class UnifiedDataService {
         id: item.id,
         name: item.name,
         isCustom: true, // All database items are considered custom
-        isAdSource: item.is_ad_source || false
+        isAdSource: item.is_ad_source || false,
+        archived: item.archived ?? false
       })) || [];
     } catch (error) {
       logger.error('Error fetching lead sources:', error);
@@ -668,7 +721,8 @@ export class UnifiedDataService {
         id: data.id,
         name: data.name,
         isCustom: true,
-        isAdSource: data.is_ad_source || false
+        isAdSource: data.is_ad_source || false,
+        archived: data.archived ?? false
       };
     } catch (error) {
       logger.error('Error creating lead source:', error);
@@ -698,6 +752,31 @@ export class UnifiedDataService {
       return true;
     } catch (error) {
       logger.error('Error updating lead source:', error);
+      return false;
+    }
+  }
+
+  static async setLeadSourceAdSource(userId: string, id: string, isAdSource: boolean, isViewOnly: boolean = false): Promise<boolean> {
+    this.checkWritePermission(isViewOnly);
+
+    if (!this.isSupabaseConfigured()) {
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('lead_sources')
+        .update({ is_ad_source: isAdSource })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) {
+        logger.error('Error setting ad source flag:', error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      logger.error('Error setting ad source flag:', error);
       return false;
     }
   }
@@ -752,6 +831,18 @@ export class UnifiedDataService {
     }
 
     try {
+      // 1. Delete ad campaigns that reference this lead source (only called when 0 sales)
+      const { error: campaignsError } = await supabase
+        .from('ad_campaigns')
+        .delete()
+        .eq('lead_source_id', id);
+
+      if (campaignsError) {
+        logger.error('Error deleting ad campaigns before lead source delete:', campaignsError);
+        return false;
+      }
+
+      // 2. Delete the lead source
       const { error } = await supabase
         .from('lead_sources')
         .delete()
@@ -766,6 +857,56 @@ export class UnifiedDataService {
       return true;
     } catch (error) {
       logger.error('Error deleting lead source:', error);
+      return false;
+    }
+  }
+
+  static async archiveLeadSource(userId: string, id: string, isViewOnly: boolean = false): Promise<boolean> {
+    this.checkWritePermission(isViewOnly);
+    
+    if (!this.isSupabaseConfigured()) {
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('lead_sources')
+        .update({ archived: true })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) {
+        logger.error('Error archiving lead source:', error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      logger.error('Error archiving lead source:', error);
+      return false;
+    }
+  }
+
+  static async unarchiveLeadSource(userId: string, id: string, isViewOnly: boolean = false): Promise<boolean> {
+    this.checkWritePermission(isViewOnly);
+    
+    if (!this.isSupabaseConfigured()) {
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('lead_sources')
+        .update({ archived: false })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) {
+        logger.error('Error unarchiving lead source:', error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      logger.error('Error unarchiving lead source:', error);
       return false;
     }
   }
@@ -800,7 +941,7 @@ export class UnifiedDataService {
         projectName: item.client_name, // Map client_name to projectName
         clientName: item.client_name || 'Unknown',
         serviceTypeId: item.service_type_id,
-        leadSourceId: item.lead_source_id,
+        leadSourceId: item.lead_source_id ?? '',
         bookingDate: item.booking_date,
         dateInquired: item.date_inquired || item.booking_date, // Use new column or fallback
         dateBooked: item.booking_date,

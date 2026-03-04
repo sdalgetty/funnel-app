@@ -47,12 +47,17 @@ export interface DataManager {
   createServiceType: (name: string, description?: string) => Promise<boolean>;
   updateServiceType: (id: string, name: string, description?: string) => Promise<boolean>;
   deleteServiceType: (id: string) => Promise<boolean>;
+  archiveServiceType: (id: string) => Promise<boolean>;
+  unarchiveServiceType: (id: string) => Promise<boolean>;
   toggleServiceTypeFunnelTracking: (id: string) => Promise<boolean>;
 
   // Lead source operations
-  createLeadSource: (name: string, description?: string) => Promise<boolean>;
+  createLeadSource: (name: string, description?: string) => Promise<LeadSource | null>;
   updateLeadSource: (id: string, name: string, description?: string) => Promise<boolean>;
+  setLeadSourceAdSource?: (id: string, isAdSource: boolean) => Promise<boolean>;
   deleteLeadSource: (id: string) => Promise<boolean>;
+  archiveLeadSource: (id: string) => Promise<boolean>;
+  unarchiveLeadSource: (id: string) => Promise<boolean>;
 
   // Ad campaign operations
   createAdCampaign: (campaign: Omit<AdCampaign, 'id' | 'createdAt' | 'lastUpdated'>) => Promise<boolean>;

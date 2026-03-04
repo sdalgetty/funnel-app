@@ -24,6 +24,7 @@ export type UserProfile = {
   crm?: string | null;
   crm_other?: string | null;
   ads_tracking_enabled?: boolean | null;
+  ads_setup_completed?: boolean | null;
   welcome_video_watched_at?: string | null;
   trial_ends_at?: string | null;
   subscription_tier: string;

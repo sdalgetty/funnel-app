@@ -6,6 +6,7 @@ interface ServiceTypesModalProps {
   serviceTypes: ServiceType[];
   onAdd: (name: string) => void;
   onRemove: (id: string) => void;
+  onUnarchive?: (id: string) => Promise<boolean>;
   onUpdate: (id: string, newName: string) => void;
   onToggleFunnelTracking: (id: string) => void;
   onClose: () => void;
@@ -15,6 +16,7 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
   serviceTypes,
   onAdd,
   onRemove,
+  onUnarchive,
   onUpdate,
   onToggleFunnelTracking,
   onClose
@@ -22,6 +24,11 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
   const [newServiceType, setNewServiceType] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
+
+  const activeServiceTypes = serviceTypes.filter(st => !st.archived);
+  const archivedServiceTypes = serviceTypes.filter(st => st.archived);
+  const displayServiceTypes = showArchived ? serviceTypes : activeServiceTypes;
 
   const handleAdd = () => {
     if (newServiceType.trim()) {
@@ -48,11 +55,8 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
     setEditingName('');
   };
 
-  const handleDelete = (id: string, name: string) => {
-    const confirmMessage = `Are you sure you want to delete "${name}"? This action cannot be undone.`;
-    if (confirm(confirmMessage)) {
-      onRemove(id);
-    }
+  const handleDelete = (id: string) => {
+    onRemove(id);
   };
 
   return (
@@ -84,8 +88,20 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
           </button>
         </div>
 
+        {archivedServiceTypes.length > 0 && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', cursor: 'pointer', fontSize: '14px', color: '#6b7280' }}>
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: '#3b82f6' }}
+            />
+            Show archived service types
+          </label>
+        )}
+
         <div style={{ marginBottom: '20px' }}>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
             <input
               type="text"
               value={newServiceType}
@@ -116,8 +132,13 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {serviceTypes.length === 0 ? (
+          <div style={{
+            maxHeight: '280px',
+            overflowY: 'auto',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+          }}>
+            {displayServiceTypes.length === 0 ? (
               <div style={{
                 textAlign: 'left',
                 padding: '24px',
@@ -125,22 +146,40 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                 fontSize: '14px',
                 backgroundColor: '#f9fafb',
                 borderRadius: '6px',
-                border: '1px solid #e5e7eb'
               }}>
-                No service types created yet. Add your first service type above to get started.
+                {showArchived ? 'No archived service types.' : 'No service types created yet. Add your first service type above to get started.'}
               </div>
             ) : (
-              serviceTypes.map(st => (
+              displayServiceTypes.map(st => (
                 <div key={st.id} style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  padding: '12px',
-                  backgroundColor: '#f9fafb',
-                  borderRadius: '6px',
-                  border: '1px solid #e5e7eb'
+                  padding: '8px 12px',
+                  borderBottom: '1px solid #f3f4f6',
+                  backgroundColor: st.archived ? '#f9fafb' : (st.tracksInFunnel ? '#eff6ff' : '#f9fafb'),
                 }}>
-                  {editingId === st.id ? (
+                  {st.archived ? (
+                    <>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>{st.name} <span style={{ fontStyle: 'italic', fontSize: '12px' }}>(archived)</span></span>
+                      {onUnarchive && (
+                        <button
+                          onClick={() => onUnarchive(st.id)}
+                          style={{
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '4px 12px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Restore
+                        </button>
+                      )}
+                    </>
+                  ) : editingId === st.id ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
                       <input
                         type="text"
@@ -199,7 +238,7 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                   ) : (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                        <span style={{ fontSize: '14px' }}>{st.name}</span>
+                        <span style={{ fontSize: '14px', fontWeight: st.tracksInFunnel ? 600 : 500 }}>{st.name}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <input
                             type="checkbox"
@@ -236,7 +275,7 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDelete(st.id, st.name)}
+                          onClick={() => handleDelete(st.id)}
                           style={{
                             backgroundColor: '#ef4444',
                             color: 'white',
@@ -275,8 +314,8 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
             <strong>Track in Funnel:</strong> Service Types marked as "Track in Funnel" will be included in your Funnel calculation for Bookings (Qty).
           </div>
           <div>
-            <strong>Delete:</strong> Deleting a service type will remove it from any existing bookings that use it.
-            The booking data will be preserved, but the service type association will be lost.
+            <strong>Archive:</strong> Service types used by sales cannot be deleted. They can be archived instead.
+            Archived types remain attached to past sales but are hidden from new sale dropdowns.
           </div>
         </div>
 

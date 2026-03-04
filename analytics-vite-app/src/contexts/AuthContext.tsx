@@ -103,7 +103,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const lastActivityTime = useRef<number>(Date.now())
 
   // Helper function to build combined user from auth user and profile data
-  const buildCombinedUser = async (authUser: SupabaseUser, profileData: { first_name: string | null; last_name: string | null; full_name: string | null; company_name: string | null; phone: string | null; website: string | null; crm: string | null; crm_other: string | null; ads_tracking_enabled: boolean | null; welcome_video_watched_at?: string | null; subscription_tier: string; subscription_status: string; trial_ends_at: string | null }): Promise<AuthUser> => {
+  const buildCombinedUser = async (authUser: SupabaseUser, profileData: { first_name: string | null; last_name: string | null; full_name: string | null; company_name: string | null; phone: string | null; website: string | null; crm: string | null; crm_other: string | null; ads_tracking_enabled: boolean | null; ads_setup_completed?: boolean | null; welcome_video_watched_at?: string | null; subscription_tier: string; subscription_status: string; trial_ends_at: string | null }): Promise<AuthUser> => {
     // Explicitly check for null/undefined to avoid falling back to email when name is intentionally empty
     const firstName = profileData.first_name !== null && profileData.first_name !== undefined 
       ? profileData.first_name 
@@ -135,6 +135,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       crm: (profileData.crm as CRMType | undefined) || undefined,
       crmOther: profileData.crm_other || undefined,
       adsTrackingEnabled: profileData.ads_tracking_enabled === true,
+      adsSetupCompleted: profileData.ads_setup_completed === true,
       welcomeVideoWatchedAt: profileData.welcome_video_watched_at ? new Date(profileData.welcome_video_watched_at) : null,
       subscriptionTier: (profileData.subscription_tier as SubscriptionTier) || 'pro',
       subscriptionStatus: (profileData.subscription_status as SubscriptionStatus) || 'active',
@@ -254,6 +255,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name: authUser.user_metadata?.full_name || authUser.email || '',
         companyName: '',
         adsTrackingEnabled: false,
+        adsSetupCompleted: false,
         welcomeVideoWatchedAt: null,
         subscriptionTier: 'pro',
         subscriptionStatus: 'active',
@@ -300,6 +302,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       crm: (impersonatingUser.crm as CRMType | undefined) || undefined,
       crmOther: impersonatingUser.crm_other || undefined,
       adsTrackingEnabled: impersonatingUser.ads_tracking_enabled === true,
+      adsSetupCompleted: impersonatingUser.ads_setup_completed === true,
       welcomeVideoWatchedAt: impersonatingUser.welcome_video_watched_at
         ? new Date(impersonatingUser.welcome_video_watched_at)
         : null,
@@ -1158,6 +1161,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (updates.crmOther !== undefined) dbUpdates.crm_other = updates.crmOther || null
     // Include ads tracking enabled in updates if provided
     if (updates.adsTrackingEnabled !== undefined) dbUpdates.ads_tracking_enabled = updates.adsTrackingEnabled || false
+    if (updates.adsSetupCompleted !== undefined) dbUpdates.ads_setup_completed = updates.adsSetupCompleted || false
     if (updates.welcomeVideoWatchedAt !== undefined) {
       dbUpdates.welcome_video_watched_at = updates.welcomeVideoWatchedAt
         ? (updates.welcomeVideoWatchedAt instanceof Date
@@ -1180,6 +1184,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         crm: string | null;
         crm_other: string | null;
         ads_tracking_enabled: boolean | null;
+        ads_setup_completed?: boolean | null;
         welcome_video_watched_at?: string | null;
         subscription_tier: string | null;
         subscription_status: string | null;
@@ -1188,7 +1193,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
 
       // Select all columns including phone/website (migration should have run)
-      const selectColumns = 'id, email, first_name, last_name, full_name, company_name, phone, website, crm, crm_other, ads_tracking_enabled, welcome_video_watched_at, subscription_tier, subscription_status, created_at, updated_at'
+      const selectColumns = 'id, email, first_name, last_name, full_name, company_name, phone, website, crm, crm_other, ads_tracking_enabled, ads_setup_completed, welcome_video_watched_at, subscription_tier, subscription_status, created_at, updated_at'
       
       const updateResult = await supabase
         .from('user_profiles')
@@ -1227,7 +1232,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           .from('user_profiles')
           .update(dbUpdatesWithoutNewFields)
           .eq('id', targetUserId)
-          .select('id, email, first_name, last_name, full_name, company_name, crm, crm_other, ads_tracking_enabled, subscription_tier, subscription_status, created_at, updated_at')
+          .select('id, email, first_name, last_name, full_name, company_name, crm, crm_other, ads_tracking_enabled, ads_setup_completed, subscription_tier, subscription_status, created_at, updated_at')
         .single()
 
         data = retryResult.data as UserProfileRow | null
@@ -1262,6 +1267,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const updatedCrm = (data.crm as CRMType | undefined) || undefined;
     const updatedCrmOther = data.crm_other !== null && data.crm_other !== undefined ? data.crm_other : undefined;
     const updatedAdsTrackingEnabled = data.ads_tracking_enabled === true;
+    const updatedAdsSetupCompleted = data.ads_setup_completed === true;
     const updatedWelcomeVideoWatchedAt = data.welcome_video_watched_at ? new Date(data.welcome_video_watched_at) : null;
     
     // Update local state immediately with the data returned from the update
@@ -1277,6 +1283,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       crm: updatedCrm,
       crmOther: updatedCrmOther,
       adsTrackingEnabled: updatedAdsTrackingEnabled,
+      adsSetupCompleted: updatedAdsSetupCompleted,
       welcomeVideoWatchedAt: updatedWelcomeVideoWatchedAt
     };
     
@@ -1300,6 +1307,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         crm: updatedUser.crm || null,
         crm_other: updatedUser.crmOther || null,
         ads_tracking_enabled: updatedUser.adsTrackingEnabled || false,
+        ads_setup_completed: updatedUser.adsSetupCompleted || false,
         welcome_video_watched_at: updatedWelcomeVideoWatchedAt ? updatedWelcomeVideoWatchedAt.toISOString() : null,
         trial_ends_at: updatedUser.trialEndsAt ? updatedUser.trialEndsAt.toISOString() : null,
         subscription_tier: updatedUser.subscriptionTier,
