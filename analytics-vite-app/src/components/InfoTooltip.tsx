@@ -26,6 +26,7 @@ const TOOLTIP_OFFSET = 8
 export function InfoTooltip({ content, minWidth = 280, maxWidth = 560, variant = 'icon', placement = 'top', children }: InfoTooltipProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({})
+  const [arrowLeft, setArrowLeft] = useState<number | null>(null)
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLSpanElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
@@ -49,6 +50,7 @@ export function InfoTooltip({ content, minWidth = 280, maxWidth = 560, variant =
         maxWidth,
         zIndex: 99999,
       })
+      setArrowLeft(centerX - left)
     }
     setIsVisible(true)
   }
@@ -109,6 +111,8 @@ export function InfoTooltip({ content, minWidth = 280, maxWidth = 560, variant =
         maxWidth,
         zIndex: 99999,
       })
+      // Arrow points to trigger center: offset from tooltip's left edge
+      setArrowLeft(triggerCenterX - left)
     }
 
     // Defer to next frame so tooltip is in DOM and has dimensions
@@ -153,7 +157,7 @@ export function InfoTooltip({ content, minWidth = 280, maxWidth = 560, variant =
       <div
         style={{
           position: 'absolute',
-          left: '50%',
+          left: arrowLeft != null ? arrowLeft : '50%',
           transform: 'translateX(-50%)',
           width: 0,
           height: 0,
