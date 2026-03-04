@@ -2,7 +2,8 @@ import { supabase } from '../lib/supabase';
 import { MockDataService } from './mockDataService';
 import { logger } from '../utils/logger';
 import type { 
-  FunnelData, 
+  FunnelData,
+  FunnelEvent,
   ServiceType, 
   LeadSource, 
   Booking, 
@@ -78,7 +79,10 @@ export class UnifiedDataService {
       year: record.year,
       month: record.month,
       inquiries: record.inquiries || 0,
+      confirmedAvailable: record.confirmed_available ?? 0,
       callsBooked: record.calls_booked || 0,
+      callsCancelled: record.calls_cancelled ?? 0,
+      callsNoShows: record.calls_no_shows != null ? record.calls_no_shows : undefined,
       callsTaken: record.calls_taken || 0,
       closes: record.closes || 0,
       bookings: record.bookings || 0,
@@ -184,6 +188,86 @@ export class UnifiedDataService {
   }
 
   /**
+   * Get all funnel events for a specific user
+   *
+   * @param userId - The ID of the user owning the funnel events
+   * @returns Promise resolving to an array of FunnelEvent records
+   */
+  static async getFunnelEvents(userId: string): Promise<FunnelEvent[]> {
+    if (!this.isSupabaseConfigured()) {
+      return [];
+    }
+
+    try {
+      logger.debug('Loading funnel events for user', { userId });
+      const { data, error } = await supabase
+        .from('funnel_events')
+        .select('*')
+        .eq('user_id', userId)
+        .order('event_date', { ascending: true });
+
+      if (error) {
+        logger.error('Error fetching funnel events:', error);
+        return [];
+      }
+
+      const transformed = (data || []).map((record: any) => ({
+        id: record.id,
+        metric: record.metric,
+        value: Number(record.value || 0),
+        eventDate: record.event_date,
+        source: record.source || 'funnel',
+        sourceId: record.source_id || undefined,
+      }));
+
+      logger.debug('Transformed funnel events', { count: transformed.length });
+      return transformed;
+    } catch (error) {
+      logger.error('Error fetching funnel events:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Create or update funnel events
+   */
+  static async createFunnelEvents(userId: string, events: FunnelEvent[], isViewOnly: boolean = false): Promise<boolean> {
+    this.checkWritePermission(isViewOnly);
+
+    if (!this.isSupabaseConfigured()) {
+      return true;
+    }
+
+    if (!events.length) return true;
+
+    try {
+      const payload = events.map(event => ({
+        user_id: userId,
+        metric: event.metric,
+        value: Number(event.value || 0),
+        event_date: event.eventDate,
+        source: event.source || 'funnel',
+        source_id: event.sourceId || null,
+        updated_at: new Date().toISOString(),
+      }));
+
+      const { error } = await supabase
+        .from('funnel_events')
+        .upsert(payload, { onConflict: 'user_id,source,metric,source_id' });
+
+      if (error) {
+        logger.error('Error upserting funnel events:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      logger.error('Error creating funnel events:', error);
+      return false;
+    }
+  }
+
+  /**
    * Save funnel data for a specific user and month/year
    * 
    * Creates a new record if none exists, or updates an existing record for the same user/year/month.
@@ -239,7 +323,10 @@ export class UnifiedDataService {
         year: Number(funnelData.year),
         month: Number(funnelData.month),
         inquiries: Number(funnelData.inquiries || 0),
+        confirmed_available: Number(funnelData.confirmedAvailable ?? 0),
         calls_booked: Number(funnelData.callsBooked || 0),
+        calls_cancelled: Number(funnelData.callsCancelled ?? 0),
+        calls_no_shows: funnelData.callsNoShows != null ? Number(funnelData.callsNoShows) : null,
         calls_taken: Number(funnelData.callsTaken || 0),
         closes: Number(funnelData.closes || 0),
         bookings: Number(funnelData.bookings || 0),
@@ -711,8 +798,10 @@ export class UnifiedDataService {
       return data?.map(item => ({
         id: item.id,
         projectName: item.client_name, // Map client_name to projectName
+        clientName: item.client_name || 'Unknown',
         serviceTypeId: item.service_type_id,
         leadSourceId: item.lead_source_id,
+        bookingDate: item.booking_date,
         dateInquired: item.date_inquired || item.booking_date, // Use new column or fallback
         dateBooked: item.booking_date,
         projectDate: item.project_date || item.booking_date, // Use new column or fallback

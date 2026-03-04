@@ -5,12 +5,13 @@
  */
 
 import { parseCSV, parseDate, parseCents, findColumn, type CSVRow } from '../utils/csvParser';
-import type { Booking, FunnelData, ServiceType, LeadSource } from '../types';
+import type { Booking, FunnelData, FunnelEvent, ServiceType, LeadSource } from '../types';
 import { logger } from '../utils/logger';
 
 export interface ImportResult {
   bookings: Booking[];
   funnelData: FunnelData[];
+  funnelEvents: FunnelEvent[];
   serviceTypes: ServiceType[];
   leadSources: LeadSource[];
   errors: string[];
@@ -33,6 +34,7 @@ export function importBookedClientsFromCSV(
   const result: ImportResult = {
     bookings: [],
     funnelData: [],
+    funnelEvents: [],
     serviceTypes: [...existingServiceTypes],
     leadSources: [...existingLeadSources],
     errors: [],
@@ -130,6 +132,7 @@ export function importBookedClientsFromCSV(
               name: serviceTypeName,
               description: `Imported from Honeybook`,
               isCustom: true,
+              tracksInFunnel: true,
             });
             serviceTypeMap.set(lowerName, newId);
           }
@@ -148,6 +151,7 @@ export function importBookedClientsFromCSV(
           name: 'General Service',
           description: 'Default service type for imported bookings',
           isCustom: true,
+          tracksInFunnel: true,
         });
         serviceTypeId = defaultId;
       }
@@ -235,7 +239,7 @@ export function importBookedClientsFromCSV(
 
 /**
  * Generate funnel data from imported booked clients
- * IMPORTANT: Only creates/updates Closes and Bookings (revenue) in funnel data
+ * IMPORTANT: Only creates/updates Bookings (Qty) and Bookings ($) in funnel data
  * Inquiries should come from the Leads report import
  * Groups by Booked Date (close date) only
  */
@@ -283,7 +287,9 @@ function generateFunnelDataFromBookedClients(bookings: Booking[]): FunnelData[] 
       month: data.month,
       inquiries: 0, // Inquiries come from Leads report, not Booked Client report
       inquiriesYtd: 0,
+      confirmedAvailable: 0,
       callsBooked: 0,
+      callsCancelled: 0,
       callsTaken: 0,
       callsYtd: 0,
       inquiryToCall: 0,

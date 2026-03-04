@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react'
 
 interface InfoTooltipProps {
   content: React.ReactNode
+  /** Optional min width for the tooltip (default 280px) */
+  minWidth?: number
   /** Optional max width for the tooltip (default 560px) */
   maxWidth?: number
 }
@@ -10,7 +12,7 @@ interface InfoTooltipProps {
  * Small info icon that shows a tooltip on hover.
  * Use next to labels to provide definitions and clarity.
  */
-export function InfoTooltip({ content, maxWidth = 560 }: InfoTooltipProps) {
+export function InfoTooltip({ content, minWidth = 280, maxWidth = 560 }: InfoTooltipProps) {
   const [isVisible, setIsVisible] = useState(false)
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -28,7 +30,7 @@ export function InfoTooltip({ content, maxWidth = 560 }: InfoTooltipProps) {
 
   return (
     <span
-      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', marginLeft: 4, cursor: 'help' }}
+      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', marginLeft: 8, cursor: 'help' }}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
@@ -37,17 +39,17 @@ export function InfoTooltip({ content, maxWidth = 560 }: InfoTooltipProps) {
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: 16,
-          height: 16,
+          width: 14,
+          height: 14,
           borderRadius: '50%',
-          border: '1.5px solid #1f2937',
-          color: '#1f2937',
-          fontSize: 11,
+          border: '1.5px solid #6b7280',
+          color: '#6b7280',
+          fontSize: 10,
           fontWeight: 600,
           fontFamily: 'system-ui, sans-serif',
         }}
       >
-        i
+        ?
       </span>
       {isVisible && (
         <div
@@ -60,6 +62,7 @@ export function InfoTooltip({ content, maxWidth = 560 }: InfoTooltipProps) {
             left: '50%',
             transform: 'translateX(-50%) translateY(-8px)',
             zIndex: 9999,
+            minWidth: minWidth,
             maxWidth: maxWidth,
             padding: '10px 12px',
             backgroundColor: '#374151',

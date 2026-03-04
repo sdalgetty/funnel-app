@@ -46,6 +46,7 @@ const isTestEnvironment = (): boolean => {
 
 interface AuthContextType {
   user: AuthUser | null
+  effectiveUser: AuthUser | null
   session: SupabaseSession | null
   loading: boolean
   features: SubscriptionFeatures
@@ -281,6 +282,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     : (viewingAsGuest && sharedAccountOwnerId 
       ? sharedAccountOwnerId 
       : (user?.id || null))
+
+  const effectiveUser = React.useMemo(() => {
+    if (!impersonatingUser) return user
+    const firstName = impersonatingUser.first_name || ''
+    const lastName = impersonatingUser.last_name || ''
+    const fullName = impersonatingUser.full_name || `${firstName} ${lastName}`.trim() || impersonatingUser.email
+    return {
+      id: impersonatingUser.id,
+      email: impersonatingUser.email,
+      name: fullName,
+      firstName,
+      lastName,
+      companyName: impersonatingUser.company_name || '',
+      phone: impersonatingUser.phone || '',
+      website: impersonatingUser.website || '',
+      crm: (impersonatingUser.crm as CRMType | undefined) || undefined,
+      crmOther: impersonatingUser.crm_other || undefined,
+      adsTrackingEnabled: impersonatingUser.ads_tracking_enabled === true,
+      welcomeVideoWatchedAt: impersonatingUser.welcome_video_watched_at
+        ? new Date(impersonatingUser.welcome_video_watched_at)
+        : null,
+      subscriptionTier: (impersonatingUser.subscription_tier as SubscriptionTier) || 'pro',
+      subscriptionStatus: (impersonatingUser.subscription_status as SubscriptionStatus) || 'active',
+      createdAt: impersonatingUser.created_at ? new Date(impersonatingUser.created_at) : new Date(),
+      lastLoginAt: new Date(),
+      trialEndsAt: impersonatingUser.trial_ends_at ? new Date(impersonatingUser.trial_ends_at) : null,
+    }
+  }, [impersonatingUser, user])
 
   // Check if user is in view-only mode (not when impersonating - admins have full access)
   const isViewOnly = viewingAsGuest && !impersonatingUserId
@@ -1097,6 +1126,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw new Error('No user found for profile update');
     }
 
+    if (isViewOnly && !impersonatingUserId) {
+      throw new Error('You are viewing this account in read-only mode. Editing is not allowed.');
+    }
+
+    const targetUserId = impersonatingUserId || user.id
+    const profileSource = effectiveUser || user
+
       // Map frontend field names to database field names
     // Include empty strings explicitly to allow clearing values
       const dbUpdates: Record<string, unknown> = {}
@@ -1130,7 +1166,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         : null
     }
 
-      logger.debug('Updating user profile', { userId: user.id, updates: dbUpdates });
+      logger.debug('Updating user profile', { userId: targetUserId, updates: dbUpdates });
 
       type UserProfileRow = {
         id: string | null;
@@ -1157,7 +1193,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const updateResult = await supabase
         .from('user_profiles')
         .update(dbUpdates)
-        .eq('id', user.id)
+        .eq('id', targetUserId)
         .select(selectColumns)
         .single()
 
@@ -1178,8 +1214,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Reconstruct full_name if needed
         if ((updates.firstName !== undefined || updates.lastName !== undefined) && updates.name === undefined) {
-          const firstName = updates.firstName !== undefined ? updates.firstName : user.firstName || ''
-          const lastName = updates.lastName !== undefined ? updates.lastName : user.lastName || ''
+          const firstName = updates.firstName !== undefined ? updates.firstName : profileSource.firstName || ''
+          const lastName = updates.lastName !== undefined ? updates.lastName : profileSource.lastName || ''
           dbUpdatesWithoutNewFields.full_name = (firstName && lastName) ? `${firstName} ${lastName}` : (firstName || lastName || null)
         }
         
@@ -1190,7 +1226,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const retryResult = await supabase
           .from('user_profiles')
           .update(dbUpdatesWithoutNewFields)
-          .eq('id', user.id)
+          .eq('id', targetUserId)
           .select('id, email, first_name, last_name, full_name, company_name, crm, crm_other, ads_tracking_enabled, subscription_tier, subscription_status, created_at, updated_at')
         .single()
 
@@ -1219,7 +1255,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const updatedLastName = data.last_name !== null && data.last_name !== undefined ? data.last_name : '';
     const updatedFullName = data.full_name !== null && data.full_name !== undefined 
       ? data.full_name 
-      : (updatedFirstName && updatedLastName ? `${updatedFirstName} ${updatedLastName}` : (updatedFirstName || updatedLastName || user.name));
+      : (updatedFirstName && updatedLastName ? `${updatedFirstName} ${updatedLastName}` : (updatedFirstName || updatedLastName || profileSource.name));
     const updatedCompanyName = data.company_name !== null && data.company_name !== undefined ? data.company_name : '';
     const updatedPhone = data.phone !== null && data.phone !== undefined ? data.phone : '';
     const updatedWebsite = data.website !== null && data.website !== undefined ? data.website : '';
@@ -1230,12 +1266,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     // Update local state immediately with the data returned from the update
     const updatedUser = {
-        ...user,
+      ...profileSource,
       firstName: updatedFirstName,
       lastName: updatedLastName,
       name: updatedFullName,
       companyName: updatedCompanyName,
-      email: data.email !== undefined ? data.email : user.email,
+      email: data.email !== undefined ? data.email : profileSource.email,
       phone: updatedPhone,
       website: updatedWebsite,
       crm: updatedCrm,
@@ -1251,28 +1287,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       companyName: updatedUser.companyName
     });
     
-    setUser(updatedUser);
+    if (impersonatingUserId) {
+      setImpersonatingUser({
+        id: targetUserId,
+        email: updatedUser.email,
+        first_name: updatedUser.firstName || null,
+        last_name: updatedUser.lastName || null,
+        full_name: updatedUser.name || null,
+        company_name: updatedUser.companyName || null,
+        phone: updatedUser.phone || null,
+        website: updatedUser.website || null,
+        crm: updatedUser.crm || null,
+        crm_other: updatedUser.crmOther || null,
+        ads_tracking_enabled: updatedUser.adsTrackingEnabled || false,
+        welcome_video_watched_at: updatedWelcomeVideoWatchedAt ? updatedWelcomeVideoWatchedAt.toISOString() : null,
+        trial_ends_at: updatedUser.trialEndsAt ? updatedUser.trialEndsAt.toISOString() : null,
+        subscription_tier: updatedUser.subscriptionTier,
+        subscription_status: updatedUser.subscriptionStatus,
+        is_admin: false,
+        created_at: data.created_at || new Date().toISOString(),
+        updated_at: data.updated_at || new Date().toISOString(),
+      })
+    } else {
+      setUser(updatedUser);
+    }
     
     // Also verify by reloading after a short delay to ensure consistency
     // This helps catch any edge cases where the update didn't fully commit
     setTimeout(async () => {
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser) {
-          const reloadedProfile = await loadUserProfile(authUser);
-          if (reloadedProfile) {
-            logger.debug('Profile verification reload');
-            // Only update if there's a discrepancy
-            if (
-              reloadedProfile.firstName !== updatedUser.firstName ||
-              reloadedProfile.lastName !== updatedUser.lastName ||
-              reloadedProfile.companyName !== updatedUser.companyName
-            ) {
-              logger.warn('Profile data discrepancy detected, updating from reload', {
-                saved: { firstName: updatedUser.firstName, lastName: updatedUser.lastName, companyName: updatedUser.companyName },
-                reloaded: { firstName: reloadedProfile.firstName, lastName: reloadedProfile.lastName, companyName: reloadedProfile.companyName }
-              });
-              setUser(reloadedProfile);
+        if (!impersonatingUserId) {
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (authUser) {
+            const reloadedProfile = await loadUserProfile(authUser);
+            if (reloadedProfile) {
+              logger.debug('Profile verification reload');
+              // Only update if there's a discrepancy
+              if (
+                reloadedProfile.firstName !== updatedUser.firstName ||
+                reloadedProfile.lastName !== updatedUser.lastName ||
+                reloadedProfile.companyName !== updatedUser.companyName
+              ) {
+                logger.warn('Profile data discrepancy detected, updating from reload', {
+                  saved: { firstName: updatedUser.firstName, lastName: updatedUser.lastName, companyName: updatedUser.companyName },
+                  reloaded: { firstName: reloadedProfile.firstName, lastName: reloadedProfile.lastName, companyName: reloadedProfile.companyName }
+                });
+                setUser(reloadedProfile);
+              }
             }
           }
         }
@@ -1285,6 +1346,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const value = {
     user,
+    effectiveUser,
     session,
     loading,
     features,

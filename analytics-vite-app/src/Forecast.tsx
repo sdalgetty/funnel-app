@@ -338,14 +338,14 @@ const Forecast: React.FC<ForecastProps> = ({
           color="#10b981"
         />
         <ForecastCard
-          title="Total Closes"
+          title="Total Bookings (Qty)"
           value={formatNumber(forecastData.reduce((sum, month) => sum + month.closes, 0))}
           sub={`Avg: ${formatNumber(monthlyAverages.closes)}/month`}
           icon={<CheckCircle size={20} />}
           color="#f59e0b"
         />
         <ForecastCard
-          title="Total Revenue"
+          title="Total Bookings ($)"
           value={toUSD(forecastData.reduce((sum, month) => sum + month.bookings, 0))}
           sub={`Avg: ${toUSD(monthlyAverages.bookings)}/month`}
           icon={<DollarSign size={20} />}

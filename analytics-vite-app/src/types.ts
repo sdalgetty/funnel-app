@@ -37,7 +37,10 @@ export interface FunnelData {
   month: number;
   inquiries: number;
   inquiriesYtd: number;
+  confirmedAvailable?: number;
   callsBooked: number;
+  callsCancelled?: number;
+  callsNoShows?: number;
   callsTaken: number;
   callsYtd: number;
   inquiryToCall: number;
@@ -54,6 +57,30 @@ export interface FunnelData {
   bookingsManual?: boolean; // If true, bookings is manually entered
   cashManual?: boolean; // If true, cash is manually entered
   lastUpdated?: string;
+}
+
+export type FunnelEventMetric =
+  | 'inquiries'
+  | 'confirmedAvailable'
+  | 'callsBooked'
+  | 'callsCancelled'
+  | 'callsNoShows'
+  | 'callsTaken'
+  | 'closes'
+  | 'bookings'
+  | 'cash'
+  | 'adsLead'
+  | 'adsSpend';
+
+export type FunnelEventSource = 'funnel' | 'funnel_manual' | 'booking' | 'payment' | 'import' | 'honeybook' | 'dubsado';
+
+export interface FunnelEvent {
+  id: string;
+  metric: FunnelEventMetric;
+  value: number;
+  eventDate: string; // YYYY-MM-DD
+  source: FunnelEventSource;
+  sourceId?: string;
 }
 
 // ============================================================================
@@ -237,5 +264,5 @@ export interface Filters {
 }
 
 // Re-export types from other type files
-export type { AuthUser, Session, SubscriptionFeatures } from './types/auth';
+export type { AuthUser, Session } from './types/auth';
 export type { DataManager } from './types/dataManager';

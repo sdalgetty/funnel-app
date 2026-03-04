@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, X, AlertCircle, CheckCircle, FileText } from 'lucide-react';
 import { importBookingsFromCSV, type ImportResult } from '../services/honeybookImporter';
 import { importBookedClientsFromCSV } from '../services/honeybookBookedClientImporter';
+import { importDubsadoLeadsFromCSV } from '../services/dubsadoImporter';
 import { parseCSV } from '../utils/csvParser';
 import type { ServiceType, LeadSource } from '../types';
 import { logger } from '../utils/logger';
@@ -14,6 +15,7 @@ interface CSVImportModalProps {
   existingLeadSources: LeadSource[];
   userId: string;
   pageType?: 'funnel' | 'sales'; // Which page is this import for?
+  crmType?: 'honeybook' | 'dubsado';
 }
 
 export default function CSVImportModal({
@@ -24,6 +26,7 @@ export default function CSVImportModal({
   existingLeadSources,
   userId,
   pageType = 'sales',
+  crmType = 'honeybook',
 }: CSVImportModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -56,32 +59,41 @@ export default function CSVImportModal({
     try {
       const text = await file.text();
       
-      // Detect which type of Honeybook report this is
+      let result: ImportResult;
+
+      // Detect report type by headers
+      // Detect report type by headers
       const { headers } = parseCSV(text);
       const lowerHeaders = headers.map(h => h.toLowerCase());
-      
-      // Check for Booked Client report indicators
-      const isBookedClientReport = 
-        lowerHeaders.includes('project creation date') ||
-        lowerHeaders.includes('total booked value') ||
-        (lowerHeaders.includes('first name') && lowerHeaders.includes('project type'));
-      
-      // Check for Leads report indicators
-      const isLeadsReport = 
-        lowerHeaders.includes('lead created date') ||
-        lowerHeaders.includes('lead source open text');
-      
-      let result: ImportResult;
-      
-      if (isBookedClientReport) {
-        // Use Booked Client importer (handles deduplication)
-        result = importBookedClientsFromCSV(text, existingServiceTypes, existingLeadSources, userId);
-      } else if (isLeadsReport) {
-        // Use Leads report importer
-        result = importBookingsFromCSV(text, existingServiceTypes, existingLeadSources, userId);
+
+      const isDubsadoReport =
+        lowerHeaders.includes('date submitted') &&
+        lowerHeaders.includes('service');
+
+      if (crmType === 'dubsado' || isDubsadoReport) {
+        result = importDubsadoLeadsFromCSV(text, existingServiceTypes, existingLeadSources);
       } else {
-        // Try Leads report format as default (more flexible)
-        result = importBookingsFromCSV(text, existingServiceTypes, existingLeadSources, userId);
+        // Check for Booked Client report indicators
+        const isBookedClientReport = 
+          lowerHeaders.includes('project creation date') ||
+          lowerHeaders.includes('total booked value') ||
+          (lowerHeaders.includes('first name') && lowerHeaders.includes('project type'));
+        
+        // Check for Leads report indicators
+        const isLeadsReport = 
+          lowerHeaders.includes('lead created date') ||
+          lowerHeaders.includes('lead source open text');
+        
+        if (isBookedClientReport) {
+          // Use Booked Client importer (handles deduplication)
+          result = importBookedClientsFromCSV(text, existingServiceTypes, existingLeadSources, userId);
+        } else if (isLeadsReport) {
+          // Use Leads report importer
+          result = importBookingsFromCSV(text, existingServiceTypes, existingLeadSources, userId);
+        } else {
+          // Try Leads report format as default (more flexible)
+          result = importBookingsFromCSV(text, existingServiceTypes, existingLeadSources, userId);
+        }
       }
       
       setPreview(result);
@@ -156,7 +168,9 @@ export default function CSVImportModal({
       >
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600' }}>Import Data from Honeybook CSV</h2>
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600' }}>
+            Import Data from {crmType === 'dubsado' ? 'Dubsado' : 'Honeybook'} CSV
+          </h2>
           <button
             onClick={handleClose}
             style={{
@@ -181,16 +195,19 @@ export default function CSVImportModal({
             {pageType === 'funnel' ? (
               <>
                 <li><strong>Import Leads Report for Funnel Data</strong></li>
-                <li>Export your <strong>Leads report</strong> from Honeybook as CSV</li>
-                <li>This will populate <strong>Inquiries</strong> and <strong>Closes count</strong> in your funnel</li>
+                <li>Export your <strong>Leads report</strong> from {crmType === 'dubsado' ? 'Dubsado' : 'Honeybook'} as CSV</li>
+                <li>This will populate <strong>Inquiries</strong> in your funnel</li>
                 <li>Select the CSV file below, click "Preview", then "Import"</li>
-                <li><strong>Note:</strong> This does NOT create sales records. Use the Sales tab to import Booked Client reports.</li>
+                {crmType === 'dubsado' && (
+                  <li><strong>Note:</strong> The import tool will only pull in leads that have the word "Wedding" or "Weddings" in the Service Column.</li>
+                )}
+                <li><strong>Note:</strong> This does NOT create sales records or fill out other info in the Funnel such as calls.</li>
               </>
             ) : (
               <>
                 <li><strong>Import Booked Client Report for Sales Data</strong></li>
                 <li>Export your <strong>Booked Client report</strong> from Honeybook as CSV</li>
-                <li>This will create sales records and update <strong>Closes & Bookings</strong> (revenue) in your funnel</li>
+                <li>This will create sales records and update <strong>Bookings (Qty) & Bookings ($)</strong> in your funnel</li>
                 <li>Select the CSV file below, click "Preview", then "Import"</li>
                 <li><strong>Note:</strong> For complete funnel data, import Leads report from Funnel tab first (for inquiries), then import Booked Client report here (for closes/bookings and sales records)</li>
                 <li>Payment schedules will need to be added manually</li>
@@ -279,17 +296,33 @@ export default function CSVImportModal({
                 </div>
               )}
 
-              <div style={{ padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <CheckCircle size={16} color="#16a34a" />
-                  <strong style={{ fontSize: '14px', color: '#16a34a' }}>
-                    {preview.funnelData.length} Months of Funnel Data
-                  </strong>
+              {preview.funnelEvents.length > 0 && (
+                <div style={{ padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <CheckCircle size={16} color="#16a34a" />
+                    <strong style={{ fontSize: '14px', color: '#16a34a' }}>
+                      {preview.funnelEvents.length} Funnel Events
+                    </strong>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#15803d', marginLeft: '24px' }}>
+                    Ready to import
+                  </div>
                 </div>
-                <div style={{ fontSize: '12px', color: '#15803d', marginLeft: '24px' }}>
-                  Generated from bookings
+              )}
+
+              {preview.funnelData.length > 0 && (
+                <div style={{ padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <CheckCircle size={16} color="#16a34a" />
+                    <strong style={{ fontSize: '14px', color: '#16a34a' }}>
+                      {preview.funnelData.length} Months of Funnel Data
+                    </strong>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#15803d', marginLeft: '24px' }}>
+                    Generated from leads
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Only show service types/lead sources for Booked Client report (sales page), not Leads report */}
               {/* Show whenever new service types/lead sources will be created, regardless of bookings */}

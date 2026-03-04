@@ -36,7 +36,8 @@ import {
 type ProfileSection = 'account' | 'subscription' | 'billing' | 'privacy' | 'support' | 'sharing';
 
 export default function UserProfile() {
-  const { user, upgradeToPro, downgradeToFree, updateProfile, signOut } = useAuth();
+  const { user, effectiveUser, upgradeToPro, downgradeToFree, updateProfile, signOut } = useAuth();
+  const profileUser = effectiveUser || user;
   const [activeSection, setActiveSection] = useState<ProfileSection>('account');
   const [isEditing, setIsEditing] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -47,15 +48,15 @@ export default function UserProfile() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   const [formData, setFormData] = useState({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    name: user?.name || '',
-    companyName: user?.companyName || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    website: user?.website || '',
-    crm: user?.crm || 'none',
-    crmOther: user?.crmOther || '',
+    firstName: profileUser?.firstName || '',
+    lastName: profileUser?.lastName || '',
+    name: profileUser?.name || '',
+    companyName: profileUser?.companyName || '',
+    email: profileUser?.email || '',
+    phone: profileUser?.phone || '',
+    website: profileUser?.website || '',
+    crm: profileUser?.crm || 'none',
+    crmOther: profileUser?.crmOther || '',
     timezone: 'America/New_York',
     dateFormat: 'MM/DD/YYYY',
     notifications: {
@@ -71,17 +72,17 @@ export default function UserProfile() {
 
   // Update formData when user changes
   React.useEffect(() => {
-    if (user) {
+    if (profileUser) {
       setFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        name: user.name || '',
-        companyName: user.companyName || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        website: user.website || '',
-        crm: user.crm || 'none',
-        crmOther: user.crmOther || '',
+        firstName: profileUser.firstName || '',
+        lastName: profileUser.lastName || '',
+        name: profileUser.name || '',
+        companyName: profileUser.companyName || '',
+        email: profileUser.email || '',
+        phone: profileUser.phone || '',
+        website: profileUser.website || '',
+        crm: profileUser.crm || 'none',
+        crmOther: profileUser.crmOther || '',
         timezone: 'America/New_York',
         dateFormat: 'MM/DD/YYYY',
         notifications: {
@@ -91,9 +92,9 @@ export default function UserProfile() {
         }
       });
     }
-  }, [user]);
+  }, [profileUser]);
 
-  if (!user) {
+  if (!profileUser) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
         <p>Please log in to access your profile.</p>
@@ -148,15 +149,15 @@ export default function UserProfile() {
 
   const handleCancel = () => {
     setFormData({
-      firstName: user.firstName || '',
-      lastName: user.lastName || '',
-      name: user.name,
-      companyName: user.companyName || '',
-      email: user.email,
-      phone: user.phone || '',
-      website: user.website || '',
-      crm: user.crm || 'none',
-      crmOther: user.crmOther || '',
+      firstName: profileUser.firstName || '',
+      lastName: profileUser.lastName || '',
+      name: profileUser.name,
+      companyName: profileUser.companyName || '',
+      email: profileUser.email,
+      phone: profileUser.phone || '',
+      website: profileUser.website || '',
+      crm: profileUser.crm || 'none',
+      crmOther: profileUser.crmOther || '',
       timezone: 'America/New_York',
       dateFormat: 'MM/DD/YYYY',
       notifications: {
@@ -497,7 +498,7 @@ export default function UserProfile() {
           <div style={{ padding: isMobile ? '16px' : '24px' }}>
             {activeSection === 'account' && (
               <AccountSection 
-                user={user}
+                user={profileUser}
                 formData={formData}
                 setFormData={setFormData}
                 isEditing={isEditing}
@@ -533,7 +534,7 @@ export default function UserProfile() {
             )}
 
             {activeSection === 'sharing' && (
-              <SharingSection user={user} />
+              <SharingSection user={profileUser} />
             )}
 
             {activeSection === 'privacy' && (

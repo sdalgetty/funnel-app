@@ -243,7 +243,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
   };
 
   // Render a section card
-  const renderSection = (title: string, icon: React.ReactNode, children: React.ReactNode) => (
+  const renderSection = (title: React.ReactNode, icon: React.ReactNode, children: React.ReactNode) => (
     <div style={{
       backgroundColor: 'white',
       borderRadius: '12px',
@@ -293,7 +293,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
         Set your revenue targets for the year.
       </p>
       <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#6b7280', lineHeight: 1.5 }}>
-        Bookings track what you sell. Cash tracks what you collect.
+        Bookings ($) tracks what you sell. Cash tracks what you collect.
       </p>
 
       <div style={{
@@ -304,15 +304,13 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
       }}>
         <div>
           <label style={{ display: 'block', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '6px' }}>
-            Bookings Goal ($)
+            Bookings ($) Goal
             <InfoTooltip
               content={
                 <>
-                  Total value of contracts signed this year, regardless of when payments are collected.
-                  <ul style={{ margin: '6px 0 0 0', paddingLeft: 16 }}>
-                    <li>Includes taxes and discounts applied</li>
-                    <li>Excludes tips, fees, and loan repayments</li>
-                  </ul>
+                  This is the total value of contracts you plan to sign this year.
+                  <br /><br />
+                  It reflects revenue secured, regardless of when payments are collected.
                 </>
               }
             />
@@ -353,10 +351,9 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
             <InfoTooltip
               content={
                 <>
-                  Total payments expected to be received this year — including from prior-year bookings.
-                  <ul style={{ margin: '6px 0 0 0', paddingLeft: 16 }}>
-                    <li>Gross revenue before taxes and expenses</li>
-                  </ul>
+                  This is the total amount of money you plan to collect this year.
+                  <br /><br />
+                  It includes payments from prior-year contracts and deposits for future-year work.
                 </>
               }
             />
@@ -397,7 +394,16 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
     <>
       <div style={{ marginBottom: '20px' }}>
         <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-          Bookings Number Goal (Number of Weddings)
+          Bookings (Qty) Goal (Number of Weddings)
+          <InfoTooltip
+            content={
+              <>
+                The number of bookings you want to secure this year.
+                <br /><br />
+                This works together with your conversion rates to estimate how much sales activity is required.
+              </>
+            }
+          />
         </label>
         <input
           type="text"
@@ -424,6 +430,17 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
       <div style={{ marginBottom: '20px' }}>
         <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
           Inquiry to Call Rate (%)
+          <InfoTooltip
+            content={
+              <>
+                The percentage of inquiries that schedule a call with you.
+                <br /><br />
+                For example, if 100 people inquire and 40 book a call, your rate is 40%.
+                <br /><br />
+                Not sure what your rates are? Start with the benchmarks below — you can refine them over time.
+              </>
+            }
+          />
         </label>
         <input
           type="text"
@@ -450,6 +467,17 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
       <div>
         <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
           Call to Booking Rate (%)
+          <InfoTooltip
+            content={
+              <>
+                The percentage of calls that turn into signed bookings.
+                <br /><br />
+                For example, if you have 20 calls and 8 clients book, your rate is 40%.
+                <br /><br />
+                Not sure what your rates are? Start with the benchmarks below — you can refine them over time.
+              </>
+            }
+          />
         </label>
         <input
           type="text"
@@ -639,7 +667,22 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
           maxWidth: '100%'
         }}>
           {renderSection('Sales Activity Calculator', <Calculator size={20} color="#3b82f6" />, salesCalculatorContent)}
-          {renderSection('Required Activity', <TrendingUp size={20} color="#10b981" />, requiredActivityContent)}
+          {renderSection(
+            <>
+              Required Activity
+              <InfoTooltip
+                content={
+                  <>
+                    Based on your goals and conversion rates, this is the number of inquiries and calls you need this year to reach your booking target.
+                    <br /><br />
+                    If this number feels high, improving your conversion rates can reduce how many inquiries you need.
+                  </>
+                }
+              />
+            </>,
+            <TrendingUp size={20} color="#10b981" />,
+            requiredActivityContent
+          )}
         </div>
 
         {/* Benchmarks */}
@@ -660,7 +703,7 @@ const Goals: React.FC<GoalsProps> = ({ dataManager }) => {
                 description: 'This should trend towards the lower end of the range if more pricing info is shared up front, and higher if pricing hasn’t been shared pre-call.'
               },
               {
-                stat: 'Call Taken to Close %',
+                stat: 'Call to Booking Rate %',
                 benchmark: '30-50%\n\n50-70%',
                 description: 'This assumes either no pricing or only a starting price was seen prior to the call.\n\nThis assumes either full pricing or pricing ranges were seen prior to the call.'
               }
