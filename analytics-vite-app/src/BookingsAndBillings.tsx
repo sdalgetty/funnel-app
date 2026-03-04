@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Plus, Trash2, CalendarDays, DollarSign, Download, Edit, X, Edit3, Check, Upload } from "lucide-react";
+import { Plus, Trash2, CalendarDays, DollarSign, Download, Edit, X, Check, Upload } from "lucide-react";
 import type { ServiceType, LeadSource, Booking, Payment } from './types';
 import { UnifiedDataService } from './services/unifiedDataService';
 import { useAuth } from './contexts/AuthContext';
@@ -2969,7 +2969,7 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
                   <span>Ad Source</span>
                   <InfoTooltip content="Mark this lead source as advertising so bookings from this source are included in your Advertising metrics and ROI calculations." />
                 </div>
-                <div style={{ width: '52px', flexShrink: 0, textAlign: 'left' }}>Edit</div>
+                <div style={{ width: '64px', flexShrink: 0, textAlign: 'left' }}>Edit</div>
                 <div style={{ width: '88px', flexShrink: 0, textAlign: 'left' }}>Actions</div>
               </div>
             )}
@@ -3098,15 +3098,15 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
                             </span>
                           </label>
                         </div>
-                        <div style={{ width: '52px', flexShrink: 0 }}>
+                        <div style={{ width: '64px', flexShrink: 0 }}>
                           <button
                             onClick={() => handleEdit(leadSource.id, leadSource.name)}
                             style={{
                               backgroundColor: '#3b82f6',
                               color: 'white',
                               border: 'none',
-                              borderRadius: '4px',
-                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              padding: '6px 12px',
                               fontSize: '12px',
                               cursor: 'pointer',
                               display: 'flex',
@@ -3114,7 +3114,7 @@ function LeadSourcesModal({ leadSources, getBookingCountForLeadSource, onAdd, on
                               gap: '4px'
                             }}
                           >
-                            <Edit3 size={12} />
+                            <Edit size={12} />
                             Edit
                           </button>
                         </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check, Edit3, Trash2 } from 'lucide-react';
+import { X, Check, Edit, Trash2 } from 'lucide-react';
 import type { ServiceType } from '../types';
 import { InfoTooltip } from './InfoTooltip';
 
@@ -168,7 +168,7 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                   <span>Track in Funnel</span>
                   <InfoTooltip content="Include this service type when calculating Bookings (Qty) and funnel conversion metrics." />
                 </div>
-                <div style={{ width: '52px', flexShrink: 0, textAlign: 'left', marginLeft: '24px' }}>Edit</div>
+                <div style={{ width: '64px', flexShrink: 0, textAlign: 'left', marginLeft: '24px' }}>Edit</div>
                 <div style={{ width: '88px', flexShrink: 0, textAlign: 'left' }}>Actions</div>
               </div>
             )}
@@ -295,15 +295,15 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                           </label>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                          <div style={{ width: '52px', flexShrink: 0, marginLeft: '24px' }}>
+                          <div style={{ width: '64px', flexShrink: 0, marginLeft: '24px' }}>
                             <button
                               onClick={() => handleEdit(st)}
                               style={{
                                 backgroundColor: '#3b82f6',
                                 color: 'white',
                                 border: 'none',
-                                borderRadius: '4px',
-                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                padding: '6px 12px',
                                 fontSize: '12px',
                                 cursor: 'pointer',
                                 display: 'flex',
@@ -311,7 +311,7 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                                 gap: '4px'
                               }}
                             >
-                              <Edit3 size={12} />
+                              <Edit size={12} />
                               Edit
                             </button>
                           </div>
