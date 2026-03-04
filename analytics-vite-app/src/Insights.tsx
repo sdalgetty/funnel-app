@@ -641,7 +641,7 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     return { avgDaysInquiryToBooking, avgMonthsBookingToWedding }
   }, [bookings, salesFunnelRange, trackableServiceIds])
 
-  // LEAD SOURCES
+  // LEAD SOURCES - only include bookings with service types that track in funnel
   const leadSourcesRange = useMemo(() => buildTimeRange(operationalTimeRange), [buildTimeRange, operationalTimeRange])
   const leadSourceBookings = useMemo(
     () => bookings.filter(b => trackableServiceIds.has(b.serviceTypeId) && isDateInRange(b.dateBooked, leadSourcesRange)),
@@ -672,11 +672,11 @@ export default function Insights({ dataManager }: { dataManager: any }) {
     return { items, totalCount, totalRevenue, byCountDesc, byRevenueDesc, byAvgRevenueDesc }
   }, [leadSourceBookings, leadSources])
 
-  // SERVICE TYPES METRICS
+  // SERVICE TYPES METRICS - only include bookings with service types that track in funnel
   const serviceTypesRange = useMemo(() => buildTimeRange(operationalTimeRange), [buildTimeRange, operationalTimeRange])
   const serviceTypeBookings = useMemo(
-    () => bookings.filter(b => isDateInRange(b.dateBooked, serviceTypesRange)),
-    [bookings, serviceTypesRange]
+    () => bookings.filter(b => trackableServiceIds.has(b.serviceTypeId) && isDateInRange(b.dateBooked, serviceTypesRange)),
+    [bookings, serviceTypesRange, trackableServiceIds]
   )
   const serviceTypeBreakdown = useMemo(() => {
     const byCount: Record<string, number> = {}
