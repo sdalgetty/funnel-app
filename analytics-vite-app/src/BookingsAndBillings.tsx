@@ -2383,7 +2383,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                         whiteSpace: 'nowrap'
                       }}
                     >
-                      + Add new
+                      New Service Type
                     </button>
                   )}
                 </div>
@@ -2523,7 +2523,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                         whiteSpace: 'nowrap'
                       }}
                     >
-                      + Add new
+                      New Lead Source
                     </button>
                   )}
                 </div>
@@ -2599,7 +2599,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
           <div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
               Booked Revenue *
-              <InfoTooltip content="The total value of the booking." />
+              <InfoTooltip content="The total value of this booking. Payments below determine when the cash will be received." />
             </label>
             <input
               type="text"
@@ -2629,7 +2629,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
           <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', margin: 0 }}>
-                Payment Schedule (For Cash Tracking)
+                Payment Schedule (For Cash Forecasting)
               </label>
               <button
                 type="button"
@@ -3730,7 +3730,7 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
           <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', margin: 0 }}>
-                Payment Schedule (For Cash Tracking)
+                Payment Schedule (For Cash Forecasting)
               </label>
               <button
                 type="button"
