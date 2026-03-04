@@ -2227,9 +2227,9 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            <div>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '20px' }}>
+            <div style={{ minWidth: 0 }}>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Project Name *
               </label>
@@ -2250,14 +2250,14 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
               />
             </div>
 
-            <div>
+            <div style={{ minWidth: 0 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Service Type *
                 <InfoTooltip content="Used to categorize your work (e.g., Wedding, Engagement, Family). Service Types allow you to filter Sales and analyze performance in Insights." />
               </label>
               {addingServiceType ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0, flexWrap: 'wrap' }}>
                     <input
                       type="text"
                       value={newServiceTypeName}
@@ -2284,7 +2284,8 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                         }
                       }}
                       style={{
-                        flex: 1,
+                        flex: '1 1 120px',
+                        minWidth: 0,
                         padding: '10px 12px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
@@ -2313,7 +2314,8 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                         borderRadius: '6px',
                         padding: '8px 12px',
                         fontSize: '14px',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        flexShrink: 0
                       }}
                     >
                       Add
@@ -2328,7 +2330,8 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                       borderRadius: '6px',
                       padding: '8px 12px',
                       fontSize: '14px',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      flexShrink: 0
                     }}
                   >
                     Cancel
@@ -2387,14 +2390,14 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
               )}
             </div>
             
-            <div>
+            <div style={{ minWidth: 0 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Lead Source *
                 <InfoTooltip content="Tracks where the booking came from. Lead Sources power your Funnel metrics and can also be used to track Advertising ROI." />
               </label>
               {addingLeadSource ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0, flexWrap: 'wrap' }}>
                     <input
                       type="text"
                       value={newLeadSourceName}
@@ -2421,7 +2424,8 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                         }
                       }}
                       style={{
-                        flex: 1,
+                        flex: '1 1 120px',
+                        minWidth: 0,
                         padding: '10px 12px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
@@ -2450,7 +2454,8 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                       borderRadius: '6px',
                       padding: '8px 12px',
                       fontSize: '14px',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      flexShrink: 0
                     }}
                   >
                     Add
@@ -2465,7 +2470,8 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                       borderRadius: '6px',
                       padding: '8px 12px',
                       fontSize: '14px',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      flexShrink: 0
                     }}
                   >
                     Cancel
@@ -2524,7 +2530,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
               )}
             </div>
 
-            <div>
+            <div style={{ minWidth: 0 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Date Inquired
                 <InfoTooltip content="The date the client first contacted you. Used to track inquiry trends and conversion rates in your Funnel." />
@@ -2545,7 +2551,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
               />
             </div>
 
-            <div>
+            <div style={{ minWidth: 0 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Date Booked *
                 <InfoTooltip content="The date the client officially booked with you. This helps track how long it takes to convert inquiries into bookings." />
@@ -2566,7 +2572,7 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
               />
             </div>
 
-            <div>
+            <div style={{ minWidth: 0 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Project Date
                 <InfoTooltip content="The date the work will take place (e.g., wedding date or session date). Used for planning and forecasting." />
