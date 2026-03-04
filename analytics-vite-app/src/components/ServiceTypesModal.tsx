@@ -319,6 +319,7 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
                           <Trash2 size={12} />
                           Delete
                         </button>
+                        </div>
                       </div>
                     </>
                   )}
