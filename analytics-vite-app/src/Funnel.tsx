@@ -1,9 +1,9 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { TrendingUp, Users, Phone, CheckCircle, DollarSign, Edit, Lock, Crown, StickyNote, Calendar, Upload } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 // Calculator moved to its own top-level page
 import { UnifiedDataService } from "./services/unifiedDataService";
-import type { FunnelData, Booking, Payment } from "./types";
+import type { FunnelData, FunnelEvent, Booking, Payment } from "./types";
 import { logger } from "./utils/logger";
 import CSVImportModal from "./components/CSVImportModal";
 import { importBookingsFromCSV, type ImportResult } from "./services/honeybookImporter";
@@ -34,6 +34,74 @@ const calculateConversionRate = (from: number, to: number) => {
   return ((to / from) * 100).toFixed(1);
 };
 
+/** Generate funnel_events for manual edits so date-based ranges (Past 30 Days, etc.) can aggregate accurately. */
+function createFunnelEventsFromManualDelta(
+  original: FunnelData | null,
+  updated: FunnelData,
+): FunnelEvent[] {
+  if (!original) return [];
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const events: FunnelEvent[] = [];
+  const ts = Date.now();
+  const base = `${updated.year}-${updated.month}`;
+
+  type MetricDef = {
+    key: keyof FunnelData;
+    dbMetric: FunnelEvent['metric'];
+    isCount: boolean; // count: N events value=1 each; amount: 1 event value=delta
+    onlyWhenManual?: keyof FunnelData; // only create when this flag is true
+  };
+
+  const countMetrics: MetricDef[] = [
+    { key: 'inquiries', dbMetric: 'inquiries', isCount: true },
+    { key: 'confirmedAvailable', dbMetric: 'confirmedAvailable', isCount: true },
+    { key: 'callsBooked', dbMetric: 'callsBooked', isCount: true },
+    { key: 'callsCancelled', dbMetric: 'callsCancelled', isCount: true },
+    { key: 'callsNoShows', dbMetric: 'callsNoShows', isCount: true },
+    { key: 'callsTaken', dbMetric: 'callsTaken', isCount: true },
+    { key: 'adsLead', dbMetric: 'adsLead', isCount: true },
+    { key: 'closes', dbMetric: 'closes', isCount: true, onlyWhenManual: 'closesManual' },
+  ];
+
+  const amountMetrics: MetricDef[] = [
+    { key: 'bookings', dbMetric: 'bookings', isCount: false, onlyWhenManual: 'bookingsManual' },
+    { key: 'cash', dbMetric: 'cash', isCount: false, onlyWhenManual: 'cashManual' },
+    { key: 'adsSpend', dbMetric: 'adsSpend', isCount: false },
+  ];
+
+  for (const { key, dbMetric, isCount, onlyWhenManual } of [...countMetrics, ...amountMetrics]) {
+    if (onlyWhenManual && !(updated[onlyWhenManual] as boolean)) continue;
+    const oldVal = (original[key] as number) ?? 0;
+    const newVal = (updated[key] as number) ?? 0;
+    const delta = newVal - oldVal;
+    if (delta <= 0) continue;
+
+    if (isCount) {
+      for (let i = 0; i < delta; i++) {
+        events.push({
+          id: `manual-${base}-${dbMetric}-${ts}-${i}`,
+          metric: dbMetric,
+          value: 1,
+          eventDate: today,
+          source: 'funnel_manual',
+          sourceId: `manual-${base}-${dbMetric}-${ts}-${i}`,
+        });
+      }
+    } else {
+      events.push({
+        id: `manual-${base}-${dbMetric}-${ts}`,
+        metric: dbMetric,
+        value: delta,
+        eventDate: today,
+        source: 'funnel_manual',
+        sourceId: `manual-${base}-${dbMetric}-${ts}`,
+      });
+    }
+  }
+
+  return events;
+}
+
 export default function Funnel({ funnelData, dataManager, salesData = [], paymentsData = [], serviceTypes = [], navigationAction, isViewOnly = false }: FunnelProps) {
   const leadSources = dataManager?.leadSources || [];
   logger.debug('Funnel component loaded', { 
@@ -42,18 +110,20 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
     paymentsDataCount: paymentsData.length 
   });
   
-  const { user, features, updateProfile } = useAuth();
+  const { user, effectiveUser, effectiveUserId, features, updateProfile } = useAuth();
+  const funnelUser = effectiveUser || user;
   logger.debug('Auth context loaded', { 
-    userId: user?.id, 
-    email: user?.email, 
-    subscriptionTier: user?.subscriptionTier 
+    userId: funnelUser?.id, 
+    email: funnelUser?.email, 
+    subscriptionTier: funnelUser?.subscriptionTier 
   });
   
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMonth, setEditingMonth] = useState<FunnelData | null>(null);
-  const [adsTrackingEnabled, setAdsTrackingEnabled] = useState<boolean>(user?.adsTrackingEnabled || false);
+  const originalEditingMonthRef = useRef<FunnelData | null>(null);
+  const [adsTrackingEnabled, setAdsTrackingEnabled] = useState<boolean>(funnelUser?.adsTrackingEnabled || false);
   
   // Mobile detection
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -66,14 +136,14 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
 
   // Sync adsTrackingEnabled with user profile
   useEffect(() => {
-    if (user?.adsTrackingEnabled !== undefined) {
-      setAdsTrackingEnabled(user.adsTrackingEnabled);
+    if (funnelUser?.adsTrackingEnabled !== undefined) {
+      setAdsTrackingEnabled(funnelUser.adsTrackingEnabled);
     }
-  }, [user?.adsTrackingEnabled]);
+  }, [funnelUser?.adsTrackingEnabled]);
 
   // Handle toggle change
   const handleAdsTrackingToggle = async (enabled: boolean) => {
-    if (user) {
+    if (funnelUser) {
       try {
         await updateProfile({ adsTrackingEnabled: enabled });
         // Only update local state if update succeeds
@@ -105,7 +175,10 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
             month,
             inquiries: 0,
             inquiriesYtd: 0,
+            confirmedAvailable: 0,
             callsBooked: 0,
+            callsCancelled: 0,
+            callsNoShows: undefined,
             callsTaken: 0,
             callsYtd: 0,
             inquiryToCall: 0,
@@ -123,6 +196,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
             cashManual: false
           }
         }
+        originalEditingMonthRef.current = { ...monthData }
         setEditingMonth(monthData)
         setIsEditModalOpen(true)
         logger.debug('Edit modal opened via navigation action', { year, month })
@@ -224,7 +298,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
   // Handler functions for edit modal
   const handleEditMonth = (month: any) => {
     logger.debug('Opening edit modal for month', { month });
-    setEditingMonth(month as FunnelData);
+    const snapshot = month as FunnelData;
+    originalEditingMonthRef.current = { ...snapshot };
+    setEditingMonth(snapshot);
     setIsEditModalOpen(true);
     logger.debug('Modal should be open now');
   };
@@ -232,17 +308,18 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
   const handleCloseModal = () => {
     setIsEditModalOpen(false);
     setEditingMonth(null);
+    originalEditingMonthRef.current = null;
   };
 
   const handleSave = async () => {
     logger.debug('handleSave function called', { editingMonth: !!editingMonth, userId: user?.id });
     
-    if (!editingMonth || !user?.id) {
-      logger.debug('Early return: missing editingMonth or user.id', { editingMonth: !!editingMonth, userId: !!user?.id });
+    if (!editingMonth || !effectiveUserId) {
+      logger.debug('Early return: missing editingMonth or user.id', { editingMonth: !!editingMonth, userId: !!effectiveUserId });
       return;
     }
     
-    logger.debug('Starting save process', { userId: user.id, isProAccount });
+    logger.debug('Starting save process', { userId: effectiveUserId, isProAccount });
     
     // For all accounts, just save what was edited
     const dataToSave = {
@@ -268,9 +345,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
         success = await dataManager.saveFunnelData(dataToSave);
       } else {
         logger.debug('Using UnifiedDataService.saveFunnelData');
-        success = await UnifiedDataService.saveFunnelData(user.id, dataToSave);
+        success = await UnifiedDataService.saveFunnelData(effectiveUserId, dataToSave);
         // If no dataManager, reload after save
-      if (success) {
+        if (success) {
           logger.debug('Reloading page in 300ms');
           setTimeout(() => {
             window.location.reload();
@@ -279,6 +356,14 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
       }
         
       if (success) {
+        // Create funnel_events for manual edits so date-based ranges (Past 30/90 Days) aggregate correctly
+        const deltaEvents = createFunnelEventsFromManualDelta(originalEditingMonthRef.current, dataToSave);
+        if (deltaEvents.length > 0 && effectiveUserId) {
+          await UnifiedDataService.createFunnelEvents(effectiveUserId, deltaEvents);
+          if (dataManager?.loadAllData) {
+            await dataManager.loadAllData();
+          }
+        }
         setJustSaved(true);
         handleCloseModal();
         logger.debug('Successfully saved to database and updated UI immediately');
@@ -308,7 +393,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
       if (dataManager?.saveFunnelData) {
         success = await dataManager.saveFunnelData(monthToSave);
       } else {
-        success = await UnifiedDataService.saveFunnelData(user.id, monthToSave);
+        success = await UnifiedDataService.saveFunnelData(effectiveUserId, monthToSave);
         if (success) {
           setTimeout(() => {
             window.location.reload();
@@ -371,15 +456,25 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
         
         return {
           id: existingData?.id || `${selectedYear}_${month.toLowerCase()}`,
+          name: existingData?.name || 'Default',
           month: monthNumber,
           year: selectedYear,
           inquiries: existingData?.inquiries || 0, // Keep manual inquiries
+          inquiriesYtd: existingData?.inquiriesYtd || 0,
+          confirmedAvailable: existingData?.confirmedAvailable ?? 0,
           callsBooked: existingData?.callsBooked || 0, // Keep manual calls
+          callsCancelled: existingData?.callsCancelled ?? 0,
+          callsNoShows: existingData?.callsNoShows,
           callsTaken: existingData?.callsTaken || 0, // Keep manual calls
+          callsYtd: existingData?.callsYtd || 0,
+          inquiryToCall: existingData?.inquiryToCall || 0,
+          callToBooking: existingData?.callToBooking || 0,
           adsLead: existingData?.adsLead || 0,
           adsSpend: existingData?.adsSpend || 0,
           closes: closes,
           bookings: bookings,
+          bookingsYtd: existingData?.bookingsYtd || 0,
+          bookingsGoal: existingData?.bookingsGoal || 0,
           cash: cash,
           closesManual: existingData?.closesManual || false,
           bookingsManual: existingData?.bookingsManual || false,
@@ -396,17 +491,30 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
         // Create default month data
         return {
           id: `${selectedYear}_${month.toLowerCase()}`,
+          name: 'Default',
           month: monthNumber,
           year: selectedYear,
           inquiries: 0,
+          inquiriesYtd: 0,
+          confirmedAvailable: 0,
           callsBooked: 0,
+          callsCancelled: 0,
+          callsNoShows: undefined,
           callsTaken: 0,
+          callsYtd: 0,
+          inquiryToCall: 0,
+          callToBooking: 0,
           closes: 0,
           bookings: 0,
+          bookingsYtd: 0,
+          bookingsGoal: 0,
           cash: 0,
           adsLead: 0,
           adsSpend: 0,
           notes: '',
+          closesManual: false,
+          bookingsManual: false,
+          cashManual: false,
           lastUpdated: new Date().toISOString()
         };
       }
@@ -420,6 +528,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
     const currentYearData = filteredData;
     const totalInquiries = currentYearData.reduce((sum, month) => sum + (month.inquiries || 0), 0);
     const totalCallsBooked = currentYearData.reduce((sum, month) => sum + (month.callsBooked || 0), 0);
+    const totalCallsCancelled = currentYearData.reduce((sum, month) => sum + (month.callsCancelled ?? 0), 0);
     const totalCallsTaken = currentYearData.reduce((sum, month) => sum + (month.callsTaken || 0), 0);
     const totalCloses = currentYearData.reduce((sum, month) => sum + (month.closes || 0), 0);
     const totalBookings = currentYearData.reduce((sum, month) => sum + (month.bookings || 0), 0);
@@ -429,7 +538,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
     }, 0);
 
     const monthsWithData = currentYearData.filter(month => 
-      month.inquiries > 0 || month.callsBooked > 0 || month.callsTaken > 0 || month.closes > 0 || month.bookings > 0
+      month.inquiries > 0 || (month.confirmedAvailable ?? 0) > 0 || month.callsBooked > 0 || (month.callsCancelled ?? 0) > 0 || month.callsTaken > 0 || month.closes > 0 || month.bookings > 0
     ).length;
 
     return {
@@ -449,7 +558,11 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
       callBookedToCloseRate: calculateConversionRate(totalCallsBooked, totalCloses),
       callTakenToCloseRate: calculateConversionRate(totalCallsTaken, totalCloses),
       inquiryToCallBookedRate: calculateConversionRate(totalInquiries, totalCallsBooked),
-      callShowUpRate: calculateConversionRate(totalCallsBooked, totalCallsTaken),
+      callShowUpRate: (() => {
+        const netBooked = totalCallsBooked - totalCallsCancelled;
+        if (netBooked <= 0) return '0.0';
+        return ((totalCallsTaken / netBooked) * 100).toFixed(1);
+      })(),
       revenuePerCallTaken: totalCallsTaken > 0 ? Math.round(totalBookings / totalCallsTaken) : 0
     };
   }, [filteredData]);
@@ -505,7 +618,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
           </h1>
           {user && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {user.crm === 'honeybook' && !isViewOnly && (
+              {(funnelUser?.crm === 'honeybook' || funnelUser?.crm === 'dubsado') && !isViewOnly && (
                 <button
                   onClick={() => setShowCSVImport(true)}
                   style={{
@@ -678,10 +791,13 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 {adsTrackingEnabled && (
                   <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '100px' }}>Ad Leads</th>
                 )}
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Confirmed Available</th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>Calls Booked</th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>Calls Cancelled</th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '95px' }}>No-Shows</th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '110px' }}>Calls Taken</th>
-                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '90px' }}>Closes</th>
-                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Bookings</th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '90px' }}>Bookings (Qty)</th>
+                <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Bookings ($)</th>
                 <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Cash</th>
                 {adsTrackingEnabled && (
                   <th style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600', color: '#374151', width: '120px' }}>Ad Spend</th>
@@ -714,7 +830,16 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                       </td>
                     )}
                     <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
+                      {formatNumber(month.confirmedAvailable ?? 0)}
+                    </td>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
                       {formatNumber(month.callsBooked)}
+                    </td>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
+                      {formatNumber(month.callsCancelled ?? 0)}
+                    </td>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
+                      {formatNumber(Math.max(0, month.callsNoShows ?? (month.callsBooked - (month.callsCancelled ?? 0) - month.callsTaken)))}
                     </td>
                     <td style={{ padding: '12px 8px', textAlign: 'right', color: '#374151' }}>
                       {formatNumber(month.callsTaken)}
@@ -784,7 +909,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                             }}
                             title={isFuture 
                               ? 'Future months cannot be edited - data is calculated from scheduled payments' 
-                              : (isProAccount ? 'Edit Inquiries, Calls Booked, Calls Taken, and Cash (Closes and Bookings are calculated automatically)' : 'Edit month data')
+                              : (isProAccount ? 'Edit Inquiries, Calls Booked, Calls Taken, and Cash (Bookings (Qty) and Bookings ($) are calculated automatically)' : 'Edit month data')
                             }
                           >
                             <Edit size={14} />
@@ -813,7 +938,19 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                   </td>
                 )}
                 <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
+                  {formatNumber(filteredData.reduce((sum, month) => sum + (month.confirmedAvailable ?? 0), 0))}
+                </td>
+                <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
                   {formatNumber(analyticsMetrics.totalCallsBooked)}
+                </td>
+                <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
+                  {formatNumber(filteredData.reduce((sum, month) => sum + (month.callsCancelled ?? 0), 0))}
+                </td>
+                <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
+                  {formatNumber(filteredData.reduce((sum, month) => {
+                    const noShows = month.callsNoShows ?? (month.callsBooked - (month.callsCancelled ?? 0) - month.callsTaken);
+                    return sum + Math.max(0, noShows);
+                  }, 0))}
                 </td>
                 <td style={{ padding: '12px 8px', textAlign: 'right', color: '#1f2937' }}>
                   {formatNumber(analyticsMetrics.totalCallsTaken)}
@@ -874,19 +1011,31 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                       </div>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Confirmed Available</span>
+                      <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.confirmedAvailable ?? 0)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '14px', color: '#6b7280' }}>Calls Booked</span>
                       <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.callsBooked)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Calls Cancelled</span>
+                      <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.callsCancelled ?? 0)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>No-Shows</span>
+                      <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(Math.max(0, month.callsNoShows ?? (month.callsBooked - (month.callsCancelled ?? 0) - month.callsTaken)))}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '14px', color: '#6b7280' }}>Calls Taken</span>
                       <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.callsTaken)}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Closes</span>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Bookings (Qty)</span>
                       <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{formatNumber(month.closes)}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Bookings</span>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>Bookings ($)</span>
                       <span style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
                         {toUSD(month.bookings)}
                       </span>
@@ -1109,7 +1258,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 fontSize: '14px',
                 color: '#0c4a6e'
               }}>
-                <strong>Pro Account:</strong> Closes, Bookings, and Cash are calculated automatically from your Sales data by default. Uncheck "Calculate from Sales Data" to manually override any field.
+                <strong>Pro Account:</strong> Bookings (Qty), Bookings ($), and Cash are calculated automatically from your Sales data by default. Uncheck "Calculate from Sales Data" to manually override any field.
               </div>
             )}
 
@@ -1189,6 +1338,35 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 </div>
               )}
 
+              {/* Confirmed Available */}
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                  Confirmed Available
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={editingMonth.confirmedAvailable || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d+$/.test(value)) {
+                      const numValue = value === '' ? 0 : parseInt(value, 10);
+                      setEditingMonth({ ...editingMonth, confirmedAvailable: numValue });
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    maxWidth: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: isMobile ? '16px' : '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
               {/* Calls Booked */}
               <div>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
@@ -1206,6 +1384,65 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                       setEditingMonth({ ...editingMonth, callsBooked: numValue });
                     }
                   }}
+                  style={{
+                    width: '100%',
+                    maxWidth: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: isMobile ? '16px' : '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {/* Calls Cancelled */}
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                  Calls Cancelled
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={editingMonth.callsCancelled || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d+$/.test(value)) {
+                      const numValue = value === '' ? 0 : parseInt(value, 10);
+                      setEditingMonth({ ...editingMonth, callsCancelled: numValue });
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    maxWidth: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: isMobile ? '16px' : '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {/* No-Shows */}
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                  No-Shows (optional)
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={editingMonth.callsNoShows ?? ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d+$/.test(value)) {
+                      const numValue = value === '' ? undefined : parseInt(value, 10);
+                      setEditingMonth({ ...editingMonth, callsNoShows: numValue });
+                    }
+                  }}
+                  placeholder="Inferred if empty"
                   style={{
                     width: '100%',
                     maxWidth: '100%',
@@ -1292,11 +1529,11 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 
                 return (
                   <>
-                    {/* Closes */}
+                    {/* Bookings (Qty) */}
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                         <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
-                          Closes
+                          Bookings (Qty)
                         </label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <input
@@ -1346,7 +1583,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                       />
                     </div>
 
-                    {/* Bookings */}
+                    {/* Bookings ($) */}
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                         <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
@@ -1464,7 +1701,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 <>
                   <div>
                     <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
-                      Closes
+                      Bookings (Qty)
                     </label>
                     <input
                       type="text"
@@ -1603,6 +1840,10 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
               // These should be managed manually by the user since they can be very custom/nuanced
               // We only import funnel data (inquiries and closes count)
 
+              if (result.funnelEvents.length > 0 && effectiveUserId) {
+                await UnifiedDataService.createFunnelEvents(effectiveUserId, result.funnelEvents);
+              }
+
               // Import funnel data (merge with existing data)
               if (dataManager && dataManager.funnelData) {
                 for (const newFunnelData of result.funnelData) {
@@ -1624,7 +1865,8 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                   }
                 }
               } else if (user?.id) {
-                const existingFunnelData = await UnifiedDataService.getAllFunnelData(user.id);
+                if (!effectiveUserId) return;
+                const existingFunnelData = await UnifiedDataService.getAllFunnelData(effectiveUserId);
                 for (const newFunnelData of result.funnelData) {
                   const existing = existingFunnelData.find(
                     f => f.year === newFunnelData.year && f.month === newFunnelData.month
@@ -1637,9 +1879,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                       closes: newFunnelData.closes > 0 ? newFunnelData.closes : existing.closes,
                       bookings: newFunnelData.bookings > 0 ? newFunnelData.bookings : existing.bookings,
                     };
-                    await UnifiedDataService.saveFunnelData(user.id, merged);
+                    await UnifiedDataService.saveFunnelData(effectiveUserId, merged);
                   } else {
-                    await UnifiedDataService.saveFunnelData(user.id, newFunnelData);
+                    await UnifiedDataService.saveFunnelData(effectiveUserId, newFunnelData);
                   }
                 }
               }
@@ -1662,8 +1904,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
           }}
           existingServiceTypes={serviceTypes}
           existingLeadSources={leadSources}
-          userId={user.id}
+          userId={effectiveUserId || user.id}
           pageType="funnel"
+          crmType={funnelUser?.crm === 'dubsado' ? 'dubsado' : 'honeybook'}
         />
       )}
     </div>

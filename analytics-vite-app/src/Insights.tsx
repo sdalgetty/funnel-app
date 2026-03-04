@@ -8,6 +8,7 @@ import type { FunnelData, Booking, Payment, ServiceType, AdCampaign, LeadSource 
 import { Users, Phone, CheckCircle, DollarSign, TrendingUp, Target, BarChart3, Plus, ArrowRight, Clock, Calendar, ChevronDown } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { UnifiedDataService } from './services/unifiedDataService'
+import { InfoTooltip } from './components/InfoTooltip'
 import { logger } from './utils/logger'
 
 type TimeRange = {
@@ -916,8 +917,36 @@ export default function Insights({ dataManager }: { dataManager: any }) {
               isMobile={isMobile}
             />
             <Cards columns={2}>
-              <Card icon={<Clock size={20} color="#ec4899" />} label="Time from Inquiry to Booking" value={bookingTimeMetrics.avgDaysInquiryToBooking !== null ? `${bookingTimeMetrics.avgDaysInquiryToBooking} days` : 'N/A'} sub="Average days" compact valueFontSize={18} />
-              <Card icon={<Calendar size={20} color="#14b8a6" />} label="Time from Booking to Wedding" value={bookingTimeMetrics.avgMonthsBookingToWedding !== null ? `${bookingTimeMetrics.avgMonthsBookingToWedding} months` : 'N/A'} sub="Average months" compact valueFontSize={18} />
+              <Card
+                icon={<Clock size={20} color="#ec4899" />}
+                label={
+                  <>
+                    Time from Inquiry to Booking
+                    <InfoTooltip
+                      content="The average time between an inquiry and a signed booking, based on bookings tracked in your Funnel."
+                    />
+                  </>
+                }
+                value={bookingTimeMetrics.avgDaysInquiryToBooking !== null ? `${bookingTimeMetrics.avgDaysInquiryToBooking} days` : 'N/A'}
+                sub="Average days"
+                compact
+                valueFontSize={18}
+              />
+              <Card
+                icon={<Calendar size={20} color="#14b8a6" />}
+                label={
+                  <>
+                    Time from Booking to Event Date
+                    <InfoTooltip
+                      content="The average time between a signed booking and the event date, based on bookings tracked in your Funnel."
+                    />
+                  </>
+                }
+                value={bookingTimeMetrics.avgMonthsBookingToWedding !== null ? `${bookingTimeMetrics.avgMonthsBookingToWedding} months` : 'N/A'}
+                sub="Average months"
+                compact
+                valueFontSize={18}
+              />
             </Cards>
           </div>
         ) : (
@@ -978,10 +1007,40 @@ export default function Insights({ dataManager }: { dataManager: any }) {
                 }}
               >
                 <div style={{ minHeight: 0 }}>
-                  <Card icon={<Clock size={20} color="#ec4899" />} label="Time from Inquiry to Booking" value={bookingTimeMetrics.avgDaysInquiryToBooking !== null ? `${bookingTimeMetrics.avgDaysInquiryToBooking} days` : 'N/A'} sub="Average days" compact valueFontSize={18} style={{ height: '100%', boxSizing: 'border-box' }} />
+                  <Card
+                    icon={<Clock size={20} color="#ec4899" />}
+                    label={
+                      <>
+                        Time from Inquiry to Booking
+                        <InfoTooltip
+                          content="The average time between an inquiry and a signed booking, based on bookings tracked in your Funnel."
+                        />
+                      </>
+                    }
+                    value={bookingTimeMetrics.avgDaysInquiryToBooking !== null ? `${bookingTimeMetrics.avgDaysInquiryToBooking} days` : 'N/A'}
+                    sub="Average days"
+                    compact
+                    valueFontSize={18}
+                    style={{ height: '100%', boxSizing: 'border-box' }}
+                  />
                 </div>
                 <div style={{ minHeight: 0 }}>
-                  <Card icon={<Calendar size={20} color="#14b8a6" />} label="Time from Booking to Wedding" value={bookingTimeMetrics.avgMonthsBookingToWedding !== null ? `${bookingTimeMetrics.avgMonthsBookingToWedding} months` : 'N/A'} sub="Average months" compact valueFontSize={18} style={{ height: '100%', boxSizing: 'border-box' }} />
+                  <Card
+                    icon={<Calendar size={20} color="#14b8a6" />}
+                    label={
+                      <>
+                        Time from Booking to Event Date
+                        <InfoTooltip
+                          content="The average time between a signed booking and the event date, based on bookings tracked in your Funnel."
+                        />
+                      </>
+                    }
+                    value={bookingTimeMetrics.avgMonthsBookingToWedding !== null ? `${bookingTimeMetrics.avgMonthsBookingToWedding} months` : 'N/A'}
+                    sub="Average months"
+                    compact
+                    valueFontSize={18}
+                    style={{ height: '100%', boxSizing: 'border-box' }}
+                  />
                 </div>
               </div>
             </div>
@@ -992,12 +1051,15 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       {/* Forecast sections removed - keeping code for potential future Tools page */}
 
       {/* LEAD SOURCE METRICS */}
-      <Section title="Lead Source Metrics">
+      <Section
+        title="Lead Source Metrics"
+        titleTooltip="Shows how bookings perform across your lead sources, including total contract value, average booking value, and booking volume."
+      >
         {/* Pie Chart Visualizations */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: isMobile ? 12 : 16, marginBottom: isMobile ? 12 : 16 }}>
             {/* Revenue by Lead Source Pie Chart */}
             <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 16 : 24 }}>
-              <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Total Booked Revenue by Lead Source</h3>
+              <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Total Bookings ($) by Lead Source</h3>
               {leadSourceBreakdown.items.length === 0 ? (
                 <p style={{ fontSize: 13, color: '#6b7280' }}>
                   No lead source data exists for the selected time range. You can either adjust the time range or add new sales data.
@@ -1020,27 +1082,9 @@ export default function Insights({ dataManager }: { dataManager: any }) {
               )}
             </div>
 
-            {/* Bookings by Lead Source Pie Chart */}
-            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 16 : 24 }}>
-              <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Number of Bookings by Lead Source</h3>
-              {leadSourceBreakdown.items.length === 0 ? (
-                <p style={{ fontSize: 13, color: '#6b7280' }}>
-                  No lead source data exists for the selected time range. You can either adjust the time range or add new sales data.
-                </p>
-              ) : (
-                <LeadSourcePieChart
-                  data={leadSourceBreakdown.byCountDesc}
-                  isMobile={isMobile}
-                  toUSD={toUSD}
-                  formatNumber={formatNumber}
-                  getColor={getLeadSourceColor}
-                />
-              )}
-            </div>
-
             {/* Average Booking by Lead Source Bar Chart */}
             <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 16 : 24 }}>
-              <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Average Booking Amount by Lead Source</h3>
+              <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Average Bookings ($) by Lead Source</h3>
               {leadSourceBreakdown.items.length === 0 ? (
                 <p style={{ fontSize: 13, color: '#6b7280' }}>
                   No lead source data exists for the selected time range. You can either adjust the time range or add new sales data.
@@ -1066,15 +1110,36 @@ export default function Insights({ dataManager }: { dataManager: any }) {
                 </div>
               )}
             </div>
+
+            {/* Bookings by Lead Source Pie Chart */}
+            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 16 : 24 }}>
+              <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Bookings (Qty) by Lead Source</h3>
+              {leadSourceBreakdown.items.length === 0 ? (
+                <p style={{ fontSize: 13, color: '#6b7280' }}>
+                  No lead source data exists for the selected time range. You can either adjust the time range or add new sales data.
+                </p>
+              ) : (
+                <LeadSourcePieChart
+                  data={leadSourceBreakdown.byCountDesc}
+                  isMobile={isMobile}
+                  toUSD={toUSD}
+                  formatNumber={formatNumber}
+                  getColor={getLeadSourceColor}
+                />
+              )}
+            </div>
           </div>
       </Section>
 
       {/* SERVICE TYPE METRICS */}
-      <Section title="Service Type Metrics">
+      <Section
+        title="Service Type Metrics"
+        titleTooltip="Shows how bookings perform across your different service types, including total contract value, average booking value, and booking volume."
+      >
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: isMobile ? 12 : 16 }}>
-          {/* Total Booked Revenue by Service Type Pie Chart */}
+          {/* Total Bookings ($) by Service Type Pie Chart */}
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 16 : 24 }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Total Booked Revenue by Service Type</h3>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Total Bookings ($) by Service Type</h3>
             {serviceTypeBreakdown.items.length === 0 ? (
               <p style={{ fontSize: 13, color: '#6b7280' }}>
                 No service type data exists for the selected time range. You can either adjust the time range or add new sales data.
@@ -1097,27 +1162,9 @@ export default function Insights({ dataManager }: { dataManager: any }) {
             )}
           </div>
 
-          {/* Number of Bookings by Service Type Pie Chart */}
-          <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 16 : 24 }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Number of Bookings by Service Type</h3>
-            {serviceTypeBreakdown.items.length === 0 ? (
-              <p style={{ fontSize: 13, color: '#6b7280' }}>
-                No service type data exists for the selected time range. You can either adjust the time range or add new sales data.
-              </p>
-            ) : (
-              <LeadSourcePieChart
-                data={serviceTypeBreakdown.byCountDesc}
-                isMobile={isMobile}
-                toUSD={toUSD}
-                formatNumber={formatNumber}
-                getColor={getServiceTypeColor}
-              />
-            )}
-          </div>
-
           {/* Average Booking Amount by Service Type Bar Chart */}
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 16 : 24 }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Average Booking Amount by Service Type</h3>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Average Bookings ($) by Service Type</h3>
             {serviceTypeBreakdown.items.length === 0 ? (
               <p style={{ fontSize: 13, color: '#6b7280' }}>
                 No service type data exists for the selected time range. You can either adjust the time range or add new sales data.
@@ -1143,6 +1190,24 @@ export default function Insights({ dataManager }: { dataManager: any }) {
               </div>
             )}
           </div>
+
+          {/* Bookings (Qty) by Service Type Pie Chart */}
+          <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 16 : 24 }}>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Bookings (Qty) by Service Type</h3>
+            {serviceTypeBreakdown.items.length === 0 ? (
+              <p style={{ fontSize: 13, color: '#6b7280' }}>
+                No service type data exists for the selected time range. You can either adjust the time range or add new sales data.
+              </p>
+            ) : (
+              <LeadSourcePieChart
+                data={serviceTypeBreakdown.byCountDesc}
+                isMobile={isMobile}
+                toUSD={toUSD}
+                formatNumber={formatNumber}
+                getColor={getServiceTypeColor}
+              />
+            )}
+          </div>
         </div>
       </Section>
 
@@ -1150,11 +1215,56 @@ export default function Insights({ dataManager }: { dataManager: any }) {
       {user?.adsTrackingEnabled && (
         <Section title="Advertising Performance Metrics">
           <Cards columns={2} desktopColumns={5}>
-            <Card icon={<Users size={20} color="#06b6d4" />} label="Total Ad Leads" value={formatNumber(advertisingTotals.totalAdLeads)} />
-            <Card icon={<DollarSign size={20} color="#3b82f6" />} label="Total Ad Spend" value={toUSD(advertisingTotals.totalAdSpend)} />
-            <Card icon={<TrendingUp size={20} color="#10b981" />} label="Total Booked from Ads" value={toUSD(advertisingTotals.totalBookedFromAds)} />
-            <Card icon={<BarChart3 size={20} color="#f59e0b" />} label="Ad Spend ROI" value={advertisingTotals.overallROI !== null ? advertisingTotals.overallROI.toFixed(2) : 'N/A'} />
-            <Card icon={<Target size={20} color="#8b5cf6" />} label="Cost Per Close" value={toUSD(advertisingTotals.costPerClose)} />
+            <Card
+              icon={<Users size={20} color="#06b6d4" />}
+              label={
+                <>
+                  Total Ad Leads
+                  <InfoTooltip content="The total number of inquiries generated from advertising during the selected time period." />
+                </>
+              }
+              value={formatNumber(advertisingTotals.totalAdLeads)}
+            />
+            <Card
+              icon={<DollarSign size={20} color="#3b82f6" />}
+              label={
+                <>
+                  Total Ad Spend
+                  <InfoTooltip content="The total amount spent on advertising during the selected time period." />
+                </>
+              }
+              value={toUSD(advertisingTotals.totalAdSpend)}
+            />
+            <Card
+              icon={<TrendingUp size={20} color="#10b981" />}
+              label={
+                <>
+                  Bookings ($) from Ads
+                  <InfoTooltip content="The total contract value of bookings that originated from advertising leads." />
+                </>
+              }
+              value={toUSD(advertisingTotals.totalBookedFromAds)}
+            />
+            <Card
+              icon={<BarChart3 size={20} color="#f59e0b" />}
+              label={
+                <>
+                  Ad Spend ROI
+                  <InfoTooltip content="The ratio of booked revenue generated from ads compared to total ad spend." />
+                </>
+              }
+              value={advertisingTotals.overallROI !== null ? advertisingTotals.overallROI.toFixed(2) : 'N/A'}
+            />
+            <Card
+              icon={<Target size={20} color="#8b5cf6" />}
+              label={
+                <>
+                  Cost Per Booking
+                  <InfoTooltip content="The average advertising cost required to generate one booking." />
+                </>
+              }
+              value={toUSD(advertisingTotals.costPerClose)}
+            />
           </Cards>
         </Section>
       )}
@@ -1304,15 +1414,20 @@ function SalesMetricsCard({
   isMobile: boolean
 }) {
   const items = [
-    { label: 'Closes', value: formatNumber(closes) },
-    { label: 'Bookings', value: toUSD(bookings) },
+    { label: 'Bookings (Qty)', value: formatNumber(closes) },
+    { label: 'Bookings ($)', value: toUSD(bookings) },
     { label: 'Cash', value: toUSD(cash) },
   ]
   return (
     <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <DollarSign size={20} color="#10b981" />
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Sales Performance</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937', display: 'flex', alignItems: 'center' }}>
+          Sales Performance
+          <InfoTooltip
+            content="Summarizes your sales results for the selected time period, including booking quantity, total contract value, and payments received."
+          />
+        </h3>
       </div>
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap' }}>
         {items.map(({ label, value }, index) => (
@@ -1353,7 +1468,12 @@ function InquiriesCard({
     <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <Users size={20} color="#3b82f6" />
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Inquiries</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937', display: 'flex', alignItems: 'center' }}>
+          Inquiries
+          <InfoTooltip
+            content="Shows the total number of new inquiries during the selected time period, along with how many were for dates you were available."
+          />
+        </h3>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div>
@@ -1395,7 +1515,12 @@ function CallPerformanceCard({
     <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <Phone size={20} color="#10b981" />
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Call Performance</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937', display: 'flex', alignItems: 'center' }}>
+          Call Performance
+          <InfoTooltip
+            content="Tracks how scheduled calls progressed during the selected time period, including calls booked, calls taken, show-up rate, cancellations, and no-shows."
+          />
+        </h3>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <div style={{ marginBottom: 24 }}>
@@ -1429,14 +1554,19 @@ function ConversionRatesCard({
 }) {
   const items = [
     { label: 'Inquiry to Call Taken %', value: `${inquiryToTaken}%` },
-    { label: 'Call Taken to Close %', value: `${takenToClose}%` },
-    { label: 'Inquiry to Close %', value: `${inquiryToClose}%` },
+    { label: 'Call to Booking Rate %', value: `${takenToClose}%` },
+    { label: 'Inquiry to Booking Rate %', value: `${inquiryToClose}%` },
   ]
   return (
     <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24, boxSizing: 'border-box', ...styleProp }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <CheckCircle size={20} color="#ef4444" />
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>Conversion Rates</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937', display: 'flex', alignItems: 'center' }}>
+          Conversion Rates
+          <InfoTooltip
+            content="Shows how inquiries convert through your sales process, including the percentage that become calls and the percentage that become bookings."
+          />
+        </h3>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {items.map(({ label, value }, index) => (
@@ -1597,7 +1727,7 @@ function OperationalTimeRangeSelector({
   )
 }
 
-function Section({ title, actions, children }: { title: string; actions?: React.ReactNode; children: React.ReactNode }) {
+function Section({ title, titleTooltip, actions, children }: { title: string; titleTooltip?: string; actions?: React.ReactNode; children: React.ReactNode }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   
   useEffect(() => {
@@ -1621,7 +1751,10 @@ function Section({ title, actions, children }: { title: string; actions?: React.
         gap: 12,
         flexWrap: isMobile ? 'wrap' : 'nowrap'
       }}>
-        <h2 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 600, margin: 0, color: '#1f2937', textAlign: 'left' }}>{title}</h2>
+        <h2 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 600, margin: 0, color: '#1f2937', textAlign: 'left', display: 'flex', alignItems: 'center' }}>
+          {title}
+          {titleTooltip ? <InfoTooltip content={titleTooltip} /> : null}
+        </h2>
         {actions ? (
           <div style={{ flexShrink: 0 }}>{actions}</div>
         ) : null}
@@ -1672,12 +1805,12 @@ function Cards({ children, columns = 4, desktopColumns, mobileColumns }: { child
   )
 }
 
-function Card({ icon, label, value, sub, compact, style: styleProp, valueFontSize }: { icon: React.ReactNode; label: string; value: string | number; sub?: React.ReactNode; compact?: boolean; style?: React.CSSProperties; valueFontSize?: number }) {
+function Card({ icon, label, value, sub, compact, style: styleProp, valueFontSize }: { icon: React.ReactNode; label: React.ReactNode; value: string | number; sub?: React.ReactNode; compact?: boolean; style?: React.CSSProperties; valueFontSize?: number }) {
   return (
     <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: compact ? 16 : 20, ...styleProp }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
         {icon}
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{label}</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937', display: 'flex', alignItems: 'flex-start' }}>{label}</h3>
       </div>
       <div style={{ fontSize: valueFontSize ?? 20, fontWeight: 700, color: '#1f2937' }}>{value}</div>
       {sub && <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>{sub}</div>}
@@ -2076,19 +2209,21 @@ function AnnualizedPace({
       width: '100%',
       boxSizing: 'border-box'
     }}>
-      <div style={{ marginBottom: '8px' }}>
+      <div style={{ marginBottom: '16px' }}>
         <h3 style={{ 
           fontSize: isMobile ? '16px' : '18px', 
           fontWeight: '600', 
           margin: 0, 
-          color: '#1f2937' 
+          color: '#1f2937',
+          display: 'flex',
+          alignItems: 'center'
         }}>
           Sales Activity Pace for {yearLabel}
+          <InfoTooltip
+            content="This section estimates your full-year pace for Inquiries, Calls, and Bookings (Qty). It combines your year-to-date results with the past 3 months of activity to project where you're trending."
+          />
         </h3>
       </div>
-      <p style={{ margin: '4px 0 16px 0', fontSize: 12, color: '#6b7280', lineHeight: 1.6 }}>
-        YTD total plus projected for remaining months based on your rate over the last 3 complete months.
-      </p>
 
       <Cards columns={2} desktopColumns={2} mobileColumns={1}>
         <Card
@@ -2104,7 +2239,7 @@ function AnnualizedPace({
         <div style={{ gridColumn: '1 / -1' }}>
           <Card
             icon={<CheckCircle size={20} color="#ef4444" />}
-            label="Bookings Pace"
+            label="Bookings (Qty) Pace"
             value={formatNumber(calculations.paceBookings)}
             sub={calculations.isOnTrack ? (
               <span style={{ color: '#065f46' }}>✓ On track</span>
@@ -2246,7 +2381,7 @@ function GoalVisualization({
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (percentage / 100) * circumference;
     const displayPercentage = Math.min(percentage, 100);
-    const formattedPercent = (Math.round(displayPercentage * 10) / 10).toFixed(1);
+    const formattedPercent = Math.round(displayPercentage).toString();
 
     return (
       <div style={{ position: 'relative', width: size, height: size }}>
@@ -2292,9 +2427,14 @@ function GoalVisualization({
         fontSize: isMobile ? '18px' : '20px',
         fontWeight: '600',
         margin: '0 0 12px 0',
-        color: '#1f2937'
+        color: '#1f2937',
+        display: 'flex',
+        alignItems: 'center'
       }}>
         {currentYear} Goal Tracker
+        <InfoTooltip
+          content="Tracks your progress toward your annual Bookings ($) and Cash goals, showing what you've achieved so far, what remains, and whether you're on track for the year."
+        />
       </h3>
 
       {hasBoth && (
@@ -2391,9 +2531,14 @@ function GoalEmptyState({ onSetGoals, isMobile }: { onSetGoals: () => void; isMo
         fontSize: isMobile ? '16px' : '18px', 
         fontWeight: '600', 
         margin: '0 0 12px 0', 
-        color: '#1f2937' 
+        color: '#1f2937',
+        display: 'flex',
+        alignItems: 'center'
       }}>
         Goal Tracker
+        <InfoTooltip
+          content="Tracks your progress toward your annual Bookings ($) and Cash goals, showing what you've achieved so far, what remains, and whether you're on track for the year."
+        />
       </h3>
       <p style={{ margin: '0 0 20px 0', fontSize: isMobile ? '14px' : '16px', color: '#6b7280' }}>
         No goals have been set. Add your bookings and cash goals for the year to track your progress.

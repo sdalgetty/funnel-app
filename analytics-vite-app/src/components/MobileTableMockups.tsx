@@ -451,11 +451,11 @@ export function OptionB_FullDataCards() {
                 <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{month.callsTaken}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '14px', color: '#6b7280' }}>Closes</span>
+                <span style={{ fontSize: '14px', color: '#6b7280' }}>Bookings (Qty)</span>
                 <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{month.closes}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '14px', color: '#6b7280' }}>Bookings</span>
+                <span style={{ fontSize: '14px', color: '#6b7280' }}>Bookings ($)</span>
                 <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>{month.bookings}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
@@ -1009,7 +1009,7 @@ export function OptionB_FullDataCards() {
               
               <div>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                  Closes
+                  Bookings (Qty)
                 </label>
                 <input
                   type="number"
@@ -1433,11 +1433,11 @@ export function OptionC_SummaryWithModal() {
                 <span style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>{selectedMonth.callsTaken}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid #e5e7eb' }}>
-                <span style={{ fontSize: '14px', color: '#6b7280' }}>Closes</span>
+                <span style={{ fontSize: '14px', color: '#6b7280' }}>Bookings (Qty)</span>
                 <span style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>{selectedMonth.closes}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid #e5e7eb' }}>
-                <span style={{ fontSize: '14px', color: '#6b7280' }}>Bookings</span>
+                <span style={{ fontSize: '14px', color: '#6b7280' }}>Bookings ($)</span>
                 <span style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>{selectedMonth.bookings}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px' }}>

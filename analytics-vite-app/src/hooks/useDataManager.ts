@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { UnifiedDataService } from '../services/unifiedDataService';
 import { AdminService } from '../services/adminService';
-import type { FunnelData, Booking, Payment, ServiceType, LeadSource, AdCampaign, ForecastModel, DataManager } from '../types';
+import type { FunnelData, FunnelEvent, Booking, Payment, ServiceType, LeadSource, AdCampaign, ForecastModel, DataManager } from '../types';
 import { logger } from '../utils/logger';
 
 export function useDataManager(): DataManager {
@@ -12,6 +12,7 @@ export function useDataManager(): DataManager {
 
   // Data state
   const [funnelData, setFunnelData] = useState<FunnelData[]>([]);
+  const [funnelEvents, setFunnelEvents] = useState<FunnelEvent[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
@@ -35,8 +36,9 @@ export function useDataManager(): DataManager {
     try {
       logger.debug('Loading all data for user', { userId, isViewOnly });
       
-      const [funnelDataResult, bookingsResult, paymentsResult, serviceTypesResult, leadSourcesResult, adCampaignsResult, forecastModelsResult] = await Promise.all([
+      const [funnelDataResult, funnelEventsResult, bookingsResult, paymentsResult, serviceTypesResult, leadSourcesResult, adCampaignsResult, forecastModelsResult] = await Promise.all([
         UnifiedDataService.getAllFunnelData(userId),
+        UnifiedDataService.getFunnelEvents(userId),
         UnifiedDataService.getBookings(userId),
         UnifiedDataService.getPayments(userId),
         UnifiedDataService.getServiceTypes(userId),
@@ -47,6 +49,7 @@ export function useDataManager(): DataManager {
 
       logger.debug('All data loaded successfully', {
         funnelData: funnelDataResult.length,
+        funnelEvents: funnelEventsResult.length,
         bookings: bookingsResult.length,
         payments: paymentsResult.length,
         serviceTypes: serviceTypesResult.length,
@@ -56,6 +59,7 @@ export function useDataManager(): DataManager {
       });
 
       setFunnelData(funnelDataResult);
+      setFunnelEvents(funnelEventsResult);
       setBookings(bookingsResult);
       setPayments(paymentsResult);
       setServiceTypes(serviceTypesResult);
@@ -493,6 +497,7 @@ export function useDataManager(): DataManager {
     loading,
     error,
     funnelData,
+    funnelEvents,
     bookings,
     payments,
     serviceTypes,

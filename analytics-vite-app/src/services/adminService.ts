@@ -21,7 +21,11 @@ export type UserProfile = {
   company_name: string | null;
   phone: string | null;
   website: string | null;
+  crm?: string | null;
+  crm_other?: string | null;
+  ads_tracking_enabled?: boolean | null;
   welcome_video_watched_at?: string | null;
+  trial_ends_at?: string | null;
   subscription_tier: string;
   subscription_status: string;
   is_admin: boolean;

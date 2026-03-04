@@ -4,13 +4,14 @@
 
 import type {
   FunnelData,
+  FunnelEvent,
   Booking,
   Payment,
   ServiceType,
   LeadSource,
   AdCampaign,
   ForecastModel,
-} from './index';
+} from '../types';
 
 /**
  * Data manager interface - provides data and operations
@@ -20,6 +21,7 @@ export interface DataManager {
   loading: boolean;
   error: string | null;
   funnelData: FunnelData[];
+  funnelEvents: FunnelEvent[];
   bookings: Booking[];
   payments: Payment[];
   serviceTypes: ServiceType[];

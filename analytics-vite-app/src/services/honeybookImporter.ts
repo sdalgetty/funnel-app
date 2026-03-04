@@ -4,12 +4,13 @@
  */
 
 import { parseCSV, parseDate, parseCents, findColumn, type CSVRow } from '../utils/csvParser';
-import type { Booking, FunnelData, ServiceType, LeadSource } from '../types';
+import type { Booking, FunnelData, FunnelEvent, ServiceType, LeadSource } from '../types';
 import { logger } from '../utils/logger';
 
 export interface ImportResult {
   bookings: Booking[];
   funnelData: FunnelData[];
+  funnelEvents: FunnelEvent[];
   serviceTypes: ServiceType[];
   leadSources: LeadSource[];
   errors: string[];
@@ -33,6 +34,7 @@ export function importBookingsFromCSV(
   const result: ImportResult = {
     bookings: [],
     funnelData: [],
+    funnelEvents: [],
     serviceTypes: [...existingServiceTypes],
     leadSources: [...existingLeadSources],
     errors: [],
@@ -135,8 +137,40 @@ export function importBookingsFromCSV(
 
   // Generate funnel data from all rows (inquiries) and bookings (closes)
   result.funnelData = generateFunnelDataFromLeadsReport(rows, columnMap, result.bookings);
+  result.funnelEvents = generateFunnelEventsFromLeadsReport(rows, columnMap);
 
   return result;
+}
+
+/**
+ * Generate funnel events from Honeybook Leads report
+ * Each row is an inquiry (Lead Created Date)
+ */
+export function generateFunnelEventsFromLeadsReport(
+  rows: CSVRow[],
+  columnMap: any,
+): FunnelEvent[] {
+  const events: FunnelEvent[] = [];
+
+  rows.forEach((row, index) => {
+    const dateInquired = columnMap.dateInquired 
+      ? parseDate(row[columnMap.dateInquired]) 
+      : null;
+    
+    if (!dateInquired) return;
+
+    const sourceId = `honeybook:${index + 1}`;
+    events.push({
+      id: `imported-honeybook-${index + 1}`,
+      metric: 'inquiries',
+      value: 1,
+      eventDate: dateInquired,
+      source: 'honeybook',
+      sourceId,
+    });
+  });
+
+  return events;
 }
 
 /**
@@ -212,7 +246,9 @@ export function generateFunnelDataFromLeadsReport(
       month: data.month,
       inquiries: data.inquiries,
       inquiriesYtd: 0, // Will be calculated after all months are imported
+      confirmedAvailable: 0,
       callsBooked: 0,
+      callsCancelled: 0,
       callsTaken: 0,
       callsYtd: 0,
       inquiryToCall: 0,

@@ -272,7 +272,7 @@ const ServiceTypesModal: React.FC<ServiceTypesModalProps> = ({
           textAlign: 'left'
         }}>
           <div style={{ marginBottom: '8px' }}>
-            <strong>Track in Funnel:</strong> Service Types marked as "Track in Funnel" will be included in your Funnel calculation for Closes.
+            <strong>Track in Funnel:</strong> Service Types marked as "Track in Funnel" will be included in your Funnel calculation for Bookings (Qty).
           </div>
           <div>
             <strong>Delete:</strong> Deleting a service type will remove it from any existing bookings that use it.

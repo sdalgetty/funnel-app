@@ -117,11 +117,14 @@ export function parseDate(dateString: string): string | null {
     return null;
   }
   
+  const trimmed = dateString.trim()
+
   // Try to parse various date formats
   const formats = [
     /^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD
     /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC$/, // YYYY-MM-DD HH:MM:SS UTC (Honeybook Booked Client format)
     /^\d{2}\/\d{2}\/\d{4}$/, // MM/DD/YYYY
+    /^\d{1,2}\/\d{1,2}\/\d{4} \d{1,2}:\d{2}:\d{2}$/, // M/D/YYYY HH:MM:SS (Dubsado Leads)
     /^\d{2}-\d{2}-\d{4}$/, // MM-DD-YYYY
     /^\d{4}\/\d{2}\/\d{2}$/, // YYYY/MM/DD
     /^[A-Za-z]{3} \d{1,2}, \d{4}$/, // MMM DD, YYYY (Honeybook Leads format)
@@ -130,30 +133,43 @@ export function parseDate(dateString: string): string | null {
   let date: Date | null = null;
   
   // Try ISO format first
-  if (formats[0].test(dateString)) {
-    date = new Date(dateString);
-  } else if (formats[1].test(dateString)) {
+  if (formats[0].test(trimmed)) {
+    date = new Date(trimmed);
+  } else if (formats[1].test(trimmed)) {
     // YYYY-MM-DD HH:MM:SS UTC (Honeybook Booked Client format)
     // Remove " UTC" and parse
-    date = new Date(dateString.replace(' UTC', ''));
-  } else if (formats[2].test(dateString)) {
+    date = new Date(trimmed.replace(' UTC', ''));
+  } else if (formats[2].test(trimmed)) {
     // MM/DD/YYYY
-    const [month, day, year] = dateString.split('/');
+    const [month, day, year] = trimmed.split('/');
     date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
-  } else if (formats[3].test(dateString)) {
+  } else if (formats[3].test(trimmed)) {
+    // M/D/YYYY HH:MM:SS (Dubsado Leads format)
+    const [datePart] = trimmed.split(' ')
+    const [month, day, year] = datePart.split('/')
+    date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`)
+  } else if (formats[4].test(trimmed)) {
     // MM-DD-YYYY
-    const [month, day, year] = dateString.split('-');
+    const [month, day, year] = trimmed.split('-');
     date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
-  } else if (formats[4].test(dateString)) {
+  } else if (formats[5].test(trimmed)) {
     // YYYY/MM/DD
-    date = new Date(dateString.replace(/\//g, '-'));
-  } else if (formats[5].test(dateString)) {
+    date = new Date(trimmed.replace(/\//g, '-'));
+  } else if (formats[6].test(trimmed)) {
     // MMM DD, YYYY (Honeybook Leads format: "Jun 30, 2025")
     // Native Date parsing handles this format well
-    date = new Date(dateString);
+    date = new Date(trimmed);
   } else {
-    // Try native Date parsing as fallback
-    date = new Date(dateString);
+    // Try extracting a MM/DD/YYYY date from strings with time or extra text
+    const match = trimmed.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+    if (match) {
+      const [month, day, year] = match[1].split('/');
+      date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+    } else {
+      // Remove leading weekday if present (e.g. "Saturday, August 27, 2022, 12:00:00 AM")
+      const weekdayStripped = trimmed.replace(/^[A-Za-z]+,\s+/, '');
+      date = new Date(weekdayStripped);
+    }
   }
   
   if (date && !isNaN(date.getTime())) {
@@ -167,18 +183,33 @@ export function parseDate(dateString: string): string | null {
  * Find the best matching column name (case-insensitive, partial match)
  */
 export function findColumn(headers: string[], searchTerms: string[]): string | null {
-  const lowerHeaders = headers.map(h => h.toLowerCase().trim());
+  const normalize = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/\u00a0/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const normalizedHeaders = headers.map(h => normalize(h));
   
   for (const term of searchTerms) {
-    const lowerTerm = term.toLowerCase().trim();
+    const normalizedTerm = normalize(term);
     
     // Exact match
-    const exactIndex = lowerHeaders.indexOf(lowerTerm);
-    if (exactIndex !== -1) return headers[exactIndex];
+    const exactIndex = normalizedHeaders.indexOf(normalizedTerm);
+    if (exactIndex !== -1) return headers[exactIndex].trim();
     
     // Partial match (contains)
-    const partialIndex = lowerHeaders.findIndex(h => h.includes(lowerTerm) || lowerTerm.includes(h));
-    if (partialIndex !== -1) return headers[partialIndex];
+    const candidateIndices = normalizedHeaders
+      .map((header, index) => ({ header, index }))
+      .filter(({ header }) => header.includes(normalizedTerm) || normalizedTerm.includes(header));
+
+    if (candidateIndices.length > 0) {
+      const bestMatch = candidateIndices.reduce((best, current) =>
+        current.header.length > best.header.length ? current : best
+      );
+      return headers[bestMatch.index].trim();
+    }
   }
   
   return null;
