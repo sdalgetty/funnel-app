@@ -103,7 +103,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const lastActivityTime = useRef<number>(Date.now())
 
   // Helper function to build combined user from auth user and profile data
-  const buildCombinedUser = async (authUser: SupabaseUser, profileData: { first_name: string | null; last_name: string | null; full_name: string | null; company_name: string | null; phone: string | null; website: string | null; crm: string | null; crm_other: string | null; ads_tracking_enabled: boolean | null; ads_setup_completed?: boolean | null; welcome_video_watched_at?: string | null; subscription_tier: string; subscription_status: string; trial_ends_at: string | null }): Promise<AuthUser> => {
+  const buildCombinedUser = async (authUser: SupabaseUser, profileData: { first_name: string | null; last_name: string | null; full_name: string | null; company_name: string | null; phone: string | null; website: string | null; crm: string | null; crm_other: string | null; ads_tracking_enabled: boolean | null; ads_setup_completed?: boolean | null; welcome_video_watched_at?: string | null; onboarding_completed?: boolean | null; onboarding_step?: number | null; onboarding_completed_at?: string | null; subscription_tier: string; subscription_status: string; trial_ends_at: string | null }): Promise<AuthUser> => {
     // Explicitly check for null/undefined to avoid falling back to email when name is intentionally empty
     const firstName = profileData.first_name !== null && profileData.first_name !== undefined 
       ? profileData.first_name 
@@ -137,6 +137,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       adsTrackingEnabled: profileData.ads_tracking_enabled === true,
       adsSetupCompleted: profileData.ads_setup_completed === true,
       welcomeVideoWatchedAt: profileData.welcome_video_watched_at ? new Date(profileData.welcome_video_watched_at) : null,
+      // Treat undefined/null as completed for backward compatibility (existing users before migration)
+      onboardingCompleted: profileData.onboarding_completed !== false,
+      onboardingStep: profileData.onboarding_step ?? 0,
+      onboardingCompletedAt: profileData.onboarding_completed_at ? new Date(profileData.onboarding_completed_at) : null,
       subscriptionTier: (profileData.subscription_tier as SubscriptionTier) || 'pro',
       subscriptionStatus: (profileData.subscription_status as SubscriptionStatus) || 'active',
       createdAt: new Date(authUser.created_at),
@@ -199,7 +203,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             last_name: null,
             company_name: null,
             subscription_tier: 'pro',
-            subscription_status: 'active'
+            subscription_status: 'active',
+            onboarding_completed: false,
+            onboarding_step: 0
           })
           .select()
         .single();
@@ -257,6 +263,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         adsTrackingEnabled: false,
         adsSetupCompleted: false,
         welcomeVideoWatchedAt: null,
+        onboardingCompleted: false,
+        onboardingStep: 1,
+        onboardingCompletedAt: null,
         subscriptionTier: 'pro',
         subscriptionStatus: 'active',
         createdAt: new Date(authUser.created_at),
@@ -306,6 +315,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       welcomeVideoWatchedAt: impersonatingUser.welcome_video_watched_at
         ? new Date(impersonatingUser.welcome_video_watched_at)
         : null,
+      onboardingCompleted: impersonatingUser.onboarding_completed !== false,
+      onboardingStep: impersonatingUser.onboarding_step ?? 0,
+      onboardingCompletedAt: impersonatingUser.onboarding_completed_at ? new Date(impersonatingUser.onboarding_completed_at) : null,
       subscriptionTier: (impersonatingUser.subscription_tier as SubscriptionTier) || 'pro',
       subscriptionStatus: (impersonatingUser.subscription_status as SubscriptionStatus) || 'active',
       createdAt: impersonatingUser.created_at ? new Date(impersonatingUser.created_at) : new Date(),
@@ -669,6 +681,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 if (typeof window !== 'undefined') {
                   try {
                     localStorage.removeItem('completedTasks');
+                    sessionStorage.removeItem('onboarding_skipped');
                   } catch (storageError) {
                     logger.warn('Could not clear localStorage:', storageError);
                   }
@@ -893,6 +906,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 if (typeof window !== 'undefined') {
                   try {
                     localStorage.removeItem('completedTasks');
+                    sessionStorage.removeItem('onboarding_skipped');
                   } catch (storageError) {
                     logger.warn('Could not clear localStorage:', storageError);
                   }
@@ -1025,7 +1039,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           crm: crm || null,
           crm_other: crm === 'other' ? (crmOther || null) : null,
           subscription_tier: 'pro',
-          subscription_status: 'active'
+          subscription_status: 'active',
+          onboarding_completed: false,
+          onboarding_step: 0
         })
 
       if (profileError) {
@@ -1169,6 +1185,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           : updates.welcomeVideoWatchedAt)
         : null
     }
+    if (updates.onboardingCompleted !== undefined) dbUpdates.onboarding_completed = updates.onboardingCompleted || false
+    if (updates.onboardingStep !== undefined) dbUpdates.onboarding_step = updates.onboardingStep
+    if (updates.onboardingCompletedAt !== undefined) {
+      dbUpdates.onboarding_completed_at = updates.onboardingCompletedAt
+        ? (updates.onboardingCompletedAt instanceof Date
+          ? updates.onboardingCompletedAt.toISOString()
+          : updates.onboardingCompletedAt)
+        : null
+    }
 
       logger.debug('Updating user profile', { userId: targetUserId, updates: dbUpdates });
 
@@ -1186,6 +1211,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         ads_tracking_enabled: boolean | null;
         ads_setup_completed?: boolean | null;
         welcome_video_watched_at?: string | null;
+        onboarding_completed?: boolean | null;
+        onboarding_step?: number | null;
+        onboarding_completed_at?: string | null;
         subscription_tier: string | null;
         subscription_status: string | null;
         created_at: string | null;
@@ -1193,7 +1221,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
 
       // Select all columns including phone/website (migration should have run)
-      const selectColumns = 'id, email, first_name, last_name, full_name, company_name, phone, website, crm, crm_other, ads_tracking_enabled, ads_setup_completed, welcome_video_watched_at, subscription_tier, subscription_status, created_at, updated_at'
+      const selectColumns = 'id, email, first_name, last_name, full_name, company_name, phone, website, crm, crm_other, ads_tracking_enabled, ads_setup_completed, welcome_video_watched_at, onboarding_completed, onboarding_step, onboarding_completed_at, subscription_tier, subscription_status, created_at, updated_at'
       
       const updateResult = await supabase
         .from('user_profiles')
@@ -1205,8 +1233,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       let data = updateResult.data as UserProfileRow | null
       let error = updateResult.error
 
-      // If update fails with column error for phone/website, retry without them
-      if (error && (updates.phone !== undefined || updates.website !== undefined || updates.welcomeVideoWatchedAt !== undefined) && (error.message?.includes('column') || error.message?.includes('phone') || error.message?.includes('website') || error.message?.includes('welcome_video_watched_at') || error.code === '42703' || error.code === 'PGRST116')) {
+      // If update fails with column error for new fields, retry without them
+      if (error && (updates.phone !== undefined || updates.website !== undefined || updates.welcomeVideoWatchedAt !== undefined || updates.onboardingCompleted !== undefined || updates.onboardingStep !== undefined || updates.onboardingCompletedAt !== undefined) && (error.message?.includes('column') || error.message?.includes('phone') || error.message?.includes('website') || error.message?.includes('welcome_video_watched_at') || error.message?.includes('onboarding') || error.code === '42703' || error.code === 'PGRST116')) {
         logger.debug('Update failed with phone/website, retrying without them', { error });
         
         const dbUpdatesWithoutNewFields: Record<string, unknown> = {}
@@ -1269,6 +1297,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const updatedAdsTrackingEnabled = data.ads_tracking_enabled === true;
     const updatedAdsSetupCompleted = data.ads_setup_completed === true;
     const updatedWelcomeVideoWatchedAt = data.welcome_video_watched_at ? new Date(data.welcome_video_watched_at) : null;
+    const updatedOnboardingCompleted = data.onboarding_completed === true;
+    const updatedOnboardingStep = data.onboarding_step ?? profileSource.onboardingStep ?? 0;
+    const updatedOnboardingCompletedAt = data.onboarding_completed_at ? new Date(data.onboarding_completed_at) : null;
     
     // Update local state immediately with the data returned from the update
     const updatedUser = {
@@ -1284,7 +1315,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       crmOther: updatedCrmOther,
       adsTrackingEnabled: updatedAdsTrackingEnabled,
       adsSetupCompleted: updatedAdsSetupCompleted,
-      welcomeVideoWatchedAt: updatedWelcomeVideoWatchedAt
+      welcomeVideoWatchedAt: updatedWelcomeVideoWatchedAt,
+      onboardingCompleted: updatedOnboardingCompleted,
+      onboardingStep: updatedOnboardingStep,
+      onboardingCompletedAt: updatedOnboardingCompletedAt
     };
     
     logger.debug('Updating user state', {

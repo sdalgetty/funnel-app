@@ -13,6 +13,7 @@ import { UnifiedDataService } from './services/unifiedDataService'
 import './App.css'
 
 // Lazy load heavy components for code splitting
+const OnboardingWizard = lazy(() => import('./onboarding/OnboardingWizard'))
 const BookingsAndBillingsPOC = lazy(() => import('./BookingsAndBillings'))
 const Insights = lazy(() => import('./Insights'))
 const Funnel = lazy(() => import('./Funnel'))
@@ -85,6 +86,17 @@ function AppContent() {
       setCurrentPage('admin')
     }
   }, [isAdmin])
+
+  // Redirect to onboarding when user hasn't completed it (unless they skipped)
+  // Only redirect when onboardingCompleted is explicitly false - not when undefined (profile still loading)
+  useEffect(() => {
+    if (loading || !user?.id) return
+    if (window.location.pathname === '/accept-invite' || window.location.pathname === '/onboarding') return
+    const skipped = sessionStorage.getItem('onboarding_skipped') === 'true'
+    if (user.onboardingCompleted === false && !skipped) {
+      window.location.replace('/onboarding')
+    }
+  }, [user?.id, user?.onboardingCompleted, loading])
 
   // Default landing page: Goals until goals exist, then Insights
   useEffect(() => {
@@ -197,6 +209,16 @@ function AppContent() {
   const isOnAcceptInvitePath = window.location.pathname === '/accept-invite'
   if (isOnAcceptInvitePath) {
     return <AcceptInvitation />
+  }
+
+  // Show onboarding wizard if on /onboarding route and user is logged in
+  const isOnOnboardingPath = window.location.pathname === '/onboarding'
+  if (isOnOnboardingPath && user) {
+    return (
+      <Suspense fallback={<div style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>Loading...</div>}>
+        <OnboardingWizard />
+      </Suspense>
+    )
   }
 
   // Show loading spinner while checking authentication

@@ -42,3 +42,13 @@
   to = "https://app.fnnlapp.com/:splat"
   status = 301
   force = true
+
+# SPA fallback - serve index.html for client routes
+[[redirects]]
+  from = "/onboarding"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/admin"
+  to = "/index.html"
+  status = 200

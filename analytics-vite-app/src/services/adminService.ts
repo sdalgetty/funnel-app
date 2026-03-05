@@ -26,6 +26,9 @@ export type UserProfile = {
   ads_tracking_enabled?: boolean | null;
   ads_setup_completed?: boolean | null;
   welcome_video_watched_at?: string | null;
+  onboarding_completed?: boolean | null;
+  onboarding_step?: number | null;
+  onboarding_completed_at?: string | null;
   trial_ends_at?: string | null;
   subscription_tier: string;
   subscription_status: string;

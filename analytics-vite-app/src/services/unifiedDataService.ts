@@ -1843,7 +1843,21 @@ export class UnifiedDataService {
       // 9. Recreate default service types and lead sources
       await this.createDefaultDataForNewUser(userId);
 
-      // 10. Clear localStorage for task completions (if in browser environment)
+      // 10. Reset onboarding so demo feels like first-time login
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({
+          onboarding_completed: false,
+          onboarding_step: 0,
+          onboarding_completed_at: null,
+        })
+        .eq('id', userId);
+
+      if (profileError) {
+        logger.warn('Could not reset onboarding fields (column may not exist yet):', profileError);
+      }
+
+      // 11. Clear localStorage for task completions (if in browser environment)
       if (typeof window !== 'undefined') {
         try {
           // Clear completed tasks

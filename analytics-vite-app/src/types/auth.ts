@@ -25,6 +25,9 @@ export interface AuthUser {
   adsTrackingEnabled?: boolean; // If true, track ads in Funnel view instead of separate page
   adsSetupCompleted?: boolean; // If true, user has completed the advertising setup wizard
   welcomeVideoWatchedAt?: Date | null;
+  onboardingCompleted?: boolean;
+  onboardingStep?: number;
+  onboardingCompletedAt?: Date | null;
   subscriptionTier: SubscriptionTier;
   subscriptionStatus: SubscriptionStatus;
   createdAt: Date;
