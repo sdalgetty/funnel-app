@@ -2026,31 +2026,32 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '20px' }}>
-            <div style={{ minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
-                Project Name *
-              </label>
-              <input
-                type="text"
-                value={formData.projectName}
-                onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                  height: '40px'
-                }}
-                placeholder="e.g., Ashley & Devon"
-              />
-            </div>
+          {/* Project Name - full width */}
+          <div style={{ minWidth: 0 }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+              Project Name *
+            </label>
+            <input
+              type="text"
+              value={formData.projectName}
+              onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px',
+                boxSizing: 'border-box',
+                height: '40px'
+              }}
+              placeholder="e.g., Ashley & Devon"
+            />
+          </div>
 
-            <div style={{ minWidth: 0 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
-                Service Type *
+          {/* Service Type - own row */}
+          <div style={{ minWidth: 0 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+              Service Type *
                 <InfoTooltip content="Used to categorize your work (e.g., Wedding, Engagement, Family). Service Types allow you to filter Sales and analyze performance in Insights." />
               </label>
               {addingServiceType ? (
@@ -2186,14 +2187,15 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                   )}
                 </div>
               )}
-            </div>
-            
-            <div style={{ minWidth: 0 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
-                Lead Source *
-                <InfoTooltip content="Tracks where the booking came from. Lead Sources power your Funnel metrics and can also be used to track Advertising ROI." />
-              </label>
-              {addingLeadSource ? (
+          </div>
+
+          {/* Lead Source - own row */}
+          <div style={{ minWidth: 0 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+              Lead Source *
+              <InfoTooltip content="Tracks where the booking came from. Lead Sources power your Funnel metrics and can also be used to track Advertising ROI." />
+            </label>
+            {addingLeadSource ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0, flexWrap: 'wrap' }}>
                     <input
@@ -2326,8 +2328,10 @@ function AddBookingModal({ serviceTypes, leadSources, onAdd, onAddServiceType, o
                   )}
                 </div>
               )}
-            </div>
+          </div>
 
+          {/* Date fields - side by side */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: '20px' }}>
             <div style={{ minWidth: 0 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
                 Date Inquired
@@ -3367,35 +3371,36 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '20px' }}>
-            <div style={{ minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
-                Project Name *
-              </label>
-              <input
-                type="text"
-                value={formData.projectName}
-                onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
-                disabled={isViewOnly}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: isMobile ? '16px' : '14px',
-                  boxSizing: 'border-box',
-                  height: '40px',
-                  opacity: isViewOnly ? 0.5 : 1
-                }}
-                placeholder="e.g., Ashley & Devon"
-              />
-            </div>
+          {/* Project Name - full width */}
+          <div style={{ minWidth: 0 }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+              Project Name *
+            </label>
+            <input
+              type="text"
+              value={formData.projectName}
+              onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
+              disabled={isViewOnly}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: isMobile ? '16px' : '14px',
+                boxSizing: 'border-box',
+                height: '40px',
+                opacity: isViewOnly ? 0.5 : 1
+              }}
+              placeholder="e.g., Ashley & Devon"
+            />
+          </div>
 
-            <div style={{ minWidth: 0 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
-                Service Type *
-                <InfoTooltip content="Used to categorize your work (e.g., Wedding, Engagement, Family). Service Types allow you to filter Sales and analyze performance in Insights." />
-              </label>
+          {/* Service Type - own row */}
+          <div style={{ minWidth: 0 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+              Service Type *
+              <InfoTooltip content="Used to categorize your work (e.g., Wedding, Engagement, Family). Service Types allow you to filter Sales and analyze performance in Insights." />
+            </label>
               {addingServiceType ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0, flexWrap: 'wrap' }}>
@@ -3531,14 +3536,15 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
                   )}
                 </div>
               )}
-            </div>
-            
-            <div style={{ minWidth: 0 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
-                Lead Source *
-                <InfoTooltip content="Tracks where the booking came from. Lead Sources power your Funnel metrics and can also be used to track Advertising ROI." />
-              </label>
-              {addingLeadSource ? (
+          </div>
+
+          {/* Lead Source - own row */}
+          <div style={{ minWidth: 0 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px', textAlign: 'left' }}>
+              Lead Source *
+              <InfoTooltip content="Tracks where the booking came from. Lead Sources power your Funnel metrics and can also be used to track Advertising ROI." />
+            </label>
+            {addingLeadSource ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0, flexWrap: 'wrap' }}>
                     <input
