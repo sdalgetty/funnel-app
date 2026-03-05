@@ -239,7 +239,7 @@ export default function OnboardingWizard() {
 
   const handleAddServiceType = async (name: string) => {
     if (!userId || !name.trim()) return;
-    const created = await UnifiedDataService.createServiceType(userId, name.trim(), true);
+    const created = await UnifiedDataService.createServiceType(userId, name.trim(), false);
     if (created) {
       setServiceTypes(prev => [...prev, created]);
       setSelectedServiceTypeIds(prev => new Set([...prev, created.id]));
