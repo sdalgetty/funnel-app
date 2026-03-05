@@ -1352,8 +1352,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
             }}>
               {/* Inquiries */}
               <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                   Inquiries
+                  <InfoTooltip content="The total number of new inquiries received during this month." />
                 </label>
                 <input
                   type="text"
@@ -1382,8 +1383,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
               {/* Ad Leads - only show if ads tracking is enabled */}
               {adsTrackingEnabled && (
                 <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                     Ad Leads
+                    <InfoTooltip content="The number of inquiries that originated from advertising." />
                   </label>
                   <input
                     type="text"
@@ -1412,8 +1414,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
 
               {/* Confirmed Available */}
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                   Confirmed Available
+                  <InfoTooltip content="The number of inquiries where you confirmed you were available for the requested date." />
                 </label>
                 <input
                   type="text"
@@ -1441,8 +1444,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
 
               {/* Calls Booked */}
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                   Calls Booked
+                  <InfoTooltip content="The number of sales calls scheduled with potential clients." />
                 </label>
                 <input
                   type="text"
@@ -1470,8 +1474,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
 
               {/* Calls Cancelled */}
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                   Calls Cancelled
+                  <InfoTooltip content="Scheduled calls that were cancelled before they occurred." />
                 </label>
                 <input
                   type="text"
@@ -1499,8 +1504,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
 
               {/* No-Shows */}
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                   No-Shows (optional)
+                  <InfoTooltip content="Scheduled calls where the client did not attend." />
                 </label>
                 <input
                   type="text"
@@ -1529,8 +1535,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
 
               {/* Calls Taken */}
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                   Calls Taken
+                  <InfoTooltip content="The number of calls that were successfully completed." />
                 </label>
                 <input
                   type="text"
@@ -1559,8 +1566,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
               {/* Ads Spend - only show if ads tracking is enabled */}
               {adsTrackingEnabled && (
                 <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                       Ad Spend ($)
+                      <InfoTooltip content="The total amount spent on advertising during this month." />
                     </label>
                   <input
                     type="text"
@@ -1604,8 +1612,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                     {/* Bookings (Qty) */}
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
                           Bookings (Qty)
+                          <InfoTooltip content="The number of signed bookings recorded for service types tracked in your Funnel." />
                         </label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <input
@@ -1659,8 +1668,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                     {/* Bookings ($) */}
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
                           Bookings ($)
+                          <InfoTooltip content="The total contract value of bookings recorded during this month." />
                         </label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <input
@@ -1715,8 +1725,9 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                     {/* Cash */}
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
                           Cash ($)
+                          <InfoTooltip content="The total payments received or projected for this month based on signed contracts and payment schedules." />
                         </label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <input
