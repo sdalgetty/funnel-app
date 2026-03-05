@@ -1330,7 +1330,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 fontSize: '14px',
                 color: '#0c4a6e'
               }}>
-                <>Funnel activity (Inquiries, Calls, etc.) is entered manually to calculate conversion metrics.<br /><br />Bookings (Qty), Bookings ($), and Cash are calculated automatically from your Sales data by default. Uncheck "Calculate from Sales Data" to manually override any field.</>
+                Enter funnel activity manually. Bookings and Cash are calculated automatically from Sales data.
               </div>
             )}
 
@@ -1624,6 +1624,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                           <label style={{ fontSize: '12px', color: '#6b7280', cursor: 'pointer' }}>
                             Calculate from Sales Data
                           </label>
+                          <InfoTooltip content={<>These values are normally calculated automatically from your Sales data.<br /><br />Uncheck "Calculate from Sales Data" if you need to manually override them.</>} />
                         </div>
                       </div>
                       <input
@@ -1678,6 +1679,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                           <label style={{ fontSize: '12px', color: '#6b7280', cursor: 'pointer' }}>
                             Calculate from Sales Data
                           </label>
+                          <InfoTooltip content={<>These values are normally calculated automatically from your Sales data.<br /><br />Uncheck "Calculate from Sales Data" if you need to manually override them.</>} />
                         </div>
                       </div>
                       <input
@@ -1733,6 +1735,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                           <label style={{ fontSize: '12px', color: '#6b7280', cursor: 'pointer' }}>
                             Calculate from Sales Data
                           </label>
+                          <InfoTooltip content={<>These values are normally calculated automatically from your Sales data.<br /><br />Uncheck "Calculate from Sales Data" if you need to manually override them.</>} />
                         </div>
                       </div>
                       <input
