@@ -55,8 +55,7 @@ export default function OnboardingWizard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Step 1: Goals
-  const [bookingsGoal, setBookingsGoal] = useState(0);
+  // Step 1: Goals (mirrors Goals page: Bookings ($) and Cash only)
   const [bookingsRevenueGoal, setBookingsRevenueGoal] = useState(0);
   const [cashGoal, setCashGoal] = useState(0);
   const [inquiryToCall, setInquiryToCall] = useState(40);
@@ -98,7 +97,6 @@ export default function OnboardingWizard() {
     try {
       const goals = await UnifiedDataService.getCalculatorGoals(userId);
       if (goals) {
-        setBookingsGoal(goals.bookingsGoal || 0);
         setBookingsRevenueGoal(Math.round((goals.bookingsRevenueGoal ?? 0) / 100));
         setCashGoal(Math.round((goals.cashGoal ?? 0) / 100)); // DB stores cents, display dollars
         setInquiryToCall(goals.inquiryToCall ?? 40);
@@ -193,8 +191,8 @@ export default function OnboardingWizard() {
   };
 
   const handleContinueGoals = async () => {
-    if (bookingsGoal <= 0 || bookingsRevenueGoal <= 0 || cashGoal <= 0) {
-      setValidationError('Bookings Goal, Bookings ($) Goal, and Cash Goal must be greater than 0.');
+    if (bookingsRevenueGoal <= 0 || cashGoal <= 0) {
+      setValidationError('Bookings ($) Goal and Cash Goal must be greater than 0.');
       return;
     }
     let cancelled = false;
@@ -202,7 +200,7 @@ export default function OnboardingWizard() {
     setValidationError(null);
     try {
       await UnifiedDataService.saveCalculatorGoals(userId!, {
-        bookingsGoal,
+        bookingsGoal: 0, // Not collected in onboarding; user sets on Goals page
         inquiryToCall,
         callToBooking,
         bookingsRevenueGoal: bookingsRevenueGoal * 100,
@@ -535,40 +533,14 @@ export default function OnboardingWizard() {
               <h2 style={{ fontSize: '20px', fontWeight: '600', margin: '0 0 8px 0', color: '#1f2937' }}>
                 Set your annual goals
               </h2>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 4px 0', lineHeight: 1.5 }}>
+                Set your revenue targets for the year.
+              </p>
               <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 24px 0', lineHeight: 1.5 }}>
-                These goals allow the dashboard to calculate your progress, pacing, and revenue forecasts. You can adjust them anytime.
+                Bookings ($) tracks what you sell. Cash tracks what you collect.
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
-                <div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
-                    Bookings Goal
-                    <InfoTooltip
-                      content={
-                        <>
-                          The number of bookings you want to secure this year.
-                          <br /><br />
-                          This works together with your conversion rates to estimate how much sales activity is required.
-                        </>
-                      }
-                    />
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={bookingsGoal || ''}
-                    onChange={(e) => setBookingsGoal(parseInt(e.target.value, 10) || 0)}
-                    placeholder="e.g., 25"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px', minWidth: 0, alignItems: 'start' }}>
                 <div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
                     Bookings ($) Goal
@@ -665,7 +637,7 @@ export default function OnboardingWizard() {
                                 <br /><br />
                                 For example, if 100 people inquire and 40 book a call, your rate is 40%.
                                 <br /><br />
-                                Not sure what your rates are? Start with the benchmarks below — you can refine them over time.
+                                Not sure what your rates are? Start with our placeholder and you can refine the number in the Goals section later.
                               </>
                             }
                           />
@@ -696,7 +668,7 @@ export default function OnboardingWizard() {
                                 <br /><br />
                                 For example, if you have 20 calls and 8 clients book, your rate is 40%.
                                 <br /><br />
-                                Not sure what your rates are? Start with the benchmarks below — you can refine them over time.
+                                Not sure what your rates are? Start with our placeholder and you can refine the number in the Goals section later.
                               </>
                             }
                           />
@@ -770,10 +742,16 @@ export default function OnboardingWizard() {
           {step === 2 && (
             <>
               <h2 style={{ fontSize: '20px', fontWeight: '600', margin: '0 0 8px 0', color: '#1f2937' }}>
-                Service Types
+                Add Service Types
               </h2>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 4px 0', lineHeight: 1.5 }}>
+                Service Types categorize the types of bookings you sell.
+              </p>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 4px 0', lineHeight: 1.5 }}>
+                They help track how many bookings you receive for each type of service.
+              </p>
               <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 24px 0', lineHeight: 1.5 }}>
-                Define service categories for your bookings.
+                Pick from the list below or add your own.
               </p>
 
               <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
@@ -782,7 +760,15 @@ export default function OnboardingWizard() {
                   value={newServiceTypeName}
                   onChange={(e) => setNewServiceTypeName(e.target.value)}
                   placeholder="Add new service type"
-                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddServiceType(newServiceTypeName), setNewServiceTypeName(''))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (newServiceTypeName.trim()) {
+                        handleAddServiceType(newServiceTypeName);
+                        setNewServiceTypeName('');
+                      }
+                    }
+                  }}
                   style={{
                     flex: 1,
                     padding: '10px 12px',
@@ -794,17 +780,21 @@ export default function OnboardingWizard() {
                 />
                 <button
                   type="button"
-                  onClick={() => { handleAddServiceType(newServiceTypeName); setNewServiceTypeName(''); }}
-                  disabled={!newServiceTypeName.trim()}
+                  onClick={() => {
+                    if (newServiceTypeName.trim()) {
+                      handleAddServiceType(newServiceTypeName);
+                      setNewServiceTypeName('');
+                    }
+                  }}
                   style={{
                     padding: '10px 16px',
-                    backgroundColor: newServiceTypeName.trim() ? '#3b82f6' : '#e5e7eb',
+                    backgroundColor: '#3b82f6',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '14px',
                     fontWeight: '500',
-                    cursor: newServiceTypeName.trim() ? 'pointer' : 'not-allowed',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
@@ -939,10 +929,16 @@ export default function OnboardingWizard() {
           {step === 3 && (
             <>
               <h2 style={{ fontSize: '20px', fontWeight: '600', margin: '0 0 8px 0', color: '#1f2937' }}>
-                Lead Sources
+                Add Lead Sources
               </h2>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 4px 0', lineHeight: 1.5 }}>
+                Lead Sources track where your bookings come from.
+              </p>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 4px 0', lineHeight: 1.5 }}>
+                This helps you understand which marketing channels are actually generating revenue.
+              </p>
               <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 24px 0', lineHeight: 1.5 }}>
-                Where do your bookings come from?
+                Pick from the list below or add your own.
               </p>
 
               <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
@@ -951,7 +947,15 @@ export default function OnboardingWizard() {
                   value={newLeadSourceName}
                   onChange={(e) => setNewLeadSourceName(e.target.value)}
                   placeholder="Add new lead source"
-                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddLeadSource(newLeadSourceName), setNewLeadSourceName(''))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (newLeadSourceName.trim()) {
+                        handleAddLeadSource(newLeadSourceName);
+                        setNewLeadSourceName('');
+                      }
+                    }
+                  }}
                   style={{
                     flex: 1,
                     padding: '10px 12px',
@@ -963,17 +967,21 @@ export default function OnboardingWizard() {
                 />
                 <button
                   type="button"
-                  onClick={() => { handleAddLeadSource(newLeadSourceName); setNewLeadSourceName(''); }}
-                  disabled={!newLeadSourceName.trim()}
+                  onClick={() => {
+                    if (newLeadSourceName.trim()) {
+                      handleAddLeadSource(newLeadSourceName);
+                      setNewLeadSourceName('');
+                    }
+                  }}
                   style={{
                     padding: '10px 16px',
-                    backgroundColor: newLeadSourceName.trim() ? '#3b82f6' : '#e5e7eb',
+                    backgroundColor: '#3b82f6',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '14px',
                     fontWeight: '500',
-                    cursor: newLeadSourceName.trim() ? 'pointer' : 'not-allowed',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
