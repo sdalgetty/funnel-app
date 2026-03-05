@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
-import { ShareService, type AccountShare } from './services/shareService';
 import { formatPhoneNumber } from './utils/formatters';
 import { validatePhone, validateWebsite } from './utils/validation';
 import { 
@@ -24,16 +23,13 @@ import {
   Edit,
   Save,
   X,
-  Share2,
-  UserPlus,
   XCircle,
   CheckCircle,
-  Clock,
   Phone,
   LogOut
 } from 'lucide-react';
 
-type ProfileSection = 'account' | 'subscription' | 'billing' | 'privacy' | 'support' | 'sharing';
+type ProfileSection = 'account' | 'subscription' | 'billing' | 'privacy' | 'support';
 
 export default function UserProfile() {
   const { user, effectiveUser, upgradeToPro, downgradeToFree, updateProfile, signOut } = useAuth();
@@ -201,7 +197,6 @@ export default function UserProfile() {
     { id: 'account' as ProfileSection, label: 'Account', icon: User },
     { id: 'subscription' as ProfileSection, label: 'Subscription', icon: Crown },
     { id: 'billing' as ProfileSection, label: 'Billing', icon: CreditCard },
-    { id: 'sharing' as ProfileSection, label: 'Account Sharing', icon: Share2 },
     { id: 'privacy' as ProfileSection, label: 'Privacy', icon: Shield },
     { id: 'support' as ProfileSection, label: 'Support', icon: HelpCircle },
   ];
@@ -417,7 +412,6 @@ export default function UserProfile() {
                 {activeSection === 'account' && 'Manage your personal information and account settings'}
                 {activeSection === 'subscription' && 'View and manage your subscription plan'}
                 {activeSection === 'billing' && 'Manage your billing information and payment methods'}
-                {activeSection === 'sharing' && 'Share your account with guests for view-only access'}
                 {activeSection === 'privacy' && 'Control your privacy settings and data preferences'}
                 {activeSection === 'support' && 'Get help and contact support'}
               </p>
@@ -531,10 +525,6 @@ export default function UserProfile() {
               }}>
                 This section is coming soon.
               </div>
-            )}
-
-            {activeSection === 'sharing' && (
-              <SharingSection user={profileUser} />
             )}
 
             {activeSection === 'privacy' && (
@@ -1644,361 +1634,3 @@ function SupportSection({ user }: { user: any }) {
   );
 }
 
-// Sharing Section Component
-function SharingSection({ user }: { user: any }) {
-  const [shares, setShares] = useState<AccountShare[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviting, setInviting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadShares();
-  }, [user]);
-
-  const loadShares = async () => {
-    if (!user?.id) return;
-    setLoading(true);
-    try {
-      const ownerShares = await ShareService.getOwnerShares(user.id);
-      setShares(ownerShares);
-    } catch (err: any) {
-      console.error('Error loading shares:', err);
-      setError('Failed to load shares');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleInvite = async () => {
-    if (!inviteEmail.trim() || !user?.id) return;
-
-    setInviting(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      // Check if there's already a pending invitation
-      const existing = await ShareService.getPendingInvitation(
-        user.id,
-        inviteEmail.trim()
-      );
-
-      if (existing) {
-        // Show existing invitation link
-        setSuccess(
-          `An invitation was already sent. Here's the link: ${existing.invitationLink}`
-        );
-        // Copy to clipboard if possible
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(existing.invitationLink);
-          setSuccess(
-            `Invitation link copied to clipboard! Link: ${existing.invitationLink}`
-          );
-        }
-        await loadShares();
-        return;
-      }
-
-      const { share, invitationLink } = await ShareService.inviteGuest(
-        user.id,
-        inviteEmail.trim()
-      );
-
-      // Send invitation email (placeholder)
-      await ShareService.sendInvitationEmail(
-        inviteEmail.trim(),
-        user.name || user.email,
-        invitationLink
-      );
-
-      setSuccess(`Invitation sent to ${inviteEmail.trim()}. Link: ${invitationLink}`);
-      // Copy to clipboard if possible
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(invitationLink);
-        setSuccess(
-          `Invitation link copied to clipboard! Link: ${invitationLink}`
-        );
-      }
-      setInviteEmail('');
-      await loadShares();
-    } catch (err: any) {
-      setError(err.message || 'Failed to send invitation');
-    } finally {
-      setInviting(false);
-    }
-  };
-
-  const handleRevoke = async (shareId: string) => {
-    if (!user?.id) return;
-    if (!confirm('Are you sure you want to revoke access for this guest?')) return;
-
-    try {
-      await ShareService.revokeShare(user.id, shareId);
-      setSuccess('Access revoked successfully');
-      await loadShares();
-    } catch (err: any) {
-      setError(err.message || 'Failed to revoke access');
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'accepted':
-        return <CheckCircle size={16} style={{ color: '#10b981' }} />;
-      case 'pending':
-        return <Clock size={16} style={{ color: '#f59e0b' }} />;
-      case 'revoked':
-        return <XCircle size={16} style={{ color: '#ef4444' }} />;
-      default:
-        return null;
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'accepted':
-        return 'Active';
-      case 'pending':
-        return 'Pending';
-      case 'revoked':
-        return 'Revoked';
-      default:
-        return status;
-    }
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Invite Guest Section */}
-      <div>
-        <h3 style={{ 
-          fontSize: '16px', 
-          fontWeight: '600', 
-          margin: '0 0 8px 0',
-          color: '#1f2937'
-        }}>
-          Invite a Guest
-        </h3>
-        <p style={{ 
-          fontSize: '14px', 
-          color: '#6b7280', 
-          margin: '0 0 16px 0'
-        }}>
-          Share your account with a coach or mentor. They'll receive an email invitation and can view your data in read-only mode.
-        </p>
-
-        {error && (
-          <div style={{
-            padding: '12px',
-            backgroundColor: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: '6px',
-            marginBottom: '16px',
-            color: '#991b1b',
-            fontSize: '14px'
-          }}>
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div style={{
-            padding: '12px',
-            backgroundColor: '#f0fdf4',
-            border: '1px solid #bbf7d0',
-            borderRadius: '6px',
-            marginBottom: '16px',
-            color: '#166534',
-            fontSize: '14px'
-          }}>
-            {success}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <input
-            type="email"
-            placeholder="Enter guest email address"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleInvite()}
-            style={{
-              flex: 1,
-              padding: '10px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              fontSize: '14px'
-            }}
-          />
-          <button
-            onClick={handleInvite}
-            disabled={!inviteEmail.trim() || inviting}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 20px',
-              backgroundColor: inviting ? '#9ca3af' : '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: inviting ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            <UserPlus size={16} />
-            {inviting ? 'Sending...' : 'Send Invitation'}
-          </button>
-        </div>
-      </div>
-
-      {/* Active Shares Section */}
-      <div>
-        <h3 style={{ 
-          fontSize: '16px', 
-          fontWeight: '600', 
-          margin: '0 0 16px 0',
-          color: '#1f2937'
-        }}>
-          Shared Accounts
-        </h3>
-
-        {loading ? (
-          <div style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>
-            Loading...
-          </div>
-        ) : shares.length === 0 ? (
-          <div style={{
-            padding: '24px',
-            backgroundColor: '#f9fafb',
-            borderRadius: '8px',
-            textAlign: 'center',
-            color: '#6b7280'
-          }}>
-            <Share2 size={32} style={{ marginBottom: '8px', opacity: 0.5 }} />
-            <p style={{ margin: 0 }}>No shared accounts yet. Invite a guest to get started.</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {shares.map((share) => {
-              const appUrl = window.location.origin;
-              const invitationLink = share.invitationToken 
-                ? `${appUrl}/accept-invite?token=${share.invitationToken}`
-                : null;
-
-              return (
-                <div
-                  key={share.id}
-                  style={{
-                    padding: '16px',
-                    backgroundColor: '#f9fafb',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        {getStatusIcon(share.status)}
-                        <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
-                          {share.guestEmail}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#6b7280' }}>
-                        <span>Status: {getStatusText(share.status)}</span>
-                        <span>Role: {share.role}</span>
-                        {share.acceptedAt && (
-                          <span>Accepted: {new Date(share.acceptedAt).toLocaleDateString()}</span>
-                        )}
-                      </div>
-                    </div>
-                    {share.status === 'accepted' && (
-                      <button
-                        onClick={() => handleRevoke(share.id)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 12px',
-                          backgroundColor: 'white',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          color: '#ef4444',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        <XCircle size={14} />
-                        Revoke
-                      </button>
-                    )}
-                  </div>
-                  {share.status === 'pending' && invitationLink && (
-                    <div style={{
-                      padding: '12px',
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '6px',
-                      fontSize: '12px'
-                    }}>
-                      <div style={{ marginBottom: '8px', color: '#6b7280', fontWeight: '500' }}>
-                        Invitation Link:
-                      </div>
-                      <div style={{
-                        display: 'flex',
-                        gap: '8px',
-                        alignItems: 'center'
-                      }}>
-                        <input
-                          type="text"
-                          value={invitationLink}
-                          readOnly
-                          style={{
-                            flex: 1,
-                            padding: '6px 8px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            fontFamily: 'monospace',
-                            backgroundColor: '#f9fafb'
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(invitationLink);
-                            setSuccess('Invitation link copied to clipboard!');
-                            setTimeout(() => setSuccess(null), 3000);
-                          }}
-                          style={{
-                            padding: '6px 12px',
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            cursor: 'pointer',
-                            fontWeight: '500'
-                          }}
-                        >
-                          Copy
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}

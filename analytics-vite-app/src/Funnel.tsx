@@ -1330,7 +1330,7 @@ export default function Funnel({ funnelData, dataManager, salesData = [], paymen
                 fontSize: '14px',
                 color: '#0c4a6e'
               }}>
-                <strong>Pro Account:</strong> Bookings (Qty), Bookings ($), and Cash are calculated automatically from your Sales data by default. Uncheck "Calculate from Sales Data" to manually override any field.
+                <>Funnel activity (Inquiries, Calls, etc.) is entered manually to calculate conversion metrics.<br /><br />Bookings (Qty), Bookings ($), and Cash are calculated automatically from your Sales data by default. Uncheck "Calculate from Sales Data" to manually override any field.</>
               </div>
             )}
 
