@@ -3680,7 +3680,6 @@ function EditBookingModal({ booking, serviceTypes, leadSources, onUpdate, onClos
                 </div>
               )}
             </div>
-          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: '20px' }}>
             <div style={{ minWidth: 0 }}>
