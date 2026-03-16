@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { UnifiedDataService } from '../services/unifiedDataService';
 import { InfoTooltip } from '../components/InfoTooltip';
-import AdsSetupModal from '../components/AdsSetupModal';
 import type { ServiceType, LeadSource } from '../types';
 import { Sparkles, Target, Briefcase, Users, Megaphone, ChevronRight, ChevronLeft, Plus } from 'lucide-react';
 
@@ -23,9 +22,8 @@ const SERVICE_TYPE_QUICK_ADD = [
   'Elopement',
   'Event',
   'Portraits',
+  'Family Portraits',
   'Mini Sessions',
-  'Full Service Planning',
-  'Month-of Planning',
 ];
 
 const LEAD_SOURCE_PREPOPULATE = [
@@ -74,7 +72,9 @@ export default function OnboardingWizard() {
 
   // Step 4: Advertising
   const [usesAds, setUsesAds] = useState<boolean | null>(null);
-  const [isAdsSetupModalOpen, setIsAdsSetupModalOpen] = useState(false);
+  const [adSourceIds, setAdSourceIds] = useState<Set<string>>(new Set());
+  const [newAdLeadSourceName, setNewAdLeadSourceName] = useState('');
+  const [isAddingAdLeadSource, setIsAddingAdLeadSource] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
 
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -150,6 +150,10 @@ export default function OnboardingWizard() {
 
       setSelectedServiceTypeIds(stIds);
       setSelectedLeadSourceIds(lsIds);
+
+      // Initialize ad source selection from existing lead sources
+      const adIds = new Set(ls.filter(l => l.isAdSource).map(l => l.id));
+      setAdSourceIds(adIds);
     } catch (e) {
       console.error('Error loading service types/lead sources:', e);
     }
@@ -273,13 +277,28 @@ export default function OnboardingWizard() {
     });
   };
 
-  const handleAdsSetupComplete = async () => {
+  const handleToggleAdSource = (id: string) => {
+    setAdSourceIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleAddAdLeadSource = async () => {
+    const name = newAdLeadSourceName.trim();
+    if (!name || !userId || isAddingAdLeadSource) return;
+    setIsAddingAdLeadSource(true);
     try {
-      await updateProfile({ adsTrackingEnabled: true, adsSetupCompleted: true });
-      setIsAdsSetupModalOpen(false);
-      await handleFinish();
-    } catch (e) {
-      console.error('Error enabling ads:', e);
+      const created = await UnifiedDataService.createLeadSource(userId, name);
+      if (created) {
+        setLeadSources(prev => [...prev, created]);
+        setAdSourceIds(prev => new Set([...prev, created.id]));
+        setNewAdLeadSourceName('');
+      }
+    } finally {
+      setIsAddingAdLeadSource(false);
     }
   };
 
@@ -288,6 +307,14 @@ export default function OnboardingWizard() {
     setIsFinishing(true);
     setValidationError(null);
     try {
+      if (usesAds === true) {
+        for (const ls of leadSources) {
+          await UnifiedDataService.setLeadSourceAdSource(userId, ls.id, adSourceIds.has(ls.id));
+        }
+        await updateProfile({ adsTrackingEnabled: true, adsSetupCompleted: true });
+      } else if (usesAds === false) {
+        await updateProfile({ adsTrackingEnabled: false });
+      }
       await updateProfile({
         onboardingCompleted: true,
         onboardingCompletedAt: new Date(),
@@ -302,10 +329,7 @@ export default function OnboardingWizard() {
     }
   };
 
-  const handleAdvertisingYes = () => {
-    setUsesAds(true);
-    setIsAdsSetupModalOpen(true);
-  };
+  const handleAdvertisingYes = () => setUsesAds(true);
 
   const handleAdvertisingNo = () => {
     setUsesAds(false);
@@ -605,7 +629,7 @@ export default function OnboardingWizard() {
                     }}
                   />
                   <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#6b7280', lineHeight: 1.5 }}>
-                    Total payments expected this year — even from last year&apos;s bookings.
+                    Total payments expected this year — even from last year&apos;s bookings. This is your gross revenue target for the year.
                   </p>
                 </div>
 
@@ -1145,6 +1169,120 @@ export default function OnboardingWizard() {
                 </button>
               </div>
 
+              {usesAds === true && (
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ marginBottom: '16px', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                    <p style={{ fontSize: '14px', color: '#374151', margin: '0 0 12px 0', lineHeight: 1.6 }}>
+                      You will enter <strong>Ad Leads</strong> and <strong>Ad Spend</strong> in the Funnel each month. Bookings from Ads, ROI, and Cost per Booking are calculated from booked sales whose Lead Source is marked as advertising.
+                    </p>
+                    <p style={{ fontSize: '14px', color: '#374151', margin: 0, lineHeight: 1.6 }}>
+                      <strong>Ad Leads:</strong> the number of inquiries that came from advertising
+                      <br />
+                      <strong>Ad Spend:</strong> the amount spent on advertising
+                    </p>
+                    <p style={{ fontSize: '13px', color: '#6b7280', margin: '12px 0 0 0', lineHeight: 1.5, fontStyle: 'italic' }}>
+                      These fields will appear in the Funnel table once you finish setup.
+                    </p>
+                  </div>
+
+                  <p style={{ fontSize: '14px', fontWeight: '500', margin: '0 0 12px 0', color: '#1f2937' }}>
+                    Choose which Lead Sources count as Ads
+                  </p>
+                  <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 12px 0', lineHeight: 1.5 }}>
+                    Which Lead Sources should count as advertising when a booking is recorded?
+                  </p>
+
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                    <input
+                      type="text"
+                      value={newAdLeadSourceName}
+                      onChange={(e) => setNewAdLeadSourceName(e.target.value)}
+                      placeholder="Add new Lead Source"
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddAdLeadSource()}
+                      style={{
+                        flex: 1,
+                        padding: '10px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddAdLeadSource}
+                      disabled={!newAdLeadSourceName.trim() || isAddingAdLeadSource}
+                      style={{
+                        padding: '10px 16px',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: !newAdLeadSourceName.trim() || isAddingAdLeadSource ? 'not-allowed' : 'pointer',
+                        opacity: !newAdLeadSourceName.trim() || isAddingAdLeadSource ? 0.6 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <Plus size={16} />
+                      Add
+                    </button>
+                  </div>
+
+                  <div style={{
+                    maxHeight: '240px',
+                    overflowY: 'auto',
+                    marginBottom: '4px',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                  }}>
+                    {leadSources.map((ls) => {
+                      const isSelected = adSourceIds.has(ls.id);
+                      return (
+                        <div
+                          key={ls.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '12px',
+                            padding: '12px 16px',
+                            borderBottom: '1px solid #f3f4f6',
+                            backgroundColor: isSelected ? '#eff6ff' : 'transparent',
+                          }}
+                        >
+                          <span style={{
+                            fontSize: '14px',
+                            fontWeight: isSelected ? 600 : 500,
+                            color: '#1f2937',
+                          }}>
+                            {ls.name}
+                          </span>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', flexShrink: 0 }}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleAdSource(ls.id)}
+                              style={{ width: 16, height: 16, accentColor: '#3b82f6' }}
+                            />
+                            <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                              Ad Source
+                            </span>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: 1.5, fontStyle: 'italic' }}>
+                    These settings affect booked sales only. Inquiries are not automatically attributed to advertising.
+                  </p>
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between', marginTop: '24px' }}>
                 <button
                   onClick={handleBack}
@@ -1166,16 +1304,7 @@ export default function OnboardingWizard() {
                   Back
                 </button>
                 <button
-                  onClick={async () => {
-                    if (usesAds === true && !user?.adsSetupCompleted) {
-                      setIsAdsSetupModalOpen(true);
-                      return;
-                    }
-                    if (usesAds === false) {
-                      await updateProfile({ adsTrackingEnabled: false });
-                    }
-                    await handleFinish();
-                  }}
+                  onClick={handleFinish}
                   disabled={isFinishing}
                   style={{
                     padding: '10px 24px',
@@ -1200,26 +1329,6 @@ export default function OnboardingWizard() {
         </div>
       </div>
 
-      {isAdsSetupModalOpen && (
-        <AdsSetupModal
-          leadSources={leadSources}
-          onCreateLeadSource={async (name) => {
-            const created = await UnifiedDataService.createLeadSource(userId!, name);
-            if (created) {
-              setLeadSources(prev => [...prev, created]);
-              return created;
-            }
-            return null;
-          }}
-          onSetLeadSourceAdSource={async (id, isAdSource) => {
-            await UnifiedDataService.setLeadSourceAdSource(userId!, id, isAdSource);
-            setLeadSources(prev => prev.map(ls => ls.id === id ? { ...ls, isAdSource } : ls));
-            return true;
-          }}
-          onEnableTracking={handleAdsSetupComplete}
-          onCancel={() => setIsAdsSetupModalOpen(false)}
-        />
-      )}
     </div>
   );
 }

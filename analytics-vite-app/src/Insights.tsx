@@ -1413,10 +1413,12 @@ function SalesMetricsCard({
   toUSD: (cents: number) => string
   isMobile: boolean
 }) {
+  const toUSDWhole = (cents: number) =>
+    (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 })
   const items = [
     { label: 'Bookings (Qty)', value: formatNumber(closes) },
-    { label: 'Bookings ($)', value: toUSD(bookings) },
-    { label: 'Cash', value: toUSD(cash) },
+    { label: 'Bookings ($)', value: toUSDWhole(bookings) },
+    { label: 'Cash', value: toUSDWhole(cash) },
   ]
   return (
     <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: isMobile ? 20 : 24, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
